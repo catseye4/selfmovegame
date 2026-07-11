@@ -84,6 +84,8 @@ export class BattleEngine {
         const stats = gameState.getEquippedStats();
         const equippedObjs = gameState.getEquippedObjects();
         this.equippedHeadId = equippedObjs.head ? equippedObjs.head.id : null;
+        this.equippedBodyId = equippedObjs.body ? equippedObjs.body.id : null;
+        this.curseTickTimer = 0;
         this.maxPlayerHp = stats.hp;
         this.playerHp = stats.hp;
         this.playerDps = stats.dps;
@@ -157,11 +159,19 @@ export class BattleEngine {
         el.className = 'damage-popup';
         el.style.left = `${x}px`;
         el.style.bottom = `${y}px`;
-        el.textContent = Math.round(damage);
-        if (isCrit) {
-            el.style.color = '#ffcc00';
-            el.style.fontSize = '22px';
-            el.textContent = `CRIT! ${Math.round(damage)}`;
+        if (typeof damage === 'string') {
+            el.textContent = damage;
+            if (damage.includes('저주') || damage.includes('흑마법')) {
+                el.style.color = '#cc33ff';
+                el.style.textShadow = '0 0 8px #9900ff';
+            }
+        } else {
+            el.textContent = Math.round(damage);
+            if (isCrit) {
+                el.style.color = '#ffcc00';
+                el.style.fontSize = '22px';
+                el.textContent = `CRIT! ${Math.round(damage)}`;
+            }
         }
         this.domDamage.appendChild(el);
         setTimeout(() => el.remove(), 800);
@@ -466,8 +476,31 @@ export class BattleEngine {
             }
         }
 
+        // [흑마법 룬 갑옷 (body_hero)]: 전방 180px 이내 적 전체에게 매초 흑마법 저주 지속 데미지(DoT)
+        const monsterFrontX = this.monsterX + 100;
+        if (this.equippedBodyId === 'body_hero') {
+            this.curseTickTimer = (this.curseTickTimer || 0) + dt;
+            const tickCursePopup = this.curseTickTimer >= 0.65;
+            if (tickCursePopup) this.curseTickTimer = 0;
+
+            [...this.enemies].forEach(enemy => {
+                const dist = enemy.x - monsterFrontX;
+                if (dist >= -40 && dist <= 180) {
+                    enemy.hp -= 48 * dt;
+                    if (enemy.hpBar) {
+                        enemy.hpBar.style.width = `${Math.max(0, (enemy.hp / enemy.maxHp) * 100)}%`;
+                    }
+                    if (tickCursePopup) {
+                        this.createDamagePopup(enemy.x, 140, '☠ 흑마법 -31', false);
+                    }
+                    if (enemy.hp <= 0) {
+                        this.dealDamageToEnemy(enemy, 0, false);
+                    }
+                }
+            });
+        }
+
         // 2. 사거리에 가장 가까운 적(또는 건물) 탐색
-        const monsterFrontX = this.monsterX + 100; // 몬스터 전방 경계 좌표
         let closestEnemy = null;
         let minDistance = Infinity;
 
