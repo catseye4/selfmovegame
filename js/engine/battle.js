@@ -85,7 +85,9 @@ export class BattleEngine {
         const equippedObjs = gameState.getEquippedObjects();
         this.equippedHeadId = equippedObjs.head ? equippedObjs.head.id : null;
         this.equippedBodyId = equippedObjs.body ? equippedObjs.body.id : null;
+        this.equippedLegId = equippedObjs.leg ? equippedObjs.leg.id : null;
         this.curseTickTimer = 0;
+        this.legSkillTimer = 0;
         this.maxPlayerHp = stats.hp;
         this.playerHp = stats.hp;
         this.playerDps = stats.dps;
@@ -174,6 +176,12 @@ export class BattleEngine {
             } else if (damage.includes('REGEN') || damage.includes('회복')) {
                 el.style.color = '#00ff66';
                 el.style.textShadow = '0 0 8px #00ff66';
+            } else if (damage.includes('포자') || damage.includes('점액')) {
+                el.style.color = '#aaff00';
+                el.style.textShadow = '0 0 8px #66aa00';
+            } else if (damage.includes('지진') || damage.includes('분쇄')) {
+                el.style.color = '#ff9900';
+                el.style.textShadow = '0 0 8px #cc6600';
             }
         } else {
             el.textContent = Math.round(damage);
@@ -515,6 +523,53 @@ export class BattleEngine {
                     }
                     if (tickCursePopup) {
                         this.createDamagePopup(enemy.x, 140, '☠ 흑마법 -31', false);
+                    }
+                    if (enemy.hp <= 0) {
+                        this.dealDamageToEnemy(enemy, 0, false);
+                    }
+                }
+            });
+        }
+
+        // [점액질 기동 포자 (leg_mutant)]: 전방(0~220px)으로 독성 점액 포자 살포 (이동속도 40% 감속 및 지속 산성 데미지)
+        if (this.equippedLegId === 'leg_mutant') {
+            this.legSkillTimer = (this.legSkillTimer || 0) + dt;
+            const tickSporePopup = this.legSkillTimer >= 0.75;
+            if (tickSporePopup) this.legSkillTimer = 0;
+
+            [...this.enemies].forEach(enemy => {
+                const dist = enemy.x - monsterFrontX;
+                if (dist >= 0 && dist <= 220) {
+                    enemy.speed = Math.min(enemy.speed, 35); // 이동속도 감속
+                    enemy.hp -= 35 * dt; // 산성 포자 데미지
+                    if (enemy.hpBar) {
+                        enemy.hpBar.style.width = `${Math.max(0, (enemy.hp / enemy.maxHp) * 100)}%`;
+                    }
+                    if (tickSporePopup) {
+                        this.createDamagePopup(enemy.x, 130, '☣ 전방 포자 살포', false);
+                    }
+                    if (enemy.hp <= 0) {
+                        this.dealDamageToEnemy(enemy, 0, false);
+                    }
+                }
+            });
+        }
+
+        // [지진 분쇄 다리 (leg_chimera)]: 전진 및 전투 중 전방 지면에 광역 지진 분쇄 충격 데미지
+        if (this.equippedLegId === 'leg_chimera') {
+            this.legSkillTimer = (this.legSkillTimer || 0) + dt;
+            const tickQuakePopup = this.legSkillTimer >= 0.75;
+            if (tickQuakePopup) this.legSkillTimer = 0;
+
+            [...this.enemies].forEach(enemy => {
+                const dist = enemy.x - monsterFrontX;
+                if (dist >= -20 && dist <= 200) {
+                    enemy.hp -= 40 * dt;
+                    if (enemy.hpBar) {
+                        enemy.hpBar.style.width = `${Math.max(0, (enemy.hp / enemy.maxHp) * 100)}%`;
+                    }
+                    if (tickQuakePopup) {
+                        this.createDamagePopup(enemy.x, 130, '💥 지진 분쇄 -28', false);
                     }
                     if (enemy.hp <= 0) {
                         this.dealDamageToEnemy(enemy, 0, false);
