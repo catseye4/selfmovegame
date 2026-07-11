@@ -1013,6 +1013,32 @@ body {
     animation: goblin-walk 1.1s steps(40) infinite;
     transition: left 0.1s linear;
 }
+
+/* 세뇌 스마트 구속구로 징집된 아군 미니언 */
+.ally-minion {
+    position: absolute;
+    bottom: 52px;
+    width: 76px;
+    height: 76px;
+    background-image: url('assets/sprites/enemy/goblin_walk_sheet.png');
+    background-repeat: no-repeat;
+    background-size: auto 100%;
+    animation: goblin-walk 1.1s steps(40) infinite;
+    transform: scaleX(-1); /* 우측 적진을 향해 진격하도록 반전 */
+    filter: drop-shadow(0 0 10px #ff0055) hue-rotate(270deg); /* 타락 세뇌 네온 글로우 */
+    transition: left 0.1s linear;
+    z-index: 12;
+}
+.ally-hp {
+    position: absolute;
+    top: -10px;
+    left: 0;
+    height: 6px;
+    background: #ff0055;
+    box-shadow: 0 0 6px #ff0055;
+    border-radius: 3px;
+    transition: width 0.1s linear;
+}
 /* 걷기 프레임 순회: 프레임폭(76px) × 40프레임 = 3040px 를 왼쪽으로 스크롤 */
 @keyframes goblin-walk {
     from { background-position-x: 0; }

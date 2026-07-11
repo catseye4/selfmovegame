@@ -39,7 +39,9 @@ export class BattleEngine {
 
         // 전장 엔티티 및 투사체 목록
         this.enemies = [];
+        this.allies = [];
         this.projectiles = [];
+        this.equippedHeadId = null;
         this.attackHitTriggered = false; // 공격 모션 타격 프레임 중복 발동 방지 플래그
         this.spawnTimer = 0;
         this.spawnInterval = 2.2; // 쫄몹 연속 소환 주기
@@ -73,6 +75,7 @@ export class BattleEngine {
         this.finalBaseSpawned = false;
         this.finalBaseDestroyed = false;
         this.enemies = [];
+        this.allies = [];
         this.projectiles = [];
         this.attackHitTriggered = false;
         this.spawnTimer = 0;
@@ -80,6 +83,7 @@ export class BattleEngine {
         // 현재 장착 파츠 스탯 불러오기
         const stats = gameState.getEquippedStats();
         const equippedObjs = gameState.getEquippedObjects();
+        this.equippedHeadId = equippedObjs.head ? equippedObjs.head.id : null;
         this.maxPlayerHp = stats.hp;
         this.playerHp = stats.hp;
         this.playerDps = stats.dps;
@@ -161,6 +165,38 @@ export class BattleEngine {
         }
         this.domDamage.appendChild(el);
         setTimeout(() => el.remove(), 800);
+    }
+
+    // [세뇌 스마트 구속구]: 적 보병 소멸 시 아군 미니언 징집 소환
+    spawnAllyMinion(startX) {
+        if (!this.domEnemies) return;
+        const maxHp = 450;
+        const dps = 60;
+        const allyId = `ally_${Date.now()}_${Math.random()}`;
+
+        const el = document.createElement('div');
+        el.className = 'ally-minion';
+        el.style.left = `${startX}px`;
+
+        const hpBar = document.createElement('div');
+        hpBar.className = 'ally-hp';
+        hpBar.style.width = '100%';
+        el.appendChild(hpBar);
+
+        this.domEnemies.appendChild(el);
+
+        this.allies.push({
+            id: allyId,
+            x: startX,
+            hp: maxHp,
+            maxHp: maxHp,
+            dps: dps,
+            speed: 110,
+            dom: el,
+            hpBar: hpBar
+        });
+
+        this.createDamagePopup(startX, 180, '★ 세뇌 징집! (MIND CONTROL)', false);
     }
 
     // 적 쫄몹 연속 소환 로직
@@ -400,6 +436,11 @@ export class BattleEngine {
             } else {
                 gameState.addDarkMatter(15);
                 this.updateHud();
+
+                // [세뇌 스마트 구속구 기믹 작동]: 적 보병 소멸 시 확률적으로 즉시 아군 미니언 징집
+                if (this.equippedHeadId === 'head_hero' && Math.random() < 0.35) {
+                    this.spawnAllyMinion(enemy.x);
+                }
             }
         }
     }
@@ -490,10 +531,41 @@ export class BattleEngine {
             }
         }
 
-        // 4. 적군 보병 이동 로직
+        // 3-1. 징집된 아군 미니언(세뇌 스마트 구속구) 이동 및 교전 로직
+        this.allies.forEach(ally => {
+            let closestEnemyToAlly = null;
+            let minAllyDist = Infinity;
+
+            this.enemies.forEach(enemy => {
+                const dist = enemy.x - ally.x;
+                if (dist >= -20 && dist < minAllyDist) {
+                    minAllyDist = dist;
+                    closestEnemyToAlly = enemy;
+                }
+            });
+
+            if (closestEnemyToAlly && minAllyDist <= 50) {
+                this.dealDamageToEnemy(closestEnemyToAlly, ally.dps * dt, false);
+            } else {
+                ally.x += ally.speed * dt;
+                if (ally.dom) ally.dom.style.left = `${ally.x}px`;
+            }
+        });
+
+        // 4. 적군 보병 이동 로직 (전방의 아군 미니언 감지 시 우선 공격)
         this.enemies.forEach(enemy => {
             if (!enemy.isBuilding) {
-                if (enemy.x > monsterFrontX + 30) {
+                const targetAlly = this.allies.find(a => enemy.x - a.x <= 45 && enemy.x - a.x >= -25);
+                if (targetAlly) {
+                    targetAlly.hp -= enemy.dps * dt;
+                    if (targetAlly.hpBar) {
+                        targetAlly.hpBar.style.width = `${Math.max(0, (targetAlly.hp / targetAlly.maxHp) * 100)}%`;
+                    }
+                    if (targetAlly.hp <= 0) {
+                        if (targetAlly.dom) targetAlly.dom.remove();
+                        this.allies = this.allies.filter(a => a.id !== targetAlly.id);
+                    }
+                } else if (enemy.x > monsterFrontX + 30) {
                     enemy.x -= enemy.speed * dt;
                     if (enemy.dom) enemy.dom.style.left = `${enemy.x}px`;
                 } else {
