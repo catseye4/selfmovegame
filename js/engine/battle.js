@@ -191,7 +191,7 @@ export class BattleEngine {
             hp: maxHp,
             maxHp: maxHp,
             dps: dps,
-            speed: 110,
+            speed: this.playerSpeed * 0.55,
             dom: el,
             hpBar: hpBar
         });
@@ -544,9 +544,22 @@ export class BattleEngine {
                 }
             });
 
-            if (closestEnemyToAlly && minAllyDist <= 65) {
+            const hitRange = (closestEnemyToAlly && closestEnemyToAlly.isBuilding) ? 110 : 65;
+            if (closestEnemyToAlly && minAllyDist <= hitRange) {
                 this.dealDamageToEnemy(closestEnemyToAlly, ally.dps * dt, false);
-            } else {
+
+                // 거점과 충돌 시 거점 공격력 대신 우리 병사 HP를 깎아 충돌 데미지 처리
+                if (closestEnemyToAlly.isBuilding) {
+                    ally.hp -= 25 * dt;
+                    if (ally.hpBar) {
+                        ally.hpBar.style.width = `${Math.max(0, (ally.hp / ally.maxHp) * 100)}%`;
+                    }
+                    if (ally.hp <= 0) {
+                        if (ally.dom) ally.dom.remove();
+                        this.allies = this.allies.filter(a => a.id !== ally.id);
+                    }
+                }
+            } else if (closestEnemyToAlly || ally.x < this.monsterX + 180) {
                 ally.x += ally.speed * dt;
                 if (ally.dom) ally.dom.style.left = `${ally.x}px`;
             }
