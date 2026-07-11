@@ -93,6 +93,13 @@ export class BattleEngine {
         this.playerSpeed = stats.speed;
         this.attackType = equippedObjs.arm ? (equippedObjs.arm.attackType || 'melee') : 'melee';
 
+        if (this.equippedBodyId === 'body_chimera') {
+            setTimeout(() => {
+                this.spawnAllyMinion(this.monsterX + 60);
+                this.spawnAllyMinion(this.monsterX + 110);
+            }, 600);
+        }
+
         // 몬스터 비주얼 렌더링 및 위치 리셋
         monsterController.renderVisuals(equippedObjs);
         monsterController.updateHpBar(this.playerHp, this.maxPlayerHp);
@@ -164,6 +171,9 @@ export class BattleEngine {
             if (damage.includes('저주') || damage.includes('흑마법')) {
                 el.style.color = '#cc33ff';
                 el.style.textShadow = '0 0 8px #9900ff';
+            } else if (damage.includes('REGEN') || damage.includes('회복')) {
+                el.style.color = '#00ff66';
+                el.style.textShadow = '0 0 8px #00ff66';
             }
         } else {
             el.textContent = Math.round(damage);
@@ -473,6 +483,19 @@ export class BattleEngine {
             if (this.spawnTimer >= this.spawnInterval && this.enemies.filter(e => !e.isBuilding).length < 6) {
                 this.spawnTimer = 0;
                 this.spawnMinion();
+            }
+        }
+
+        // [돌연변이 포자 뿔 (head_mutant)]: 전투 중 초당 최대 체력의 2%씩 지속 재생
+        if (this.equippedHeadId === 'head_mutant' && this.playerHp < this.maxPlayerHp) {
+            const regenAmount = this.maxPlayerHp * 0.02 * dt;
+            this.playerHp = Math.min(this.maxPlayerHp, this.playerHp + regenAmount);
+            monsterController.updateHpBar(this.playerHp, this.maxPlayerHp);
+
+            this.regenPopupTimer = (this.regenPopupTimer || 0) + dt;
+            if (this.regenPopupTimer >= 1.0) {
+                this.regenPopupTimer = 0;
+                this.createDamagePopup(this.monsterX + 40, 180, `+${Math.round(this.maxPlayerHp * 0.02)} REGEN`, false);
             }
         }
 
