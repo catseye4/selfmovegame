@@ -1,17 +1,17 @@
 /* ==========================================================================
-   PROJECT: MAD OVERLORD // DESIGN SYSTEM & STYLES (CYBERPUNK NEON)
+   PROJECT: MAD OVERLORD // DESIGN SYSTEM & STYLES (SC2-STYLE STEEL/BLUE UI)
    ========================================================================== */
 
 :root {
     --bg-dark: #08080f;
     --bg-grid: #121222;
     --panel-bg: rgba(16, 18, 30, 0.85);
-    --panel-border: rgba(0, 255, 204, 0.4);
-    --border-neon: #00ffcc;
-    --neon-pink: #ff0055;
-    --neon-purple: #9900ff;
-    --neon-green: #00ff66;
-    --neon-yellow: #ffcc00;
+    --panel-border: rgba(94, 200, 232, 0.4);
+    --border-neon: #5ec8e8;
+    --neon-pink: #ff8c3c;
+    --neon-purple: #8fa8c9;
+    --neon-green: #3ddc84;
+    --neon-yellow: #f0c14b;
     --neon-blue: #00ccff;
     --text-main: #f0f4f8;
     --text-dim: #90a0b0;
@@ -47,8 +47,8 @@ body {
     width: 100vw;
     height: 100vh;
     background-image: 
-        linear-gradient(to right, rgba(0, 255, 204, 0.05) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(0, 255, 204, 0.05) 1px, transparent 1px);
+        linear-gradient(to right, rgba(94, 200, 232, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(94, 200, 232, 0.05) 1px, transparent 1px);
     background-size: 40px 40px;
     z-index: -1;
     pointer-events: none;
@@ -88,15 +88,17 @@ body {
     opacity: 1;
 }
 
-/* 세로형 (Portrait Mode - 모바일/키오스크 뷰포트 시뮬레이션) */
+/* 세로형 (Portrait Mode - 모바일/키오스크 뷰포트 시뮬레이션)
+   Wenrexa CC0 콘솔 패널 텍스처(상단 청록 트림 포함)를 9-slice로 입힌다. */
 .screen.portrait {
     width: 100%;
     max-width: 480px;
     height: 100vh;
     max-height: 850px;
-    border: 2px solid var(--border-neon);
-    border-radius: 12px;
-    box-shadow: 0 0 40px rgba(0, 255, 204, 0.2), inset 0 0 20px rgba(0, 255, 204, 0.1);
+    border: 22px solid transparent;
+    border-image: url('assets/ui/panel_portrait.png') 30 fill / 22px stretch;
+    border-radius: 0;
+    box-shadow: 0 0 40px rgba(94, 200, 232, 0.2);
 }
 
 /* 가로형 (Landscape Mode - 횡스크롤 전투 뷰포트) */
@@ -105,9 +107,10 @@ body {
     max-width: 1280px;
     height: 100vh;
     max-height: 720px;
-    border: 2px solid var(--neon-pink);
-    border-radius: 12px;
-    box-shadow: 0 0 50px rgba(255, 0, 85, 0.25), inset 0 0 20px rgba(255, 0, 85, 0.1);
+    border: 22px solid transparent;
+    border-image: url('assets/ui/panel_wide.png') 28 fill / 22px stretch;
+    border-radius: 0;
+    box-shadow: 0 0 50px rgba(94, 200, 232, 0.25);
 }
 
 /* ==========================================================================
@@ -173,7 +176,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    background: radial-gradient(circle, rgba(0, 255, 204, 0.15) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(94, 200, 232, 0.15) 0%, transparent 70%);
     border: 1px dashed var(--panel-border);
     border-radius: 50%;
 }
@@ -198,6 +201,29 @@ body {
     width: 180px;
     height: 240px;
     animation: live2d-breathe 4s ease-in-out infinite alternate;
+}
+
+/* 메뉴 캐릭터 스프라이트 스테이지 (인게임과 동일한 baked idle 재생) */
+.sprite-preview-stage {
+    position: relative;
+    width: 240px;
+    height: 280px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: live2d-breathe 4s ease-in-out infinite alternate;
+    z-index: 2;
+}
+#menu-sprite-canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /* 인게임과 달리 접지가 아니라 원 중앙 정렬 */
+    object-position: 50% 50%;
+    /* 인게임 캐릭터와 동일하게 진행 방향(오른쪽)으로 반전 + 확대 (중앙 기준) */
+    transform: scaleX(-1.15) scaleY(1.15);
+    transform-origin: center center;
+    filter: drop-shadow(0 0 14px rgba(94, 200, 232, 0.45));
 }
 
 @keyframes live2d-breathe {
@@ -278,9 +304,11 @@ body {
     align-items: center;
     gap: 16px;
     padding: 16px;
-    background: rgba(20, 25, 45, 0.9);
-    border: 1px solid var(--panel-border);
-    border-radius: 8px;
+    /* Wenrexa CC0 홀로그램 버튼 텍스처 (normal/hover 상태별 이미지 스왑) */
+    border: 12px solid transparent;
+    border-image: url('assets/ui/btn_normal.png') 14 fill / 12px stretch;
+    border-radius: 0;
+    background: none;
     color: var(--text-main);
     font-family: var(--font-head);
     cursor: pointer;
@@ -305,48 +333,40 @@ body {
 
 .cyber-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    border-image: url('assets/ui/btn_hover.png') 14 fill / 12px stretch;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5), 0 0 18px rgba(94, 200, 232, 0.35);
+}
+.cyber-btn:active {
+    border-image: url('assets/ui/btn_active.png') 14 fill / 12px stretch;
 }
 
-.cyber-btn.primary {
-    border-color: var(--border-neon);
-}
 .cyber-btn.primary:hover {
-    background: rgba(0, 255, 204, 0.15);
-    box-shadow: 0 0 20px rgba(0, 255, 204, 0.4);
+    box-shadow: 0 0 20px rgba(94, 200, 232, 0.4);
 }
 
-.cyber-btn.danger {
-    border-color: var(--neon-pink);
+.cyber-btn.danger .main-text {
+    color: var(--neon-pink);
 }
 .cyber-btn.danger:hover {
-    background: rgba(255, 0, 85, 0.15);
-    box-shadow: 0 0 20px rgba(255, 0, 85, 0.4);
+    box-shadow: 0 0 20px rgba(255, 140, 60, 0.4);
 }
 
 .cyber-btn.success {
-    background: linear-gradient(135deg, #00b377, #00ffaa);
-    color: #000;
-    font-weight: 900;
-    border: none;
     justify-content: center;
     font-size: 16px;
+    font-weight: 900;
+    color: var(--neon-green);
 }
 .cyber-btn.success:hover {
-    background: linear-gradient(135deg, #00ffaa, #00ffcc);
-    box-shadow: 0 0 25px rgba(0, 255, 170, 0.6);
+    box-shadow: 0 0 25px rgba(61, 220, 132, 0.6);
 }
 
 .cyber-btn.special {
-    background: rgba(255, 204, 0, 0.15);
-    border-color: var(--neon-yellow);
     color: var(--neon-yellow);
     padding: 10px 20px;
     font-weight: 800;
 }
 .cyber-btn.special:hover {
-    background: var(--neon-yellow);
-    color: #000;
     box-shadow: 0 0 20px var(--neon-yellow);
 }
 
@@ -399,20 +419,21 @@ body {
 }
 
 .icon-btn {
-    background: transparent;
-    border: 1px solid var(--border-neon);
+    border: 8px solid transparent;
+    border-image: url('assets/ui/btn_normal.png') 14 fill / 8px stretch;
+    background: none;
     color: var(--border-neon);
-    padding: 6px 12px;
-    border-radius: 6px;
+    padding: 0 6px;
     font-family: var(--font-head);
     font-size: 11px;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
+    white-space: nowrap;
 }
 .icon-btn:hover {
-    background: var(--border-neon);
-    color: #000;
+    border-image: url('assets/ui/btn_hover.png') 14 fill / 8px stretch;
+    color: #fff;
 }
 
 .header-title h2 {
@@ -444,10 +465,9 @@ body {
 .lab-preview-section {
     display: flex;
     gap: 16px;
-    background: rgba(0, 0, 0, 0.4);
-    padding: 12px;
-    border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.05);
+    border: 12px solid transparent;
+    border-image: url('assets/ui/panel_wide.png') 28 fill / 12px stretch;
+    padding: 4px;
 }
 
 .live2d-kiosk-display {
@@ -456,9 +476,9 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    background: radial-gradient(circle, rgba(153, 0, 255, 0.2) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(143, 168, 201, 0.2) 0%, transparent 70%);
     border-radius: 8px;
-    border: 1px solid rgba(153, 0, 255, 0.3);
+    border: 1px solid rgba(143, 168, 201, 0.3);
     position: relative;
 }
 
@@ -496,7 +516,7 @@ body {
 .skill-preview-box {
     margin-top: 6px;
     padding: 8px;
-    background: rgba(255, 0, 85, 0.1);
+    background: rgba(255, 140, 60, 0.1);
     border-left: 3px solid var(--neon-pink);
     border-radius: 4px;
 }
@@ -520,20 +540,24 @@ body {
 }
 .tab-btn {
     flex: 1;
-    padding: 8px 4px;
-    background: rgba(0,0,0,0.3);
-    border: none;
+    padding: 0 2px;
+    height: 36px;
+    border: 8px solid transparent;
+    border-image: url('assets/ui/tab_btn.png') 16 fill / 8px stretch;
+    background: none;
     color: var(--text-dim);
     font-family: var(--font-head);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
-    border-radius: 6px 6px 0 0;
+    white-space: nowrap;
+    overflow: hidden;
 }
 .tab-btn.active {
-    background: var(--border-neon);
-    color: #000;
+    border-image: url('assets/ui/btn_hover.png') 14 fill / 8px stretch;
+    color: #fff;
+    text-shadow: 0 0 8px var(--border-neon);
 }
 
 .parts-grid {
@@ -544,10 +568,10 @@ body {
 }
 
 .part-card {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 8px;
-    padding: 12px;
+    border: 10px solid transparent;
+    border-image: url('assets/ui/tab_btn.png') 16 fill / 10px stretch;
+    background: none;
+    padding: 4px;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
@@ -557,13 +581,18 @@ body {
     position: relative;
 }
 .part-card:hover {
-    border-color: var(--border-neon);
-    background: rgba(0, 255, 204, 0.05);
+    box-shadow: 0 0 12px rgba(94, 200, 232, 0.4);
 }
 .part-card.selected {
-    border-color: var(--neon-green);
-    background: rgba(0, 255, 102, 0.1);
-    box-shadow: 0 0 12px rgba(0, 255, 102, 0.3);
+    box-shadow: 0 0 14px rgba(61, 220, 132, 0.55);
+}
+/* 텍스처 위에 장착 상태 표시용 내부 발광 테두리 */
+.part-card.selected::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border: 1px solid var(--neon-green);
+    pointer-events: none;
 }
 
 .part-card-header {
@@ -581,9 +610,10 @@ body {
     font-size: 11px;
     font-weight: 800;
     color: var(--neon-purple);
-    background: rgba(153, 0, 255, 0.2);
+    background: rgba(143, 168, 201, 0.2);
     padding: 2px 6px;
     border-radius: 4px;
+    white-space: nowrap;
 }
 .part-stats-summary {
     font-size: 11px;
@@ -608,6 +638,7 @@ body {
 /* ==========================================================================
    3. BATTLE SCREEN (LANDSCAPE - HORIZONTAL SCROLL)
    =================================================== */
+
 .battle-frame {
     display: flex;
     flex-direction: column;
@@ -619,8 +650,9 @@ body {
 
 .battle-hud {
     height: 60px;
-    background: rgba(10, 12, 20, 0.9);
-    border-bottom: 2px solid var(--neon-pink);
+    border: 10px solid transparent;
+    border-image: url('assets/ui/panel_wide.png') 28 fill / 10px stretch;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.6);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -630,17 +662,20 @@ body {
 
 .hud-left, .hud-right { display: flex; align-items: center; gap: 16px; }
 .hud-btn {
-    background: transparent;
-    border: 1px solid var(--neon-pink);
+    border: 8px solid transparent;
+    border-image: url('assets/ui/btn_normal.png') 14 fill / 8px stretch;
+    background: none;
     color: var(--neon-pink);
-    padding: 6px 12px;
-    border-radius: 4px;
+    padding: 0 8px;
     font-family: var(--font-head);
     font-size: 12px;
     font-weight: 800;
     cursor: pointer;
 }
-.hud-btn:hover { background: var(--neon-pink); color: #000; }
+.hud-btn:hover {
+    border-image: url('assets/ui/btn_hover.png') 14 fill / 8px stretch;
+    color: #fff;
+}
 
 .hud-info { display: flex; flex-direction: column; font-size: 12px; }
 .hud-label { color: var(--text-dim); font-size: 10px; }
@@ -670,17 +705,18 @@ body {
 .bar-track {
     width: 100%;
     height: 14px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 4px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 2px;
     overflow: hidden;
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--panel-border);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.6);
 }
 .bar-fill {
     height: 100%;
     transition: width 0.3s ease;
 }
-.player-base .bar-fill { background: linear-gradient(90deg, #00b377, var(--border-neon)); }
-.enemy-base .bar-fill { background: linear-gradient(90deg, var(--neon-pink), #ff6600); float: right; }
+.player-base .bar-fill { background: linear-gradient(90deg, #1a8a5c, var(--neon-green)); }
+.enemy-base .bar-fill { background: linear-gradient(90deg, var(--neon-pink), #c9432a); float: right; }
 
 .vs-badge {
     font-family: var(--font-head);
@@ -726,8 +762,8 @@ body {
 /* 1. 하늘 레이어 (별, 네온 그리드) */
 .bg-layer.sky {
     background-image: radial-gradient(2px 2px at 40px 60px, #ffffff, rgba(0,0,0,0)),
-                      radial-gradient(2px 2px at 150px 30px, #00ffcc, rgba(0,0,0,0)),
-                      radial-gradient(2px 2px at 300px 120px, #ff0055, rgba(0,0,0,0));
+                      radial-gradient(2px 2px at 150px 30px, #5ec8e8, rgba(0,0,0,0)),
+                      radial-gradient(2px 2px at 300px 120px, #ff8c3c, rgba(0,0,0,0));
     background-size: 400px 300px;
     z-index: 1;
 }
@@ -759,9 +795,9 @@ body {
     height: 60px;
     background: linear-gradient(180deg, #1f1f3a, #080811);
     border-top: 3px solid var(--border-neon);
-    box-shadow: 0 -5px 20px rgba(0, 255, 204, 0.3);
+    box-shadow: 0 -5px 20px rgba(94, 200, 232, 0.3);
     z-index: 3;
-    background-image: linear-gradient(90deg, rgba(0, 255, 204, 0.4) 50%, transparent 50%);
+    background-image: linear-gradient(90deg, rgba(94, 200, 232, 0.4) 50%, transparent 50%);
     background-size: 80px 10px;
     background-position: 0 10px;
 }
@@ -804,9 +840,10 @@ body {
 
 .monster-hp-container {
     position: absolute;
-    top: -15px;
-    left: 10px;
-    width: 120px;
+    /* 캐릭터 모자 끝(엔티티 y≈66px) 바로 위에 오도록 조정 */
+    top: 42px;
+    left: 30px;
+    width: 80px;
     height: 8px;
     background: rgba(0,0,0,0.8);
     border: 1px solid var(--border-neon);
@@ -826,6 +863,23 @@ body {
     height: 100%;
 }
 
+/* 베이킹된 스프라이트 프레임 캔버스 (512x512 원본을 컨테이너 비율에 맞춰 축소) */
+#player-sprite-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /* 발이 박스 하단(지면)에 붙도록 바닥 정렬 (기본 center로 두면 아래쪽에 여백이 남아 공중부양처럼 보임) */
+    object-position: 50% 100%;
+    /* .pixel-art-mode * 의 nearest-neighbor 렌더링을 덮어씀: 원본이 도트가 아닌 일러스트라 부드럽게 축소되어야 함 */
+    image-rendering: auto;
+    /* 발 위치(하단 중앙)를 고정한 채로 좌우 반전 + 1.15배 확대 */
+    transform-origin: bottom center;
+    transform: scaleX(-1.15) scaleY(1.15);
+}
+
 /* 부위별 도트 파츠 속성 ( CSS Box-Shadow 및 격자로 도트 픽셀 형태 연출 ) */
 .pixel-part {
     position: absolute;
@@ -836,9 +890,9 @@ body {
 .part-head {
     width: 48px; height: 40px;
     top: 15px; left: 55px;
-    background: #00ffcc;
+    background: #5ec8e8;
     border: 4px solid #004433;
-    box-shadow: inset -4px -4px 0 #00aa88, 0 0 10px rgba(0, 255, 204, 0.6);
+    box-shadow: inset -4px -4px 0 #00aa88, 0 0 10px rgba(94, 200, 232, 0.6);
     z-index: 4;
 }
 
@@ -848,7 +902,7 @@ body {
     top: 50px; left: 35px;
     background: #332255;
     border: 4px solid #110022;
-    box-shadow: inset -6px -6px 0 #221133, 4px 4px 0 #00ffcc;
+    box-shadow: inset -6px -6px 0 #221133, 4px 4px 0 #5ec8e8;
     z-index: 2;
 }
 
@@ -856,9 +910,9 @@ body {
 .part-arm {
     width: 50px; height: 30px;
     top: 60px; left: 80px;
-    background: #ff0055;
+    background: #ff8c3c;
     border: 4px solid #550011;
-    box-shadow: inset -4px -4px 0 #aa0033, 0 0 12px rgba(255, 0, 85, 0.8);
+    box-shadow: inset -4px -4px 0 #aa0033, 0 0 12px rgba(255, 140, 60, 0.8);
     transform-origin: 10px 15px;
     z-index: 3;
 }
@@ -913,24 +967,24 @@ body {
 }
 .monster-entity.victory .part-head {
     animation: victory-head-cheer 0.5s ease-in-out infinite alternate;
-    box-shadow: 0 0 25px #ffcc00, inset -4px -4px 0 #00aa88;
-    border-color: #ffcc00;
+    box-shadow: 0 0 25px #f0c14b, inset -4px -4px 0 #00aa88;
+    border-color: #f0c14b;
 }
 .monster-entity.victory .part-body {
-    border-color: #ffcc00;
-    box-shadow: 0 0 20px rgba(255, 204, 0, 0.5), inset -6px -6px 0 #221133;
+    border-color: #f0c14b;
+    box-shadow: 0 0 20px rgba(240, 193, 75, 0.5), inset -6px -6px 0 #221133;
 }
 .monster-entity.victory .part-arm {
     /* 정면을 향해 두 팔을 번쩍 뻗고 흔드는 만세 모션 */
     animation: victory-arm-hurrah 0.25s steps(2, end) infinite alternate;
     filter: brightness(1.4);
-    box-shadow: 0 0 20px #ffcc00;
-    border-color: #ffcc00;
+    box-shadow: 0 0 20px #f0c14b;
+    border-color: #f0c14b;
 }
 .monster-entity.victory .part-leg {
     /* 스쿼트 자세로 다리를 벌리고 힘을 줌 */
     transform: scaleX(1.3) scaleY(0.7) translateY(12px);
-    border-color: #ffcc00;
+    border-color: #f0c14b;
 }
 
 @keyframes victory-squat-bounce {
@@ -949,29 +1003,47 @@ body {
 /* 적군 도트 픽셀 엔티티 */
 .enemy-entity {
     position: absolute;
-    bottom: 60px;
-    width: 48px;
-    height: 56px;
-    background: #ff6600;
-    border: 4px solid #551100;
-    box-shadow: inset -4px -4px 0 #aa3300;
+    bottom: 52px;
+    width: 76px;
+    height: 76px;
+    /* 고블린 몬스터 걷기 스프라이트시트(40프레임) CSS steps 애니메이션 */
+    background-image: url('assets/sprites/enemy/goblin_walk_sheet.png');
+    background-repeat: no-repeat;
+    background-size: auto 100%;
+    animation: goblin-walk 1.1s steps(40) infinite;
     transition: left 0.1s linear;
+}
+/* 걷기 프레임 순회: 프레임폭(76px) × 40프레임 = 3040px 를 왼쪽으로 스크롤 */
+@keyframes goblin-walk {
+    from { background-position-x: 0; }
+    to   { background-position-x: -3040px; }
 }
 .enemy-entity::after {
     content: 'HERO';
     position: absolute;
-    top: -18px; left: -5px;
+    /* HP 바(top:-6px) 위에 표기 */
+    top: -20px; left: 50%;
+    transform: translateX(-50%);
     font-size: 9px;
     font-weight: 900;
-    color: #ffcc00;
-    background: #000;
+    color: #f0c14b;
+    background: rgba(0,0,0,0.7);
     padding: 1px 4px;
+    white-space: nowrap;
+}
+/* 고정폭 HP 트랙: 고블린 머리(약 7px) 위로 올려 표기, 몸통 폭(약 40px)에 맞춤 */
+.enemy-entity .enemy-hp-track {
+    position: absolute;
+    top: -6px; left: 50%;
+    transform: translateX(-50%);
+    width: 42px;
+    height: 4px;
+    background: rgba(0,0,0,0.6);
+    overflow: hidden;
 }
 .enemy-entity .enemy-hp {
-    position: absolute;
-    top: -6px; left: 0;
-    height: 4px;
-    background: #ff0055;
+    height: 100%;
+    background: #ff8c3c;
 }
 
 /* 투사체 & 이펙트 */
@@ -991,7 +1063,7 @@ body {
     font-size: 16px;
     font-weight: 900;
     color: #fff;
-    text-shadow: 2px 2px 0 #ff0055;
+    text-shadow: 2px 2px 0 #ff8c3c;
     animation: float-up 0.8s ease-out forwards;
     pointer-events: none;
     z-index: 50;
@@ -1026,8 +1098,9 @@ body {
 /* 하단 컨트롤 바 */
 .battle-controls {
     height: 60px;
-    background: rgba(10, 12, 20, 0.95);
-    border-top: 1px solid var(--panel-border);
+    border: 10px solid transparent;
+    border-image: url('assets/ui/panel_wide.png') 28 fill / 10px stretch;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.6);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1055,7 +1128,7 @@ body {
     height: 150px;
     background: #221133;
     border: 6px solid #440022;
-    box-shadow: inset -8px -8px 0 #110018, 0 0 25px rgba(255, 0, 85, 0.6);
+    box-shadow: inset -8px -8px 0 #110018, 0 0 25px rgba(255, 140, 60, 0.6);
     z-index: 8;
     display: flex;
     justify-content: center;
@@ -1065,22 +1138,22 @@ body {
     width: 120px;
     height: 200px;
     background: #1a0826;
-    border: 6px solid #ff0055;
-    box-shadow: inset -10px -10px 0 #0a0011, 0 0 40px rgba(255, 0, 85, 0.9);
+    border: 6px solid #ff8c3c;
+    box-shadow: inset -10px -10px 0 #0a0011, 0 0 40px rgba(255, 140, 60, 0.9);
 }
 .building-entity::before {
     content: '';
     width: 40px;
     height: 60px;
-    background: #ff0055;
-    box-shadow: 0 0 20px #ffcc00;
+    background: #ff8c3c;
+    box-shadow: 0 0 20px #f0c14b;
     animation: core-pulse 1.5s infinite alternate;
 }
 .building-entity.final-base::before {
     width: 60px;
     height: 90px;
-    background: #ffcc00;
-    box-shadow: 0 0 30px #ff0055;
+    background: #f0c14b;
+    box-shadow: 0 0 30px #ff8c3c;
 }
 @keyframes core-pulse {
     0% { transform: scale(0.9); opacity: 0.7; }
@@ -1093,8 +1166,8 @@ body {
     left: 50%;
     transform: translateX(-50%);
     background: #000;
-    border: 1px solid #ff0055;
-    color: #ffcc00;
+    border: 1px solid #ff8c3c;
+    color: #f0c14b;
     font-family: var(--font-head);
     font-size: 11px;
     font-weight: 900;
@@ -1105,7 +1178,7 @@ body {
     position: absolute;
     top: -8px; left: 0;
     height: 6px;
-    background: #00ffcc;
-    box-shadow: 0 0 8px #00ffcc;
+    background: #5ec8e8;
+    box-shadow: 0 0 8px #5ec8e8;
 }
 

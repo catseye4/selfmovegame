@@ -26,14 +26,11 @@
                 </header>
 
                 <div class="menu-avatar-display">
-                    <!-- 메뉴 전용 Live2D 스타일 일러스트 컨테이너 -->
+                    <!-- 메뉴 캐릭터 프리뷰: 인게임과 동일한 베이킹 스프라이트(idle) 재생 -->
                     <div id="menu-live2d-avatar" class="live2d-avatar-container">
                         <div class="live2d-glow"></div>
-                        <div class="live2d-model-preview">
-                            <div class="live2d-head" id="menu-prev-head"></div>
-                            <div class="live2d-body" id="menu-prev-body"></div>
-                            <div class="live2d-arm" id="menu-prev-arm"></div>
-                            <div class="live2d-leg" id="menu-prev-leg"></div>
+                        <div class="sprite-preview-stage">
+                            <canvas id="menu-sprite-canvas" width="330" height="248"></canvas>
                         </div>
                         <div class="avatar-tag">FACTION: <span id="menu-faction-name">합성괴인 (키메라)</span></div>
                     </div>
@@ -198,12 +195,9 @@
                             <div class="monster-hp-container">
                                 <div id="hp-player-monster" class="monster-hp-fill" style="width: 100%;"></div>
                             </div>
-                            <!-- 파츠별 도트 애니메이션 레이어 -->
+                            <!-- 베이킹된 스프라이트 프레임 시퀀스 재생 캔버스 (Devwin Character Engine → PNG 추출) -->
                             <div class="pixel-parts-container">
-                                <div id="pixel-leg" class="pixel-part part-leg"></div>
-                                <div id="pixel-body" class="pixel-part part-body"></div>
-                                <div id="pixel-head" class="pixel-part part-head"></div>
-                                <div id="pixel-arm" class="pixel-part part-arm"></div>
+                                <canvas id="player-sprite-canvas" width="330" height="248"></canvas>
                             </div>
                         </div>
 

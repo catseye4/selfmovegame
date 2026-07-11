@@ -40,7 +40,7 @@ export class BattleEngine {
         // 전장 엔티티 및 투사체 목록
         this.enemies = [];
         this.projectiles = [];
-        this.lastAttackTime = 0;
+        this.attackHitTriggered = false; // 공격 모션 타격 프레임 중복 발동 방지 플래그
         this.spawnTimer = 0;
         this.spawnInterval = 2.2; // 쫄몹 연속 소환 주기
 
@@ -74,6 +74,7 @@ export class BattleEngine {
         this.finalBaseDestroyed = false;
         this.enemies = [];
         this.projectiles = [];
+        this.attackHitTriggered = false;
         this.spawnTimer = 0;
 
         // 현재 장착 파츠 스탯 불러오기
@@ -177,10 +178,14 @@ export class BattleEngine {
         el.className = 'enemy-entity';
         el.style.left = `${startX}px`;
 
+        // 고정폭 HP 트랙 + 내부 체력 채움 (채움 폭을 %로 제어)
+        const hpTrack = document.createElement('div');
+        hpTrack.className = 'enemy-hp-track';
         const hpBar = document.createElement('div');
         hpBar.className = 'enemy-hp';
         hpBar.style.width = '100%';
-        el.appendChild(hpBar);
+        hpTrack.appendChild(hpBar);
+        el.appendChild(hpTrack);
 
         this.domEnemies.appendChild(el);
 
@@ -441,9 +446,13 @@ export class BattleEngine {
             // [ATTACKING STATE]: 사거리에 닿았으므로 이동 및 배경 스크롤을 멈추고 공격
             monsterController.setState('attacking');
 
-            if (timestamp - this.lastAttackTime > 500) {
-                this.lastAttackTime = timestamp;
+            // 공격 모션이 실제 타격 프레임(20~23번째) 구간에 진입하는 순간에만 1회 데미지 적용
+            const inHitWindow = monsterController.isAttackImpactFrame();
+            if (inHitWindow && !this.attackHitTriggered) {
+                this.attackHitTriggered = true;
                 this.fireAttack(closestEnemy);
+            } else if (!inHitWindow) {
+                this.attackHitTriggered = false;
             }
 
             // 적 또한 몬스터를 공격
@@ -454,11 +463,13 @@ export class BattleEngine {
         } else if (activeBuilding) {
             // [ADVANCING STATE]: 적 거점이 떴으나 아직 사거리에 닿지 않음 -> 배경 스크롤을 멈추고 캐릭터가 직접 사거리까지 앞으로 전진!
             monsterController.setState('walking-forward');
+            this.attackHitTriggered = false;
             this.monsterX += this.playerSpeed * dt;
             monsterController.setMonsterPosition(this.monsterX);
         } else {
             // [NORMAL WALKING STATE]: 거점 건물이 없으므로 캐릭터는 제자리 걷고 배경이 우에서 좌로 흐름!
             monsterController.setState('walking');
+            this.attackHitTriggered = false;
 
             // 이전에 거점 공격을 위해 우측으로 전진해있던 몬스터가 원래 위치(150px)로 서서히 복귀 (카메라가 이동하는 연출)
             if (this.monsterX > 150) {

@@ -2,13 +2,29 @@
    PROJECT: MAD OVERLORD // MONSTER RENDERER & ANIMATION CONTROLLER
    ========================================================================== */
 
+import { SpriteAnimator } from './spriteAnimator.js';
+
 export class MonsterController {
     constructor() {
         // 인게임 도트(Pixel Art) 부위별 DOM 요소
         this.domMonster = document.getElementById('player-monster');
         this.domHpFill = document.getElementById('hp-player-monster');
         this.domViewport = document.getElementById('battle-viewport');
-        
+
+        // 베이킹된 스프라이트 프레임 재생기 (walk/attack)
+        const spriteCanvas = document.getElementById('player-sprite-canvas');
+        this.spriteAnimator = spriteCanvas ? new SpriteAnimator(spriteCanvas) : null;
+        if (this.spriteAnimator) {
+            this.spriteAnimator.play('walk'); // HTML 기본 클래스(walking)와 동일한 초기 상태
+        }
+
+        // 메인 메뉴 캐릭터 프리뷰용 재생기 (idle 대기 모션, 인게임과 동일한 스프라이트)
+        const menuCanvas = document.getElementById('menu-sprite-canvas');
+        this.menuAnimator = menuCanvas ? new SpriteAnimator(menuCanvas) : null;
+        if (this.menuAnimator) {
+            this.menuAnimator.play('idle');
+        }
+
         this.pixelParts = {
             head: document.getElementById('pixel-head'),
             body: document.getElementById('pixel-body'),
@@ -32,7 +48,9 @@ export class MonsterController {
             leg: document.getElementById('lab-prev-leg')
         };
 
-        this.currentState = 'walking'; // 'walking' | 'walking-forward' | 'attacking'
+        // null로 시작해야 전투 시작 시 첫 setState('walking') 호출이 실제로 실행된다.
+        // (초기값을 'walking'으로 두면 동일값 가드에 걸려 domViewport에 walking 클래스가 안 붙어 배경 스크롤이 멈춰있었음)
+        this.currentState = null; // 'walking' | 'walking-forward' | 'attacking' | 'victory'
     }
 
     // 스타일 맵 적용 Helper
@@ -83,6 +101,7 @@ export class MonsterController {
 
         if (newState === 'walking') {
             // [일반 진격]: 배경 스크롤 작동 + 캐릭터 제자리 걷기 모션
+            if (this.spriteAnimator) this.spriteAnimator.play('walk');
             this.domMonster.classList.remove('attacking', 'victory');
             this.domMonster.classList.add('walking');
             if (this.domViewport) {
@@ -97,7 +116,9 @@ export class MonsterController {
                 actionLog.textContent = '사정거리 내 적을 탐색하며 배경을 가로질러 전진합니다.';
             }
         } else if (newState === 'walking-forward') {
-            // [거점 향해 전진]: 배경 스크롤 정지 + 캐릭터 앞으로 이동 걷기 모션
+            // [거점 향해 전진]: 배경 스크롤이 멈춰 화면 자체는 정지 상태이므로 idle 연출
+            // (캐릭터 좌표만 CSS transition으로 서서히 이동)
+            if (this.spriteAnimator) this.spriteAnimator.play('idle');
             this.domMonster.classList.remove('attacking', 'victory');
             this.domMonster.classList.add('walking');
             if (this.domViewport) {
@@ -113,6 +134,7 @@ export class MonsterController {
             }
         } else if (newState === 'attacking') {
             // [교전]: 배경 스크롤 정지 + 캐릭터 이동 정지 및 공격 모션
+            if (this.spriteAnimator) this.spriteAnimator.play('attack');
             this.domMonster.classList.remove('walking', 'victory');
             this.domMonster.classList.add('attacking');
             if (this.domViewport) {
@@ -127,7 +149,9 @@ export class MonsterController {
                 actionLog.textContent = '전진 및 배경 이동을 멈추고 화력을 집중하여 적을 공격합니다!';
             }
         } else if (newState === 'victory') {
-            // [승리 포즈]: 정면 바라보고 만세 스쿼트 포효!
+            // [승리 포즈]: 전용 승리 모션 프레임은 없어 idle(대기) 루프를 재생하면서
+            // CSS 트랜스폼(victory-squat-bounce 등)으로 만세 모션을 얹어 연출한다.
+            if (this.spriteAnimator) this.spriteAnimator.play('idle');
             this.domMonster.classList.remove('walking', 'attacking');
             this.domMonster.classList.add('victory');
             if (this.domViewport) {
@@ -142,6 +166,14 @@ export class MonsterController {
                 actionLog.textContent = '최종 핵심 기지 분쇄! 오버로드가 정면을 바라보며 만세 스쿼트 포효를 터뜨립니다!';
             }
         }
+    }
+
+    // 공격 애니메이션이 실제 타격 프레임 구간(20~23번째 프레임)에 들어와 있는지 확인
+    isAttackImpactFrame() {
+        if (!this.spriteAnimator) return false;
+        return this.spriteAnimator.currentName === 'attack'
+            && this.spriteAnimator.frameIndex >= 20
+            && this.spriteAnimator.frameIndex <= 23;
     }
 
     // 체력바 업데이트
