@@ -170,8 +170,8 @@ export class BattleEngine {
     // [세뇌 스마트 구속구]: 적 보병 소멸 시 아군 미니언 징집 소환
     spawnAllyMinion(startX) {
         if (!this.domEnemies) return;
-        const maxHp = 450;
-        const dps = 60;
+        const maxHp = 350;
+        const dps = 17.5; // 적 보병 데미지의 절반
         const allyId = `ally_${Date.now()}_${Math.random()}`;
 
         const el = document.createElement('div');
@@ -538,13 +538,13 @@ export class BattleEngine {
 
             this.enemies.forEach(enemy => {
                 const dist = enemy.x - ally.x;
-                if (dist >= -20 && dist < minAllyDist) {
+                if (dist >= -35 && dist < minAllyDist) {
                     minAllyDist = dist;
                     closestEnemyToAlly = enemy;
                 }
             });
 
-            if (closestEnemyToAlly && minAllyDist <= 50) {
+            if (closestEnemyToAlly && minAllyDist <= 65) {
                 this.dealDamageToEnemy(closestEnemyToAlly, ally.dps * dt, false);
             } else {
                 ally.x += ally.speed * dt;
@@ -555,7 +555,7 @@ export class BattleEngine {
         // 4. 적군 보병 이동 로직 (전방의 아군 미니언 감지 시 우선 공격)
         this.enemies.forEach(enemy => {
             if (!enemy.isBuilding) {
-                const targetAlly = this.allies.find(a => enemy.x - a.x <= 45 && enemy.x - a.x >= -25);
+                const targetAlly = this.allies.find(a => enemy.x - a.x <= 65 && enemy.x - a.x >= -35);
                 if (targetAlly) {
                     targetAlly.hp -= enemy.dps * dt;
                     if (targetAlly.hpBar) {
