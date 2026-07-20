@@ -1,6 +1,7 @@
 /* ==========================================================================
-   PROJECT: MAD OVERLORD // SPRITE FRAME ANIMATOR (v2)
+   PROJECT: MAD OVERLORD // SPRITE FRAME & PAPER-DOLL ANIMATOR (v2)
    Calculates frame/timing logic only, delegating draw commands to Renderer.
+   Supports Paper-Doll pivot skeletal rendering and baked sequence.
    ========================================================================== */
 
 import { renderer } from './renderer.js';
@@ -27,6 +28,7 @@ export class SpriteAnimator {
         this.elapsedMs = 0;
         this.lastTime = 0;
         this.running = false;
+        this.mode = 'paperdoll'; // 'paperdoll' (순수 관절형) | 'sequence' (기본 베이킹)
         this._boundTick = this._tick.bind(this);
 
         for (const name in ANIMATIONS) {
@@ -70,19 +72,26 @@ export class SpriteAnimator {
         const dt = now - this.lastTime;
         this.lastTime = now;
 
-        const def = ANIMATIONS[this.currentName];
-        const frames = this.cache[this.currentName];
-        if (def && frames) {
+        if (this.mode === 'paperdoll') {
             this.elapsedMs += dt;
-            const frameDuration = 1000 / def.fps;
-            while (this.elapsedMs >= frameDuration) {
-                this.elapsedMs -= frameDuration;
-                this.frameIndex++;
-                if (this.frameIndex >= def.frameCount) {
-                    this.frameIndex = def.loop ? 0 : def.frameCount - 1;
+            const timeSec = this.elapsedMs / 1000;
+            renderer.clear(this.canvas);
+            renderer.drawPaperDoll(this.canvas, 165, 124, this.currentName, timeSec);
+        } else {
+            const def = ANIMATIONS[this.currentName];
+            const frames = this.cache[this.currentName];
+            if (def && frames) {
+                this.elapsedMs += dt;
+                const frameDuration = 1000 / def.fps;
+                while (this.elapsedMs >= frameDuration) {
+                    this.elapsedMs -= frameDuration;
+                    this.frameIndex++;
+                    if (this.frameIndex >= def.frameCount) {
+                        this.frameIndex = def.loop ? 0 : def.frameCount - 1;
+                    }
                 }
+                this._draw(frames[this.frameIndex]);
             }
-            this._draw(frames[this.frameIndex]);
         }
 
         requestAnimationFrame(this._boundTick);
@@ -90,7 +99,6 @@ export class SpriteAnimator {
 
     _draw(img) {
         if (!img) return;
-        // 렌더링 작업을 Renderer 인터페이스로 완전 위임하여 캡슐화
         renderer.clear(this.canvas);
         renderer.drawSprite(this.canvas, img, SOURCE_CROP);
     }

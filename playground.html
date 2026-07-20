@@ -158,6 +158,24 @@
         <div class="controls-section">
             <div style="font-family: 'Orbitron'; color: #ff0055; font-size: 1.1rem; font-weight: 800; border-bottom: 1px solid #333; padding-bottom: 10px;">PARTS MODIFICATION KIOSK</div>
 
+            <!-- 하이브리드 엔진 모드 조절 -->
+            <div class="control-group">
+                <label>엔진 렌더링 모드 (Engine Render Mode)</label>
+                <select id="select-engine-mode">
+                    <option value="paperdoll">(v2) 레이어 관절 페이퍼돌 (Paper Doll)</option>
+                    <option value="sequence">(v1) 베이킹 프레임 시퀀스 (Baked Sequence)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>다리 애니메이션 물리 방식 (Leg Anim Type)</label>
+                <select id="select-leg-anim-type">
+                    <option value="pivot">관절 스윙 회전 (Pivot swing)</option>
+                    <option value="sprite">스프라이트 무한궤도 흐름 (Sprite sheet/treads)</option>
+                </select>
+            </div>
+
+            <!-- 기존 슬롯 파츠 스왑 -->
             <div class="control-group">
                 <label>머리 파츠 (Head)</label>
                 <select id="select-head"></select>

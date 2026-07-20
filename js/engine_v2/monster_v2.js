@@ -86,6 +86,18 @@ export class MonsterController {
             if (this.labLive2dParts[slot] && part.live2dStyle) {
                 renderer.applyStyle(this.labLive2dParts[slot], part.live2dStyle);
             }
+
+            // 4. 격리 렌더러의 페이퍼돌 레이어 실시간 스왑 연동 (changePart)
+            if (slot === 'leg') {
+                const isSprite = part.id === 'leg_mech_wheel';
+                if (isSprite) {
+                    renderer.changePart('leg', 'assets/sprites/parts/leg_track_mock.png', 'sprite', 4, 12);
+                } else {
+                    renderer.changePart('leg', 'assets/sprites/parts/leg_mock.png', 'pivot');
+                }
+            } else {
+                renderer.changePart(slot, `assets/sprites/parts/${slot}_mock.png`, 'pivot');
+            }
         }
     }
 

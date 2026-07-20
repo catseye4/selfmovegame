@@ -6,8 +6,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('playground-canvas');
     if (!canvas) return;
 
-    // SpriteAnimator 및 Renderer 초기화
+    // SpriteAnimator 및 Renderer 초기화 (기본 모드: paperdoll)
     const animator = new SpriteAnimator(canvas);
+    animator.mode = 'paperdoll';
     animator.play('idle');
 
     // UI 요소
@@ -18,6 +19,8 @@ window.addEventListener('DOMContentLoaded', () => {
         leg: document.getElementById('select-leg')
     };
 
+    const selectEngineMode = document.getElementById('select-engine-mode');
+    const selectLegAnimType = document.getElementById('select-leg-anim-type');
     const statsFeedback = document.getElementById('stats-feedback');
 
     // 각 파츠 드롭다운 채우기
@@ -56,6 +59,18 @@ window.addEventListener('DOMContentLoaded', () => {
                     canvas.style.borderColor = part.pixelStyle.borderColor || '#00ffcc';
                     canvas.style.boxShadow = part.pixelStyle.boxShadow || 'none';
                 }
+
+                // 렌더러의 해당 슬롯 이미지 교체 (Renderer.changePart 호출)
+                if (slot === 'leg') {
+                    const isSprite = selectLegAnimType.value === 'sprite';
+                    if (isSprite) {
+                        renderer.changePart('leg', 'assets/sprites/parts/leg_track_mock.png', 'sprite', 4, 12);
+                    } else {
+                        renderer.changePart('leg', 'assets/sprites/parts/leg_mock.png', 'pivot');
+                    }
+                } else {
+                    renderer.changePart(slot, `assets/sprites/parts/${slot}_mock.png`, 'pivot');
+                }
             }
         }
 
@@ -73,6 +88,21 @@ window.addEventListener('DOMContentLoaded', () => {
     // 드롭다운 변경 리스너
     for (const slot in selectors) {
         selectors[slot].addEventListener('change', updateSelectedParts);
+    }
+
+    // 엔진 모드 스위치 연동
+    if (selectEngineMode) {
+        selectEngineMode.addEventListener('change', (e) => {
+            animator.mode = e.target.value;
+            console.log(`Renderer mode changed to: ${animator.mode}`);
+        });
+    }
+
+    // 다리 궤도 타입 스위치 연동
+    if (selectLegAnimType) {
+        selectLegAnimType.addEventListener('change', () => {
+            updateSelectedParts();
+        });
     }
 
     // 애니메이션 트리거 버튼 연동
