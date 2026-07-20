@@ -15,9 +15,42 @@
         <div class="cyber-grid-bg"></div>
 
         <!-- ===================================================
-             1. 세로형 (PORTRAIT) 메인 메뉴 화면
+             0. 게임 모드 선택 화면 (Mode Selector)
              =================================================== -->
-        <section id="screen-menu" class="screen portrait active">
+        <section id="screen-mode-selector" class="screen portrait active" style="display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 30px; z-index: 9999; background: #05050c; opacity: 1;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h1 style="font-family: 'Orbitron', sans-serif; font-size: 2.2rem; color: #ff0055; text-shadow: 0 0 15px #ff0055; margin: 0;">MAD OVERLORD</h1>
+                <p style="color: #00ffcc; font-size: 0.9rem; margin-top: 5px; font-family: 'Chakra Petch';">엔진 버전 선택 터미널 (Engine Version Selector)</p>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px; width: 85%; max-width: 360px;">
+                <button id="btn-select-vanilla" class="cyber-btn primary" style="width: 100%; height: 60px;">
+                    <div class="btn-text">
+                        <span class="main-text">기존 오리지널 모드</span>
+                        <span class="sub-text">ORIGINAL VANILLA VERSION</span>
+                    </div>
+                </button>
+                
+                <button id="btn-select-v2" class="cyber-btn danger" style="width: 100%; height: 60px;">
+                    <div class="btn-text">
+                        <span class="main-text">디커플드 엔진 모드 (v2)</span>
+                        <span class="sub-text">DECOUPLED ENGINE V2</span>
+                    </div>
+                </button>
+
+                <a href="playground.html" target="_blank" class="cyber-btn special" style="width: 100%; height: 50px; display: flex; align-items: center; justify-content: center; text-decoration: none; box-sizing: border-box;">
+                    <div class="btn-text" style="text-align: center;">
+                        <span class="main-text" style="font-size: 14px;">🛠️ 파츠 플레이그라운드 열기</span>
+                        <span class="sub-text" style="font-size: 10px;">OPEN PARTS PLAYGROUND</span>
+                    </div>
+                </a>
+            </div>
+        </section>
+
+        <!-- ===================================================
+             1. 세로형 (PORTRAIT) 오리지널 메인 메뉴 화면
+             =================================================== -->
+        <section id="screen-menu" class="screen portrait">
             <div class="menu-frame">
                 <header class="menu-header">
                     <div class="badge">REVERSE OFFENSE RPG</div>
@@ -26,7 +59,6 @@
                 </header>
 
                 <div class="menu-avatar-display">
-                    <!-- 메뉴 캐릭터 프리뷰: 인게임과 동일한 베이킹 스프라이트(idle) 재생 -->
                     <div id="menu-live2d-avatar" class="live2d-avatar-container">
                         <div class="live2d-glow"></div>
                         <div class="sprite-preview-stage">
@@ -62,7 +94,7 @@
         </section>
 
         <!-- ===================================================
-             2. 세로형 (PORTRAIT) 연구소 키오스크 화면 (MVVM)
+             2. 세로형 (PORTRAIT) 오리지널 연구소 키오스크 화면 (MVVM)
              =================================================== -->
         <section id="screen-lab" class="screen portrait">
             <div class="lab-frame">
@@ -79,7 +111,6 @@
                 </header>
 
                 <div class="lab-body">
-                    <!-- 상단: Live2D 프리뷰 및 MVVM 스탯 피드백 -->
                     <div class="lab-preview-section">
                         <div class="live2d-kiosk-display">
                             <div id="lab-live2d-model" class="live2d-model-preview">
@@ -90,7 +121,6 @@
                             </div>
                         </div>
 
-                        <!-- MVVM 실시간 스탯 변화 프리뷰 -->
                         <div class="mvvm-stats-panel">
                             <h3>REAL-TIME STAT PREVIEW</h3>
                             <div class="stat-row">
@@ -116,7 +146,6 @@
                         </div>
                     </div>
 
-                    <!-- 하단: 부위별 파츠 슬롯 및 탭 -->
                     <div class="lab-parts-section">
                         <div class="parts-tabs">
                             <button class="tab-btn active" data-slot="head">머리 (HEAD)</button>
@@ -125,10 +154,7 @@
                             <button class="tab-btn" data-slot="leg">다리/기동 (LEG)</button>
                         </div>
 
-                        <!-- 파츠 그리드 목록 생성 영역 -->
-                        <div id="parts-grid" class="parts-grid">
-                            <!-- JS로 동적 생성 -->
-                        </div>
+                        <div id="parts-grid" class="parts-grid"></div>
                     </div>
                 </div>
 
@@ -144,11 +170,10 @@
         </section>
 
         <!-- ===================================================
-             3. 가로형 (LANDSCAPE) 횡스크롤 전투 전장 화면
+             3. 가로형 (LANDSCAPE) 오리지널 횡스크롤 전투 전장 화면
              =================================================== -->
         <section id="screen-battle" class="screen landscape">
             <div class="battle-frame">
-                <!-- 상단 HUD -->
                 <header class="battle-hud">
                     <div class="hud-left">
                         <button id="btn-battle-leave" class="hud-btn">&lt; RETREAT</button>
@@ -181,43 +206,31 @@
                     </div>
                 </header>
 
-                <!-- 횡스크롤 전장 뷰포트 (도트 픽셀 아트 전용) -->
                 <div id="battle-viewport" class="battle-viewport pixel-art-mode">
-                    <!-- 패럴랙스 배경 레이어 (우에서 좌로 흐름) -->
                     <div id="bg-sky" class="bg-layer sky"></div>
                     <div id="bg-city" class="bg-layer city"></div>
                     <div id="bg-ground" class="bg-layer ground"></div>
 
-                    <!-- 전장 엔티티 레이어 -->
                     <div id="entity-layer" class="entity-layer">
-                        <!-- 아군 오버로드 괴수 (부위별 픽셀 파츠 조합) -->
                         <div id="player-monster" class="monster-entity walking">
                             <div class="monster-hp-container">
                                 <div id="hp-player-monster" class="monster-hp-fill" style="width: 100%;"></div>
                             </div>
-                            <!-- 베이킹된 스프라이트 프레임 시퀀스 재생 캔버스 (Devwin Character Engine → PNG 추출) -->
                             <div class="pixel-parts-container">
                                 <canvas id="player-sprite-canvas" width="330" height="248"></canvas>
                             </div>
                         </div>
 
-                        <!-- 적군 스폰 컨테이너 -->
                         <div id="enemies-container" class="enemies-container"></div>
-
-                        <!-- 투사체 및 스킬 이펙트 컨테이너 -->
                         <div id="projectiles-container" class="projectiles-container"></div>
-
-                        <!-- 데미지 텍스트 팝업 컨테이너 -->
                         <div id="damage-container" class="damage-container"></div>
                     </div>
 
-                    <!-- 전투 알림 메시지 오버레이 -->
                     <div id="battle-announcement" class="battle-announcement hidden">
                         <h2 id="announcement-text">WAVE 1 START!</h2>
                     </div>
                 </div>
 
-                <!-- 하단 컨트롤 바 -->
                 <footer class="battle-controls">
                     <div class="control-status">
                         <span class="status-indicator">MONSTER STATE: <strong id="monster-state-text" class="text-neon-green">진격 중 (WALKING)</strong></span>
@@ -231,9 +244,231 @@
                 </footer>
             </div>
         </section>
+
+        <!-- ===================================================
+             4. 세로형 (PORTRAIT) v2 메인 메뉴 화면 (격리용)
+             =================================================== -->
+        <section id="screen-menu-v2" class="screen-v2 portrait">
+            <div class="menu-frame">
+                <header class="menu-header">
+                    <div class="badge">REVERSE OFFENSE RPG (v2)</div>
+                    <h1 class="glitch-title" data-text="MAD OVERLORD">MAD OVERLORD</h1>
+                    <p class="subtitle">프로젝트: 매드 오버로드 // 디커플드 엔진 v2</p>
+                </header>
+
+                <div class="menu-avatar-display">
+                    <div id="menu-live2d-avatar-v2" class="live2d-avatar-container">
+                        <div class="live2d-glow"></div>
+                        <div class="sprite-preview-stage">
+                            <canvas id="menu-sprite-canvas-v2" width="330" height="248"></canvas>
+                        </div>
+                        <div class="avatar-tag">FACTION: <span id="menu-faction-name-v2">합성괴인 (키메라)</span></div>
+                    </div>
+                </div>
+
+                <div class="menu-actions">
+                    <button id="btn-to-lab-v2" class="cyber-btn primary">
+                        <span class="btn-icon">⚙️</span>
+                        <div class="btn-text">
+                            <span class="main-text">연구소 키오스크</span>
+                            <span class="sub-text">PARTS LAB // MVVM KIOSK</span>
+                        </div>
+                    </button>
+
+                    <button id="btn-to-battle-v2" class="cyber-btn danger">
+                        <span class="btn-icon">🔥</span>
+                        <div class="btn-text">
+                            <span class="main-text">전투 출격</span>
+                            <span class="sub-text">DEPLOY TO BATTLE // 횡스크롤 전장</span>
+                        </div>
+                    </button>
+                </div>
+
+                <footer class="menu-footer">
+                    <span>SYSTEM STATUS: <strong class="text-neon-green">ONLINE (v2)</strong></span>
+                    <span>DARK MATTER: <strong id="menu-dm-count-v2" class="text-neon-purple">1,500</strong> DM</span>
+                </footer>
+            </div>
+        </section>
+
+        <!-- ===================================================
+             5. 세로형 (PORTRAIT) v2 연구소 키오스크 화면 (격리용)
+             =================================================== -->
+        <section id="screen-lab-v2" class="screen-v2 portrait">
+            <div class="lab-frame-v2 lab-frame">
+                <header class="lab-header">
+                    <button id="btn-lab-back-v2" class="icon-btn">&lt; MAIN MENU</button>
+                    <div class="header-title">
+                        <h2>RESEARCH LAB KIOSK (v2)</h2>
+                        <span>디커플드 렌더러 연동 개조 시스템</span>
+                    </div>
+                    <div class="lab-currency">
+                        <span class="dm-label">DARK MATTER</span>
+                        <span id="lab-dm-count-v2" class="dm-value">1,500</span>
+                    </div>
+                </header>
+
+                <div class="lab-body">
+                    <div class="lab-preview-section">
+                        <div class="live2d-kiosk-display">
+                            <div id="lab-live2d-model-v2" class="live2d-model-preview">
+                                <div class="live2d-head" id="lab-prev-head-v2"></div>
+                                <div class="live2d-body" id="lab-prev-body-v2"></div>
+                                <div class="live2d-arm" id="lab-prev-arm-v2"></div>
+                                <div class="live2d-leg" id="lab-prev-leg-v2"></div>
+                            </div>
+                        </div>
+
+                        <div class="mvvm-stats-panel">
+                            <h3>REAL-TIME STAT PREVIEW</h3>
+                            <div class="stat-row">
+                                <span>최대 체력 (HP)</span>
+                                <strong id="stat-hp-val-v2">3,000</strong>
+                            </div>
+                            <div class="stat-row">
+                                <span>초당 데미지 (DPS)</span>
+                                <strong id="stat-dps-val-v2">450</strong>
+                            </div>
+                            <div class="stat-row">
+                                <span>공격 사거리 (RANGE)</span>
+                                <strong id="stat-range-val-v2">250px</strong>
+                            </div>
+                            <div class="stat-row">
+                                <span>진격 속도 (SPEED)</span>
+                                <strong id="stat-speed-val-v2">120</strong>
+                            </div>
+                            <div class="skill-preview-box">
+                                <span class="skill-label">무장 스킬 기믹:</span>
+                                <p id="stat-skill-desc-v2" class="skill-desc">레이저 포대: 단일 보스급 대상 방어력 관통 지속 딜링</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lab-parts-section">
+                        <div class="parts-tabs">
+                            <button class="tab-btn-v2 tab-btn active" data-slot="head">머리 (HEAD)</button>
+                            <button class="tab-btn-v2 tab-btn" data-slot="body">가슴/몸통 (BODY)</button>
+                            <button class="tab-btn-v2 tab-btn" data-slot="arm">팔/어깨 (ARM)</button>
+                            <button class="tab-btn-v2 tab-btn" data-slot="leg">다리/기동 (LEG)</button>
+                        </div>
+
+                        <div id="parts-grid-v2" class="parts-grid"></div>
+                    </div>
+                </div>
+
+                <footer class="lab-footer">
+                    <div class="cart-summary">
+                        <span>선택된 개조 비용: <strong id="cart-cost-v2">0</strong> DM</span>
+                    </div>
+                    <button id="btn-equip-confirm-v2" class="cyber-btn success">
+                        <span>파츠 확정 및 즉시 장착</span>
+                    </button>
+                </footer>
+            </div>
+        </section>
+
+        <!-- ===================================================
+             6. 가로형 (LANDSCAPE) v2 횡스크롤 전투 전장 화면 (격리용)
+             =================================================== -->
+        <section id="screen-battle-v2" class="screen-v2 landscape">
+            <div class="battle-frame">
+                <header class="battle-hud">
+                    <div class="hud-left">
+                        <button id="btn-battle-leave-v2" class="hud-btn">&lt; RETREAT</button>
+                        <div class="hud-info">
+                            <span class="hud-label">FRONT: SECTOR 7 (v2)</span>
+                            <span class="hud-wave">DIST: <strong id="battle-distance-v2">0m</strong> / 1000m</span>
+                        </div>
+                        <div class="hud-stars" style="margin-left: 12px; font-size: 18px; color: #ffcc00; text-shadow: 0 0 10px #ffcc00;">
+                            <span id="battle-stars-v2">☆☆</span>
+                        </div>
+                    </div>
+
+                    <div class="hud-center">
+                        <div class="base-hp-bar player-base">
+                            <div class="bar-label">오버로드 거점 HP</div>
+                            <div class="bar-track"><div id="hp-player-base-v2" class="bar-fill" style="width: 100%;"></div></div>
+                        </div>
+                        <div class="vs-badge">VS</div>
+                        <div class="base-hp-bar enemy-base">
+                            <div class="bar-label" id="enemy-target-label-v2">적 수비대 거점 HP</div>
+                            <div class="bar-track"><div id="hp-enemy-base-v2" class="bar-fill" style="width: 100%;"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="hud-right">
+                        <div class="hud-dm">
+                            <span>DARK MATTER:</span>
+                            <strong id="battle-dm-count-v2" class="text-neon-purple">1,500</strong>
+                        </div>
+                    </div>
+                </header>
+
+                <div id="battle-viewport-v2" class="battle-viewport pixel-art-mode">
+                    <div id="bg-sky-v2" class="bg-layer sky"></div>
+                    <div id="bg-city-v2" class="bg-layer city"></div>
+                    <div id="bg-ground-v2" class="bg-layer ground"></div>
+
+                    <div id="entity-layer-v2" class="entity-layer">
+                        <div id="player-monster-v2" class="monster-entity walking">
+                            <div class="monster-hp-container">
+                                <div id="hp-player-monster-v2" class="monster-hp-fill" style="width: 100%;"></div>
+                            </div>
+                            <div class="pixel-parts-container">
+                                <canvas id="player-sprite-canvas-v2" width="330" height="248"></canvas>
+                            </div>
+                        </div>
+
+                        <div id="enemies-container-v2" class="enemies-container"></div>
+                        <div id="projectiles-container-v2" class="projectiles-container"></div>
+                        <div id="damage-container-v2" class="damage-container"></div>
+                    </div>
+
+                    <div id="battle-announcement-v2" class="battle-announcement hidden">
+                        <h2 id="announcement-text-v2">WAVE 1 START!</h2>
+                    </div>
+                </div>
+
+                <footer class="battle-controls">
+                    <div class="control-status">
+                        <span class="status-indicator">MONSTER STATE: <strong id="monster-state-text-v2" class="text-neon-green">진격 중 (WALKING)</strong></span>
+                        <span class="sub-status" id="battle-action-log-v2">사정거리 내 적을 탐색하며 전진합니다.</span>
+                    </div>
+                    <div class="control-skills">
+                        <button id="btn-trigger-special-v2" class="cyber-btn special">
+                            <span>⚡ 특수 스킬 강제 발동</span>
+                        </button>
+                    </div>
+                </footer>
+            </div>
+        </section>
     </div>
 
-    <!-- 스크립트 모듈 로드 -->
-    <script type="module" src="js/main.js"></script>
+    <!-- 스크립트 동적 로더 -->
+    <script type="module">
+        const btnVanilla = document.getElementById('btn-select-vanilla');
+        const btnV2 = document.getElementById('btn-select-v2');
+        const selector = document.getElementById('screen-mode-selector');
+
+        btnVanilla.addEventListener('click', () => {
+            window.madOverlordGameMode = 'vanilla';
+            selector.remove();
+            
+            // 오리지널 버젼 모듈 로드
+            import('./js/main.js').then(() => {
+                window.dispatchEvent(new Event('DOMContentLoaded'));
+            });
+        });
+
+        btnV2.addEventListener('click', () => {
+            window.madOverlordGameMode = 'v2';
+            selector.remove();
+            
+            // v2 버젼 모듈 로드
+            import('./js/main_v2.js').then(module => {
+                module.initGameRouterV2();
+            });
+        });
+    </script>
 </body>
 </html>

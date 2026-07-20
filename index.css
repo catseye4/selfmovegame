@@ -1208,3 +1208,40 @@ body {
     box-shadow: 0 0 8px #5ec8e8;
 }
 
+/* ==========================================================================
+   v2 DECOUPLED ENGINE SPECIFIC STYLES
+   ========================================================================== */
+.screen-v2 {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.screen-v2.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.screen-v2.portrait {
+    width: 480px;
+    height: 850px;
+    box-shadow: 0 0 40px rgba(0,0,0,0.8);
+    border: 4px solid var(--neon-cyan);
+    border-radius: 20px;
+    background: #000;
+    overflow: hidden;
+}
+.screen-v2.landscape {
+    width: 1280px;
+    height: 720px;
+    box-shadow: 0 0 50px rgba(0,0,0,0.9);
+    border: 4px solid var(--neon-pink);
+    border-radius: 16px;
+    background: #05050c;
+    overflow: hidden;
+}
+
