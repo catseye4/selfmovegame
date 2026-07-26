@@ -1,7 +1,7 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // PLAYGROUND UI CONTROLLER (v2)
    Includes [파츠제거] support, Wireframe fallback mode, Real-time Debug Log Console,
-   Faction-based Monster Part Filtering & 3-Step Laser Cannon Sequence.
+   Single-slot event logging, Red Error highlighting, and 3-step laser attack sequence.
    ========================================================================== */
 
 import { PARTS_DB } from '../data/parts.js';
@@ -36,7 +36,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 렌더러 이미지 자산 로드 실패 (HTTP 404 / 403 / 파일 미존재 등) 실시간 에러 로깅 바인딩
+    // 렌더러 이미지 자산 로드 실패 (HTTP 404 / 403 / 파일 미존재 등) 실시간 에러 로깅 바인딩 (붉은색 강조)
     renderer.onAssetError = (layerKey, src) => {
         addLog(`[자산 로드 오류 ❌] Layer: <strong>${layerKey.toUpperCase()}</strong> -> 이미지 파일이 존재하지 않거나 로드에 실패했습니다! (Path: ${src})`, "error");
     };
@@ -105,7 +105,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 currentMonsterPreset = selectedVal;
                 addLog(`[몬스터 선택] Preset Loaded -> <strong>거대로봇 (메카닉)</strong>`, "success");
                 populatePartSelectors('거대로봇 (메카닉)');
-                updateSelectedParts();
+                updateSelectedParts(null);
             }
         });
     }
@@ -113,15 +113,18 @@ window.addEventListener('DOMContentLoaded', () => {
     // 초기 파츠 드롭다운 채우기 (거대로봇 계통 파츠만 채움)
     populatePartSelectors('거대로봇 (메카닉)');
 
-    // 선택된 파츠들 스탯 계산 및 렌더링 스타일 연동 함수
-    function updateSelectedParts() {
+    // 선택된 파츠들 스탯 계산 및 렌더링 스타일 연동 함수 (changedSlot이 지정되면 오직 해당 변경 파츠의 로그만 단독 출력!)
+    function updateSelectedParts(changedSlot = null) {
         for (const slot in selectors) {
             const partId = selectors[slot].value;
             const part = PARTS_DB[slot].find(p => p.id === partId);
+            const shouldLog = (changedSlot === null || changedSlot === slot);
 
             if (part) {
                 if (partId === 'none') {
-                    addLog(`[파츠 해제] Slot: <strong>${slot.toUpperCase()}</strong> -> 이미지 해제 (뼈대 와이어프레임 렌더링)`, "warn");
+                    if (shouldLog) {
+                        addLog(`[파츠 해제] Slot: <strong>${slot.toUpperCase()}</strong> -> 이미지 해제 (뼈대 와이어프레임 렌더링)`, "warn");
+                    }
                     if (slot === 'head') {
                         robotParts.setHead({ id: 'none', name: '[파츠제거]', src: '', animType: 'pivot' });
                         renderer.changePart('head', '', 'pivot');
@@ -140,7 +143,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     const rSrc = part.rightSrc || partSrc;
                     const lSrc = part.leftSrc || partSrc;
 
-                    // 연결된 이미지 파일 경로(src) 부재 체크
+                    // 연결된 이미지 파일 경로(src) 부재 체크 (오류 시 붉은색 강조)
                     if (!partSrc && !rSrc && !lSrc) {
                         addLog(`[파츠 바인딩 오류 ⚠️] Slot: <strong>${slot.toUpperCase()}</strong> | ID: <strong>${part.id}</strong> (${part.name}) -> 연결된 이미지 파일 경로(src)가 없습니다!`, "error");
                     }
@@ -148,19 +151,25 @@ window.addEventListener('DOMContentLoaded', () => {
                     const animType = part.animType || 'pivot';
 
                     if (slot === 'head') {
-                        addLog(`[파츠 선택] Head -> <strong>${part.name}</strong> (${part.id}) | Src: ${partSrc}`, "info");
+                        if (shouldLog) {
+                            addLog(`[파츠 선택] Head -> <strong>${part.name}</strong> (${part.id}) | Src: ${partSrc}`, "info");
+                        }
                         canvas.style.borderColor = part.pixelStyle?.borderColor || '#00ffcc';
                         canvas.style.boxShadow = part.pixelStyle?.boxShadow || 'none';
                         robotParts.setHead({ id: part.id, name: part.name, src: partSrc, animType: animType });
                         renderer.changePart('head', partSrc, animType);
                     } else if (slot === 'body') {
-                        addLog(`[파츠 선택] Body -> <strong>${part.name}</strong> (${part.id}) | Src: ${partSrc}`, "info");
+                        if (shouldLog) {
+                            addLog(`[파츠 선택] Body -> <strong>${part.name}</strong> (${part.id}) | Src: ${partSrc}`, "info");
+                        }
                         robotParts.setBody({ id: part.id, name: part.name, src: partSrc, animType: animType });
                         renderer.changePart('body', partSrc, animType, 1, 10, part.id);
                     } else if (slot === 'arm') {
                         const rPivot = part.rightPivot || null;
                         const lPivot = part.leftPivot || null;
-                        addLog(`[파츠 선택] Arm -> <strong>${part.name}</strong> (${part.id}) | Right: ${rSrc} | Left: ${lSrc}`, "success");
+                        if (shouldLog) {
+                            addLog(`[파츠 선택] Arm -> <strong>${part.name}</strong> (${part.id}) | Right: ${rSrc} | Left: ${lSrc}`, "success");
+                        }
                         robotParts.setArmSet({
                             id: part.id,
                             name: part.name,
@@ -172,7 +181,9 @@ window.addEventListener('DOMContentLoaded', () => {
                     } else if (slot === 'leg') {
                         const finalRSrc = part.rightSrc || partSrc;
                         const finalLSrc = part.leftSrc || partSrc;
-                        addLog(`[파츠 선택] Leg -> <strong>${part.name}</strong> (${part.id}) | AnimType: ${animType} | Src: ${finalRSrc}`, "info");
+                        if (shouldLog) {
+                            addLog(`[파츠 선택] Leg -> <strong>${part.name}</strong> (${part.id}) | AnimType: ${animType} | Src: ${finalRSrc}`, "info");
+                        }
                         robotParts.setLegSet({
                             id: part.id,
                             name: part.name,
@@ -197,9 +208,11 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 드롭다운 변경 리스너
+    // 드롭다운 변경 리스너 (변경 시 오직 해당 slot 전용 로그만 단독 출력!)
     for (const slot in selectors) {
-        selectors[slot].addEventListener('change', updateSelectedParts);
+        selectors[slot].addEventListener('change', () => {
+            updateSelectedParts(slot);
+        });
     }
 
     // 엔진 모드 스위치 연동
@@ -207,7 +220,7 @@ window.addEventListener('DOMContentLoaded', () => {
         selectEngineMode.addEventListener('change', (e) => {
             animator.mode = e.target.value;
             addLog(`[엔진 모드 변경] Render Mode: <strong>${animator.mode.toUpperCase()}</strong>`, "warn");
-            updateSelectedParts();
+            updateSelectedParts(null);
         });
     }
 
@@ -221,7 +234,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (anim === 'stop') {
                 animator.pause();
                 addLog(`[애니메이션 멈춤] Motion Engine Paused`, "warn");
-                updateSelectedParts();
+                updateSelectedParts(null);
             } else {
                 animator.play(anim);
                 addLog(`[애니메이션 트리거] Trigger: <strong>${anim.toUpperCase()}</strong>`, "success");
@@ -229,6 +242,6 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 초기 실행 갱신
-    updateSelectedParts();
+    // 초기 실행 갱신 (전체 파츠 로깅 안 함)
+    updateSelectedParts(null);
 });
