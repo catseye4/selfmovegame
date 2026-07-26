@@ -387,9 +387,9 @@ export class Renderer {
                     const chargeT = attackElapsed - 0.35;
                     const chargeScale = Math.min(1, chargeT / 0.3); // 0.3초간 차징 원 생성
 
-                    // 포구 노즐 팁 좌표 (이미지 드로잉 로컬 좌표계 기준: 왼쪽 -10px -> 26, 아래쪽 +2px -> 68)
-                    const tipX = layer.pivotX + 26;
-                    const tipY = layer.pivotY + 68;
+                    // 포구 노즐 팁 좌표 (이미지 드로잉 로컬 좌표계 기준: 왼쪽 -7px -> 19, 위쪽 -4px -> 64)
+                    const tipX = layer.pivotX + 19;
+                    const tipY = layer.pivotY + 64;
 
                     // Step 2: 포구 입구 직경 25px 무한 펄스 원 차징 생성 (Charging Pulse)
                     const pulse = (Math.sin(timeSec * 16.0) + 1) / 2;
