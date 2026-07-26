@@ -11,18 +11,18 @@ class GameStateManager {
         
         // 현재 장착 확정된 파츠 ID 조합
         this.equippedParts = {
-            head: 'head_chimera',
-            body: 'body_chimera',
-            arm: 'arm_chimera',
-            leg: 'leg_chimera'
+            head: 'head_red_robot',
+            body: 'body_red_robot',
+            arm: 'arm_red_robot',
+            leg: 'leg_red_robot'
         };
 
         // 연구소 키오스크에서 장바구니/시뮬레이션 중인 파츠 ID 조합
         this.cartParts = {
-            head: 'head_chimera',
-            body: 'body_chimera',
-            arm: 'arm_chimera',
-            leg: 'leg_chimera'
+            head: 'head_red_robot',
+            body: 'body_red_robot',
+            arm: 'arm_red_robot',
+            leg: 'leg_red_robot'
         };
 
         // UI 업데이트를 위한 리스너 콜백 배열

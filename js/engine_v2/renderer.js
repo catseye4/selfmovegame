@@ -1,54 +1,52 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // ENCAPSULATED VIEW RENDERER (v2)
    Encapsulates all Canvas drawing and styles to decouple Logic from View.
-   Supports 6-Subpart Robot Skeletal Layered Pivot Paper-Doll Rendering.
-   Subparts: head, body, rightArm, leftArm, rightLeg, leftLeg
-   Changing arm or leg swaps both left and right assets as a unified set.
+   Supports 6-Subpart Red Robot Skeletal Layered Pivot Paper-Doll Rendering.
    ========================================================================== */
 
 export class Renderer {
     constructor() {
         this.contexts = new Map(); // canvas -> CanvasRenderingContext2D
 
-        // 6부위 로봇 페이퍼돌 레이어 기본 설정 (zIndex 순서대로 그리기)
+        // 6부위 레드 메카 로봇 페이퍼돌 레이어 기본 설정 (zIndex 순서대로 그리기)
         this.layers = {
             leftArm: {
-                x: 145, y: 110, pivotX: 15, pivotY: 15, zIndex: 0,
-                img: null, src: '', animType: 'pivot',
-                frameCount: 1, fps: 10, defaultColor: '#ff9900'
+                x: 138, y: 108, pivotX: 18, pivotY: 18, zIndex: 0,
+                img: null, src: 'assets/sprites/parts/arm_mock.png', animType: 'pivot',
+                renderWidth: 36, renderHeight: 72, frameCount: 1, fps: 10, defaultColor: '#ff9900'
             },
             leftLeg: {
-                x: 150, y: 170, pivotX: 25, pivotY: 15, zIndex: 1,
-                img: null, src: '', animType: 'pivot',
-                frameCount: 1, fps: 10, defaultColor: '#00cc55'
+                x: 148, y: 165, pivotX: 25, pivotY: 15, zIndex: 1,
+                img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot',
+                renderWidth: 52, renderHeight: 82, frameCount: 1, fps: 10, defaultColor: '#00cc55'
             },
             body: {
-                x: 165, y: 125, pivotX: 30, pivotY: 35, zIndex: 2,
-                img: null, src: '', animType: 'pivot',
-                frameCount: 1, fps: 10, defaultColor: '#ff0055'
+                x: 165, y: 118, pivotX: 36, pivotY: 48, zIndex: 2,
+                img: null, src: 'assets/sprites/parts/robot/red_body.png', animType: 'pivot',
+                renderWidth: 72, renderHeight: 96, frameCount: 1, fps: 10, defaultColor: '#ff0055'
             },
             rightLeg: {
-                x: 180, y: 170, pivotX: 25, pivotY: 15, zIndex: 3,
-                img: null, src: '', animType: 'pivot',
-                frameCount: 1, fps: 10, defaultColor: '#00ff66'
+                x: 182, y: 165, pivotX: 25, pivotY: 15, zIndex: 3,
+                img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot',
+                renderWidth: 52, renderHeight: 82, frameCount: 1, fps: 10, defaultColor: '#00ff66'
             },
             head: {
-                x: 165, y: 70, pivotX: 20, pivotY: 25, zIndex: 4,
-                img: null, src: '', animType: 'pivot',
-                frameCount: 1, fps: 10, defaultColor: '#00ffcc'
+                x: 165, y: 66, pivotX: 26, pivotY: 48, zIndex: 4,
+                img: null, src: 'assets/sprites/parts/robot/red_head.png', animType: 'pivot',
+                renderWidth: 52, renderHeight: 52, frameCount: 1, fps: 10, defaultColor: '#00ffcc'
             },
             rightArm: {
-                x: 185, y: 110, pivotX: 15, pivotY: 15, zIndex: 5,
-                img: null, src: '', animType: 'pivot',
-                frameCount: 1, fps: 10, defaultColor: '#ffcc00'
+                x: 192, y: 108, pivotX: 18, pivotY: 18, zIndex: 5,
+                img: null, src: 'assets/sprites/parts/arm_mock.png', animType: 'pivot',
+                renderWidth: 36, renderHeight: 72, frameCount: 1, fps: 10, defaultColor: '#ffcc00'
             }
         };
 
-        // 초기 프리셋 파츠 모크 이미지 선로드 처리 (팔/다리는 양측 일괄 적용)
-        this.changePart('head', 'assets/sprites/parts/head_mock.png', 'pivot');
-        this.changePart('body', 'assets/sprites/parts/body_mock.png', 'pivot');
+        // 초기 레드 메카 파츠 자산 선로드
+        this.changePart('head', 'assets/sprites/parts/robot/red_head.png', 'pivot');
+        this.changePart('body', 'assets/sprites/parts/robot/red_body.png', 'pivot');
         this.changePart('arm', 'assets/sprites/parts/arm_mock.png', 'pivot');
-        this.changePart('leg', 'assets/sprites/parts/leg_mock.png', 'pivot');
+        this.changePart('leg', 'assets/sprites/parts/robot/red_leg.png', 'pivot');
     }
 
     // 캔버스 초기화 및 컨텍스트 바인딩
@@ -110,19 +108,14 @@ export class Renderer {
 
     /**
      * 파츠 스왑 인터페이스
-     * - 'head' / 'body': 해당 개별 파츠 교체
-     * - 'arm': 팔 파츠 교체 (오른팔 rightArm과 왼팔 leftArm 세트 일괄 교체)
-     * - 'leg': 다리 파츠 교체 (오른다리 rightLeg와 왼다리 leftLeg 세트 일괄 교체)
      */
     changePart(slotName, imageSrc, animType = 'pivot', frameCount = 1, fps = 10) {
         if (slotName === 'arm') {
-            // 팔 변경 시 왼쪽과 오른쪽 이미지를 동시에 세트로 일괄 교체
             const rightSrc = (typeof imageSrc === 'object' && imageSrc.right) ? imageSrc.right : imageSrc;
             const leftSrc = (typeof imageSrc === 'object' && imageSrc.left) ? imageSrc.left : imageSrc;
             this._bindSingleLayer('rightArm', rightSrc, animType, frameCount, fps);
             this._bindSingleLayer('leftArm', leftSrc, animType, frameCount, fps);
         } else if (slotName === 'leg') {
-            // 다리 변경 시 왼쪽과 오른쪽 이미지를 동시에 세트로 일괄 교체
             const rightSrc = (typeof imageSrc === 'object' && imageSrc.right) ? imageSrc.right : imageSrc;
             const leftSrc = (typeof imageSrc === 'object' && imageSrc.left) ? imageSrc.left : imageSrc;
             this._bindSingleLayer('rightLeg', rightSrc, animType, frameCount, fps);
@@ -131,7 +124,6 @@ export class Renderer {
             const src = (typeof imageSrc === 'object' && imageSrc.src) ? imageSrc.src : imageSrc;
             this._bindSingleLayer(slotName, src, animType, frameCount, fps);
         } else if (this.layers[slotName]) {
-            // 단일 서브레이어 명시 교체 (예: 'rightArm', 'leftArm' 등)
             this._bindSingleLayer(slotName, imageSrc, animType, frameCount, fps);
         }
     }
@@ -187,19 +179,15 @@ export class Renderer {
 
             if (stateName === 'walk') {
                 if (name === 'rightArm') {
-                    // 오른팔은 Math.sin()으로 정방향 왕복
                     angle = Math.sin(timeSec * 8) * 0.5;
                 } else if (name === 'leftArm') {
-                    // 왼팔은 역방향 왕복
                     angle = -Math.sin(timeSec * 8) * 0.5;
                 } else if (name === 'rightLeg') {
                     if (layer.animType === 'pivot') {
-                        // 오른다리는 역방향 스윙
                         angle = -Math.sin(timeSec * 8) * 0.4;
                     }
                 } else if (name === 'leftLeg') {
                     if (layer.animType === 'pivot') {
-                        // 왼다리는 정방향 스윙
                         angle = Math.sin(timeSec * 8) * 0.4;
                     }
                 } else if (name === 'body') {
@@ -209,7 +197,6 @@ export class Renderer {
                 }
             } else if (stateName === 'attack') {
                 if (name === 'rightArm') {
-                    // 공격 시 오른팔이 칼날치기 모션으로 튀어나감
                     angle = -Math.PI / 4 + Math.abs(Math.sin(timeSec * 12)) * 0.8;
                     offsetOffsetX = Math.sin(timeSec * 12) * 10;
                 } else if (name === 'leftArm') {
@@ -235,22 +222,23 @@ export class Renderer {
             // 피벗 중심으로 드로잉 영역 밀어내기
             ctx.translate(-layer.pivotX, -layer.pivotY);
 
-            // 3. 실체 그리기 (이미지 로드 완료 시 이미지 그림, 없으면 사이버네틱 벡터 폴백 드로잉)
+            // 3. 실체 그리기
             if (layer.img && layer.img.complete && layer.img.naturalWidth > 0) {
+                const targetW = layer.renderWidth || layer.img.naturalWidth;
+                const targetH = layer.renderHeight || layer.img.naturalHeight;
+
                 if (layer.animType === 'sprite') {
-                    // 가로 스프라이트 시트 크롭 이동
                     const frameWidth = layer.img.naturalWidth / layer.frameCount;
                     const frameIndex = Math.floor(timeSec * layer.fps) % layer.frameCount;
                     ctx.drawImage(
                         layer.img,
                         frameIndex * frameWidth, 0, frameWidth, layer.img.naturalHeight,
-                        0, 0, frameWidth, layer.img.naturalHeight
+                        0, 0, targetW, targetH
                     );
                 } else {
-                    ctx.drawImage(layer.img, 0, 0);
+                    ctx.drawImage(layer.img, 0, 0, targetW, targetH);
                 }
             } else {
-                // 이미지 없을 시 폴백 벡터 그래픽 렌더링
                 this.drawFallbackPart(ctx, name, layer, timeSec);
             }
 
@@ -258,7 +246,6 @@ export class Renderer {
         });
     }
 
-    // 네온 광선 스타일의 기하학적 도형으로 파츠를 그리는 절차적 벡터 드로잉 폴백
     drawFallbackPart(ctx, name, layer, timeSec) {
         ctx.strokeStyle = layer.defaultColor;
         ctx.lineWidth = 3;

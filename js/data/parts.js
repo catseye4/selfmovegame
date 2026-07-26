@@ -5,6 +5,24 @@
 export const PARTS_DB = {
     head: [
         {
+            id: 'head_red_robot',
+            name: '레드 바이저 다안 헬멧',
+            faction: '거대로봇 (메카닉)',
+            cost: 0, // 기본 로봇 파츠
+            stats: { hp: 800, dps: 80, range: 40, speed: 10 },
+            skillDesc: '다안 레이저 센서: 치명타 확률 20% 및 범위 조준',
+            live2dStyle: {
+                background: 'linear-gradient(135deg, #ff0055, #330011)',
+                clipPath: 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)',
+                boxShadow: '0 0 15px #ff0055'
+            },
+            pixelStyle: {
+                background: '#ff0055',
+                borderColor: '#440011',
+                boxShadow: 'inset -4px -4px 0 #aa0033, 0 0 10px rgba(255, 0, 85, 0.8)'
+            }
+        },
+        {
             id: 'head_chimera',
             name: '바이오 키메라 헤드',
             faction: '합성괴인 (키메라)',
@@ -79,6 +97,23 @@ export const PARTS_DB = {
     ],
     body: [
         {
+            id: 'body_red_robot',
+            name: '중장갑 엑시온 코어 흉갑',
+            faction: '거대로봇 (메카닉)',
+            cost: 0,
+            stats: { hp: 1600, dps: 60, range: 0, speed: 5 },
+            skillDesc: '중앙 엑시온 코어: 피격 시 에너지 반사 파동 방출 및 방어력 상승',
+            live2dStyle: {
+                background: 'linear-gradient(180deg, #441122, #11050c)',
+                borderColor: '#ff0055'
+            },
+            pixelStyle: {
+                background: '#441122',
+                borderColor: '#11050c',
+                boxShadow: 'inset -6px -6px 0 #220811, 4px 4px 0 #ff0055'
+            }
+        },
+        {
             id: 'body_chimera',
             name: '강화 생체 코어',
             faction: '합성괴인 (키메라)',
@@ -148,6 +183,24 @@ export const PARTS_DB = {
         }
     ],
     arm: [
+        {
+            id: 'arm_red_robot',
+            name: '더블 블레이드 메카 암 세트',
+            faction: '거대로봇 (메카닉)',
+            cost: 0,
+            stats: { hp: 400, dps: 300, range: 200, speed: 10 },
+            skillDesc: '양팔 더블 블레이드 고속 연타 참격 및 범위 공격',
+            attackType: 'melee',
+            live2dStyle: {
+                background: 'linear-gradient(180deg, #ff0055, #330011)',
+                borderColor: '#ff0055'
+            },
+            pixelStyle: {
+                background: '#ff0055',
+                borderColor: '#550011',
+                boxShadow: 'inset -4px -4px 0 #aa0033, 0 0 12px rgba(255, 0, 85, 0.8)'
+            }
+        },
         {
             id: 'arm_chimera',
             name: '플라즈마 커터 팔',
@@ -222,6 +275,23 @@ export const PARTS_DB = {
         }
     ],
     leg: [
+        {
+            id: 'leg_red_robot',
+            name: '서스펜션 발목 레그 세트',
+            faction: '거대로봇 (메카닉)',
+            cost: 0,
+            stats: { hp: 500, dps: 30, range: 0, speed: 20 },
+            skillDesc: '충격 흡수 유압 서스펜션: 이동속도 증가 및 진격 기동',
+            live2dStyle: {
+                background: 'linear-gradient(180deg, #00ff66, #003311)',
+                borderColor: '#00ff66'
+            },
+            pixelStyle: {
+                background: '#00ff66',
+                borderColor: '#003311',
+                boxShadow: 'inset -4px -4px 0 #00aa44, 0 0 12px rgba(0, 255, 102, 0.8)'
+            }
+        },
         {
             id: 'leg_chimera',
             name: '지진 분쇄 다리',
