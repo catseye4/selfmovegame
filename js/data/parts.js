@@ -1,6 +1,38 @@
-/* ==========================================================================
-   PROJECT: MAD OVERLORD // PARTS DATABASE (DUAL GRAPHIC DATA)
-   ========================================================================== */
+/* 가슴(Chest/Body) 파츠 기준 마운팅 앵커 오프셋 DB 및 기동 타입 정의 */
+export const BODY_ANCHORS_DB = {
+    // 1. 레드 메카 중장갑 엑시온 코어 흉갑 (인간형 메카 앵커)
+    body_red_robot: {
+        type: 'humanoid_robot',
+        anchors: {
+            headAnchor:     { offsetX: 0,   offsetY: -33 }, // 머리가 목 소켓에 안착되는 상대 오프셋
+            leftArmAnchor:  { offsetX: 33,  offsetY: -12 }, // 왼팔 (후면 어깨 소켓)
+            rightArmAnchor: { offsetX: -22, offsetY: -13 }, // 오른팔 (전면 어깨 소켓)
+            leftLegAnchor:  { offsetX: 27,  offsetY: 42  }, // 왼다리 (후면 고관절 소켓)
+            rightLegAnchor: { offsetX: 1,   offsetY: 46  }  // 오른다리 (전면 고관절 소켓)
+        }
+    },
+    // 2. 바이오 키메라 흉갑 앵커
+    body_chimera: {
+        type: 'humanoid_bio',
+        anchors: {
+            headAnchor:     { offsetX: 0,   offsetY: -30 },
+            leftArmAnchor:  { offsetX: -20, offsetY: -10 },
+            rightArmAnchor: { offsetX: 20,  offsetY: -10 },
+            leftLegAnchor:  { offsetX: -15, offsetY: 40  },
+            rightLegAnchor: { offsetX: 15,  offsetY: 40  }
+        }
+    },
+    // 3. 무한궤도 전차 기동 흉갑 앵커 (기동 방식 예외 분기 타입)
+    body_tank_core: {
+        type: 'track_vehicle',
+        anchors: {
+            headAnchor:     { offsetX: 0,   offsetY: -35 },
+            leftArmAnchor:  { offsetX: -25, offsetY: -10 },
+            rightArmAnchor: { offsetX: 25,  offsetY: -10 },
+            trackAnchor:    { offsetX: 0,   offsetY: 45  }
+        }
+    }
+};
 
 export const PARTS_DB = {
     head: [

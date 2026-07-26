@@ -1,56 +1,60 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // ENCAPSULATED VIEW RENDERER (v2)
    Encapsulates all Canvas drawing and styles to decouple Logic from View.
-   Independent View Layout Layers & Z-Indices.
+   Chest-Centric Anchor System with Dynamic Mobility Type Branching.
    Z-Index View Order: leftArm(0) -> leftLeg(1) -> body(2) -> head(3) -> rightLeg(4) -> rightArm(5)
    ========================================================================== */
+
+import { BODY_ANCHORS_DB } from '../data/parts.js';
 
 export class Renderer {
     constructor() {
         this.contexts = new Map(); // canvas -> CanvasRenderingContext2D
 
-        // 화면 배치를 위한 렌더러 독자적인 6개 독립 레이어 구조체 (정밀 픽셀 조정 좌표)
+        // 가슴(body) 파츠를 기준 앵커(x: 165, y: 98)로 설정하고, 상하/좌우 오프셋으로 연동되는 6개 독립 레이어 구조체
         // 1. 왼팔(leftArm, 0) -> 2. 왼쪽다리(leftLeg, 1) -> 3. 몸통(body, 2) -> 4. 얼굴(head, 3) -> 5. 오른쪽다리(rightLeg, 4) -> 6. 오른팔(rightArm, 5)
         this.screenLayers = {
             leftArm: {
-                zIndex: 0, // 가장 뒤쪽 최하단 뒤 팔
+                zIndex: 0, // 가장 뒤쪽 최하단 뒤 팔 (가슴 기준 오프셋: +33, -12)
                 x: 198, y: 86, pivotX: 20, pivotY: 18,
                 renderWidth: 42, renderHeight: 84, defaultColor: '#ff9900',
                 img: null, src: 'assets/sprites/parts/robot/red_arm_r.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             leftLeg: {
-                zIndex: 1, // 뒤쪽 다리 (오른쪽으로 10px 추가 이동: x 192)
+                zIndex: 1, // 뒤쪽 다리 (가슴 기준 오프셋: +27, +42)
                 x: 192, y: 140, pivotX: 25, pivotY: 15,
                 renderWidth: 52, renderHeight: 82, defaultColor: '#00cc55',
                 img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             body: {
-                zIndex: 2, // 메인 코어 흉갑
+                zIndex: 2, // 메인 코어 흉갑 (앵커 기준 Origin: x 165, y 98)
                 x: 165, y: 98, pivotX: 36, pivotY: 48,
                 renderWidth: 72, renderHeight: 96, defaultColor: '#ff0055',
                 img: null, src: 'assets/sprites/parts/robot/red_body.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             head: {
-                zIndex: 3, // 얼굴/머리 (밑쪽으로 3px 이동: y 65)
+                zIndex: 3, // 얼굴/머리 (가슴 기준 오프셋: 0, -33)
                 x: 165, y: 65, pivotX: 26, pivotY: 48,
                 renderWidth: 52, renderHeight: 52, defaultColor: '#00ffcc',
                 img: null, src: 'assets/sprites/parts/robot/red_head.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             rightLeg: {
-                zIndex: 4, // 전면 앞쪽 다리
+                zIndex: 4, // 전면 앞쪽 다리 (가슴 기준 오프셋: +1, +46)
                 x: 166, y: 144, pivotX: 25, pivotY: 15,
                 renderWidth: 52, renderHeight: 82, defaultColor: '#00ff66',
                 img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             rightArm: {
-                zIndex: 5, // 모든 이미지의 가장 앞쪽 최상단 전면 팔
+                zIndex: 5, // 모든 이미지의 가장 앞쪽 최상단 전면 팔 (가슴 기준 오프셋: -22, -13)
                 x: 143, y: 85, pivotX: 22, pivotY: 18,
                 renderWidth: 44, renderHeight: 86, defaultColor: '#ffcc00',
                 img: null, src: 'assets/sprites/parts/robot/red_arm_l.png', animType: 'pivot', frameCount: 1, fps: 10
             }
         };
 
-        // 초기 레드 메카 파츠 자산 선로드
+        this.currentBodyId = 'body_red_robot';
+
+        // 초기 레드 메카 파츠 자산 선로드 및 앵커 동기화
         this.changePart('head', 'assets/sprites/parts/robot/red_head.png', 'pivot');
         this.changePart('body', 'assets/sprites/parts/robot/red_body.png', 'pivot');
         this.changePart('arm', {
@@ -58,6 +62,71 @@ export class Renderer {
             left: 'assets/sprites/parts/robot/red_arm_r.png'
         }, 'pivot');
         this.changePart('leg', 'assets/sprites/parts/robot/red_leg.png', 'pivot');
+    }
+
+    /**
+     * 가슴(body) 파츠 기준 앵커 동적 재계산 및 기동 방식 타입별 분기 처리 함수
+     * @param {string} bodyPartId - 가슴 파츠 ID (예: 'body_red_robot', 'body_tank_core' 등)
+     * @param {string} customAnimType - 하위 장착 파츠의 기동 방식 (예: 'sprite' 궤도형, 'pivot' 관절형 등)
+     */
+    recalculateAnchors(bodyPartId = this.currentBodyId, customAnimType = null) {
+        this.currentBodyId = bodyPartId || this.currentBodyId;
+        const anchorConfig = BODY_ANCHORS_DB[this.currentBodyId] || BODY_ANCHORS_DB['body_red_robot'];
+        const bodyLayer = this.screenLayers.body;
+        if (!bodyLayer || !anchorConfig) return;
+
+        const anchors = anchorConfig.anchors;
+        const mobilityType = anchorConfig.type;
+
+        // 기동 방식 타입 분기 예외 처리 (전차 궤도/무한궤도 vs 인간형 로봇 관절 등)
+        if (mobilityType === 'track_vehicle' || customAnimType === 'sprite') {
+            // 전차 궤도 기동 파츠 앵커 스위칭 분기
+            if (anchors.headAnchor) {
+                this.screenLayers.head.x = bodyLayer.x + anchors.headAnchor.offsetX;
+                this.screenLayers.head.y = bodyLayer.y + anchors.headAnchor.offsetY;
+            }
+            if (anchors.leftArmAnchor) {
+                this.screenLayers.leftArm.x = bodyLayer.x + anchors.leftArmAnchor.offsetX;
+                this.screenLayers.leftArm.y = bodyLayer.y + anchors.leftArmAnchor.offsetY;
+            }
+            if (anchors.rightArmAnchor) {
+                this.screenLayers.rightArm.x = bodyLayer.x + anchors.rightArmAnchor.offsetX;
+                this.screenLayers.rightArm.y = bodyLayer.y + anchors.rightArmAnchor.offsetY;
+            }
+
+            // 전차 궤도는 단일 중앙 트랙 앵커로 다리 레이어를 분기 변환
+            const trackY = bodyLayer.y + (anchors.trackAnchor?.offsetY || 46);
+            this.screenLayers.leftLeg.x = bodyLayer.x;
+            this.screenLayers.leftLeg.y = trackY;
+            this.screenLayers.leftLeg.animType = 'sprite';
+
+            this.screenLayers.rightLeg.x = bodyLayer.x;
+            this.screenLayers.rightLeg.y = trackY;
+            this.screenLayers.rightLeg.animType = 'sprite';
+
+        } else {
+            // 표준 인간형/로봇 관절 앵커 셋팅 (가슴 기준 상대 오프셋으로 연동)
+            if (anchors.headAnchor) {
+                this.screenLayers.head.x = bodyLayer.x + anchors.headAnchor.offsetX;
+                this.screenLayers.head.y = bodyLayer.y + anchors.headAnchor.offsetY;
+            }
+            if (anchors.leftArmAnchor) {
+                this.screenLayers.leftArm.x = bodyLayer.x + anchors.leftArmAnchor.offsetX;
+                this.screenLayers.leftArm.y = bodyLayer.y + anchors.leftArmAnchor.offsetY;
+            }
+            if (anchors.rightArmAnchor) {
+                this.screenLayers.rightArm.x = bodyLayer.x + anchors.rightArmAnchor.offsetX;
+                this.screenLayers.rightArm.y = bodyLayer.y + anchors.rightArmAnchor.offsetY;
+            }
+            if (anchors.leftLegAnchor) {
+                this.screenLayers.leftLeg.x = bodyLayer.x + anchors.leftLegAnchor.offsetX;
+                this.screenLayers.leftLeg.y = bodyLayer.y + anchors.leftLegAnchor.offsetY;
+            }
+            if (anchors.rightLegAnchor) {
+                this.screenLayers.rightLeg.x = bodyLayer.x + anchors.rightLegAnchor.offsetX;
+                this.screenLayers.rightLeg.y = bodyLayer.y + anchors.rightLegAnchor.offsetY;
+            }
+        }
     }
 
     // 캔버스 초기화 및 컨텍스트 바인딩
@@ -91,7 +160,7 @@ export class Renderer {
         );
     }
 
-    // 단일 화면 레이어 이미지 바인딩 내부 헬퍼 (Z-Index 및 좌표는 절대로 건드리지 않고 오직 이미지 자산과 animType만 바인딩)
+    // 단일 화면 레이어 이미지 바인딩 내부 헬퍼
     _bindSingleLayer(layerKey, src, animType = 'pivot', frameCount = 1, fps = 10) {
         const layer = this.screenLayers[layerKey];
         if (!layer) return;
@@ -118,9 +187,9 @@ export class Renderer {
     }
 
     /**
-     * 파츠 스왑 인터페이스 (화면 레이어 Z-Index 및 좌표는 유지하며 자산만 변경)
+     * 파츠 스왑 인터페이스 (가슴 기준 앵커 자동 동기화)
      */
-    changePart(slotName, imageSrc, animType = 'pivot', frameCount = 1, fps = 10) {
+    changePart(slotName, imageSrc, animType = 'pivot', frameCount = 1, fps = 10, bodyPartId = null) {
         if (slotName === 'arm') {
             const rightSrc = (typeof imageSrc === 'object' && imageSrc.right) ? imageSrc.right : imageSrc;
             const leftSrc = (typeof imageSrc === 'object' && imageSrc.left) ? imageSrc.left : imageSrc;
@@ -137,19 +206,23 @@ export class Renderer {
         } else if (this.screenLayers[slotName]) {
             this._bindSingleLayer(slotName, imageSrc, animType, frameCount, fps);
         }
+
+        // 파츠 교체 후 가슴 기준 앵커 재계산 및 기동 타입 분기 처리 실행
+        this.recalculateAnchors(bodyPartId || this.currentBodyId, animType);
     }
 
     /**
-     * 파츠 구조체(RobotPartsStructure) 데이터를 받아 화면 레이어 자산 동기화
+     * 파츠 구조체(RobotPartsStructure) 데이터를 받아 화면 레이어 자산 동기화 및 앵커 동적 전환
      */
     setRobotStructure(robotStruct) {
         if (!robotStruct) return;
 
+        if (robotStruct.body) {
+            this.currentBodyId = robotStruct.body.id || this.currentBodyId;
+            this._bindSingleLayer('body', robotStruct.body.src, robotStruct.body.animType);
+        }
         if (robotStruct.head) {
             this._bindSingleLayer('head', robotStruct.head.src, robotStruct.head.animType);
-        }
-        if (robotStruct.body) {
-            this._bindSingleLayer('body', robotStruct.body.src, robotStruct.body.animType);
         }
         if (robotStruct.arm) {
             const rSrc = robotStruct.arm.right?.src || robotStruct.arm.src;
@@ -163,6 +236,9 @@ export class Renderer {
             this._bindSingleLayer('rightLeg', rSrc, robotStruct.leg.animType);
             this._bindSingleLayer('leftLeg', lSrc, robotStruct.leg.animType);
         }
+
+        // 앵커 동적 재계산 실행
+        this.recalculateAnchors(this.currentBodyId, robotStruct.leg?.animType);
     }
 
     // 독립된 6-부위 화면 배치 레이어(screenLayers) 순서대로 관절식 로봇 페이퍼돌 드로잉
@@ -328,7 +404,7 @@ export class Renderer {
                 
                 ctx.beginPath();
                 ctx.arc(25, 55, 6, 0, Math.PI * 2);
-                ctx.fill();
+                fill();
                 ctx.stroke();
             }
         }
