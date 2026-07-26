@@ -372,9 +372,9 @@ export class Renderer {
             // 4. [레이저 포대 전용 최상단 Z-Index 덮어쓰기 파티클 렌더링]
             // 이미지 드로잉이 완료된 바로 그 위(Z-Index 최상단)에 포구 입구 25px 차징 원 & 15px 레이저 연사 렌더링!
             if (stateName === 'attack' && name === 'rightArm' && this.screenLayers.rightArm.src.includes('arm_laser_r.png')) {
-                // 포구 노즐 팁 좌표 (이미지 드로잉 로컬 좌표계 기준: layer.pivotX + 51, layer.pivotY + 41)
-                const tipX = layer.pivotX + 51;
-                const tipY = layer.pivotY + 41;
+                // 포구 노즐 팁 좌표 (이미지 드로잉 로컬 좌표계 기준: 왼쪽 -15px -> 36, 아래쪽 +25px -> 66)
+                const tipX = layer.pivotX + 36;
+                const tipY = layer.pivotY + 66;
 
                 // 포구 입구 직경 25px 무한 펄스 원 반짝임 (Charging Pulse)
                 const pulse = (Math.sin(timeSec * 16.0) + 1) / 2;
@@ -399,9 +399,9 @@ export class Renderer {
                 ctx.arc(0, 0, Math.max(1, flashRadius - 4), 0, Math.PI * 2);
                 ctx.fill();
 
-                // 직경 15px 레이저 플라즈마 발사체 +25도 사격 각도 연사 발사
+                // 직경 15px 레이저 플라즈마 발사체 +45도 사격 각도 연사 발사 (아래쪽 20도 하향 조종)
                 const numBullets = 3;
-                const fireAngle = (25 * Math.PI / 180);
+                const fireAngle = (45 * Math.PI / 180);
 
                 for (let i = 0; i < numBullets; i++) {
                     const bulletPhase = (timeSec * 4.5 + i * (Math.PI * 2 / numBullets)) % (Math.PI * 2);
