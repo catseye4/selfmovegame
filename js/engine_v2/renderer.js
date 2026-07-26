@@ -13,14 +13,14 @@ export class Renderer {
         // 1. 왼팔(leftArm, 0) -> 2. 왼쪽다리(leftLeg, 1) -> 3. 몸통(body, 2) -> 4. 얼굴(head, 3) -> 5. 오른쪽다리(rightLeg, 4) -> 6. 오른팔(rightArm, 5)
         this.screenLayers = {
             leftArm: {
-                zIndex: 0, // 가장 뒤쪽 최하단 뒤 팔 (위로 10px: y 86, 오른쪽으로 8px: x 198)
+                zIndex: 0, // 가장 뒤쪽 최하단 뒤 팔
                 x: 198, y: 86, pivotX: 20, pivotY: 18,
                 renderWidth: 42, renderHeight: 84, defaultColor: '#ff9900',
                 img: null, src: 'assets/sprites/parts/robot/red_arm_r.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             leftLeg: {
-                zIndex: 1, // 뒤쪽 다리 (오른쪽으로 30px: x 182)
-                x: 182, y: 140, pivotX: 25, pivotY: 15,
+                zIndex: 1, // 뒤쪽 다리 (오른쪽으로 10px 추가 이동: x 192)
+                x: 192, y: 140, pivotX: 25, pivotY: 15,
                 renderWidth: 52, renderHeight: 82, defaultColor: '#00cc55',
                 img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot', frameCount: 1, fps: 10
             },
@@ -31,8 +31,8 @@ export class Renderer {
                 img: null, src: 'assets/sprites/parts/robot/red_body.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             head: {
-                zIndex: 3, // 얼굴/머리
-                x: 165, y: 62, pivotX: 26, pivotY: 48,
+                zIndex: 3, // 얼굴/머리 (밑쪽으로 3px 이동: y 65)
+                x: 165, y: 65, pivotX: 26, pivotY: 48,
                 renderWidth: 52, renderHeight: 52, defaultColor: '#00ffcc',
                 img: null, src: 'assets/sprites/parts/robot/red_head.png', animType: 'pivot', frameCount: 1, fps: 10
             },
@@ -43,7 +43,7 @@ export class Renderer {
                 img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             rightArm: {
-                zIndex: 5, // 모든 이미지의 가장 앞쪽 최상단 전면 팔 (왼쪽으로 3px: x 143, 위쪽으로 3px: y 85)
+                zIndex: 5, // 모든 이미지의 가장 앞쪽 최상단 전면 팔
                 x: 143, y: 85, pivotX: 22, pivotY: 18,
                 renderWidth: 44, renderHeight: 86, defaultColor: '#ffcc00',
                 img: null, src: 'assets/sprites/parts/robot/red_arm_l.png', animType: 'pivot', frameCount: 1, fps: 10
