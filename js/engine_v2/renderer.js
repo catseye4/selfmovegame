@@ -2,6 +2,7 @@
    PROJECT: MAD OVERLORD // ENCAPSULATED VIEW RENDERER (v2)
    Encapsulates all Canvas drawing and styles to decouple Logic from View.
    Chest-Centric Anchor System with Dynamic Mobility Type Branching.
+   Chest-Linked Idle Bounce Motion (Full Body Synchronized Idle).
    Z-Index View Order: leftArm(0) -> leftLeg(1) -> body(2) -> head(3) -> rightLeg(4) -> rightArm(5)
    ========================================================================== */
 
@@ -241,7 +242,7 @@ export class Renderer {
         this.recalculateAnchors(this.currentBodyId, robotStruct.leg?.animType);
     }
 
-    // 독립된 6-부위 화면 배치 레이어(screenLayers) 순서대로 관절식 로봇 페이퍼돌 드로잉
+    // 독립된 6-부위 화면 배치 레이어(screenLayers) 순서대로 관절식 로봇 페이퍼돌 드로잉 (가슴 기준 호흡 바운싱 연동)
     drawPaperDoll(canvas, x, y, stateName, timeSec) {
         const ctx = this.initCanvas(canvas);
         if (!ctx) return;
@@ -290,10 +291,19 @@ export class Renderer {
                 } else if (name === 'body') {
                     offsetOffsetX = Math.sin(timeSec * 12) * 4;
                 }
-            } else { // 'idle'
-                // 대기(아이들) 상태에서의 상하 위아래 바운싱 모션 일시 정지
-                offsetOffsetY = 0;
-                offsetOffsetX = 0;
+            } else { // 'idle' 대기 상태: 가슴 파츠 축 중심 전신 연동 호흡 바운싱
+                const bodyBounceY = Math.sin(timeSec * 2.5) * 2.5;
+
+                if (name === 'body') {
+                    offsetOffsetY = bodyBounceY;
+                } else if (name === 'head') {
+                    offsetOffsetY = bodyBounceY + Math.sin(timeSec * 2.5) * 0.8; // 머리는 흉부 호흡에 부드럽게 지연 반응
+                } else if (name === 'rightArm' || name === 'leftArm') {
+                    offsetOffsetY = bodyBounceY; // 가슴 어깨 소켓과 100% 동기화 바운싱
+                    angle = Math.sin(timeSec * 2.5) * 0.04; // 팔이 부드럽게 살랑거리는 호흡 흔들림
+                } else if (name === 'rightLeg' || name === 'leftLeg') {
+                    offsetOffsetY = bodyBounceY * 0.3; // 다리는 둔부 소켓 완충 연동
+                }
             }
 
             ctx.translate(offsetOffsetX, offsetOffsetY);
