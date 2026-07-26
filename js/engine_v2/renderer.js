@@ -316,18 +316,80 @@ export class Renderer {
                 offsetOffsetX = 0;
                 offsetOffsetY = 0;
 
-                // 양팔(오른팔 & 왼팔) 모두 반시계 방향으로 1시 방향(-150도)까지 호쾌하게 치솟았다가 복귀
-                if (name === 'rightArm' || name === 'leftArm') {
-                    const attackProgress = (timeSec * 6) % (Math.PI * 2);
-                    
-                    if (attackProgress < Math.PI) {
-                        const upRatio = attackProgress / Math.PI;
-                        const easeUp = Math.sin(upRatio * Math.PI * 0.5);
-                        angle = -easeUp * (Math.PI * 0.85);
-                    } else {
-                        const downRatio = (attackProgress - Math.PI) / Math.PI;
-                        const easeDown = Math.cos(downRatio * Math.PI * 0.5);
-                        angle = -easeDown * (Math.PI * 0.85);
+                const isLaserArm = this.screenLayers.rightArm.src.includes('arm_laser_r.png');
+
+                if (isLaserArm) {
+                    // [레이저 포대 전용 특수 공격 애니메이션 모션]
+                    // 1. 왼팔은 고정되어 움직이지 않는다.
+                    // 2. 레이저 포대만 반시계 방향으로 15도 움직인다.
+                    // 3. 레이저 포대 위치를 고정한다.
+                    // 4. 레이저 포대 입구에서 직경 15px 원 형태의 반짝임 (3회)
+                    // 5. 레이저 포대를 원래 위치로 복귀한다.
+                    if (name === 'leftArm') {
+                        angle = 0; // 1. 왼팔 고정!
+                    } else if (name === 'rightArm') {
+                        const cycle = (timeSec * 3.5) % (Math.PI * 2); // 공격 1주기 타임라인
+                        const targetRad = - (15 * Math.PI / 180); // 반시계 방향 15도 (-0.2618 rad)
+
+                        if (cycle < Math.PI * 0.4) {
+                            // Phase 1: 반시계 방향 15도 조준 들어올리기
+                            const ratio = cycle / (Math.PI * 0.4);
+                            angle = targetRad * Math.sin(ratio * Math.PI * 0.5);
+                        } else if (cycle < Math.PI * 1.6) {
+                            // Phase 2 & 3: 15도 각도 조준 위치 고정!
+                            angle = targetRad;
+
+                            // Phase 4: 레이저 포대 입구에서 직경 15px 원 형태의 반짝임 (3회 파동)
+                            const flashProgress = (cycle - Math.PI * 0.4) / (Math.PI * 1.2); // 0 ~ 1
+                            const pulse = Math.sin(flashProgress * Math.PI * 3); // 3회 파동 펄스
+
+                            if (pulse > 0) {
+                                // 포구 입구 팁 위치 좌표 (피벗 기준 노즐 위치)
+                                const tipX = 36;
+                                const tipY = 70;
+                                const flashRadius = (15 / 2) * pulse; // 직경 15px (반지름 7.5px)
+
+                                ctx.save();
+                                ctx.translate(tipX, tipY);
+
+                                // 1. 외곽 청록빛 글로우 반짝임 (직경 15px)
+                                ctx.fillStyle = `rgba(0, 255, 204, ${0.85 * pulse})`;
+                                ctx.shadowColor = '#00ffcc';
+                                ctx.shadowBlur = 16;
+                                ctx.beginPath();
+                                ctx.arc(0, 0, Math.max(1, flashRadius), 0, Math.PI * 2);
+                                ctx.fill();
+
+                                // 2. 중심 고광도 화이트 코어 반짝임
+                                ctx.fillStyle = `rgba(255, 255, 255, ${0.95 * pulse})`;
+                                ctx.shadowColor = '#ffffff';
+                                ctx.shadowBlur = 10;
+                                ctx.beginPath();
+                                ctx.arc(0, 0, Math.max(1, flashRadius - 2), 0, Math.PI * 2);
+                                ctx.fill();
+
+                                ctx.restore();
+                            }
+                        } else {
+                            // Phase 5: 레이저 포대를 원래 위치(0도)로 이동
+                            const ratio = (cycle - Math.PI * 1.6) / (Math.PI * 0.4);
+                            angle = targetRad * (1 - Math.sin(ratio * Math.PI * 0.5));
+                        }
+                    }
+                } else {
+                    // [기본 파츠 일반 공격 모션] 양팔 1시 방향 호쾌 상승
+                    if (name === 'rightArm' || name === 'leftArm') {
+                        const attackProgress = (timeSec * 6) % (Math.PI * 2);
+                        
+                        if (attackProgress < Math.PI) {
+                            const upRatio = attackProgress / Math.PI;
+                            const easeUp = Math.sin(upRatio * Math.PI * 0.5);
+                            angle = -easeUp * (Math.PI * 0.85);
+                        } else {
+                            const downRatio = (attackProgress - Math.PI) / Math.PI;
+                            const easeDown = Math.cos(downRatio * Math.PI * 0.5);
+                            angle = -easeDown * (Math.PI * 0.85);
+                        }
                     }
                 }
             } else { // 'idle' 대기 상태: 가슴 파츠 축 중심 전신 연동 호흡 바운싱
