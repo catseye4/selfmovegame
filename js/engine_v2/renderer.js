@@ -404,7 +404,7 @@ export class Renderer {
                 
                 ctx.beginPath();
                 ctx.arc(25, 55, 6, 0, Math.PI * 2);
-                fill();
+                ctx.fill();
                 ctx.stroke();
             }
         }
