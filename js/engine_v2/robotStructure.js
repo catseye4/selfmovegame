@@ -10,7 +10,7 @@ export class RobotPartsStructure {
         this.head = {
             id: initialData.head?.id || 'head_red_robot',
             name: initialData.head?.name || '기본 머리',
-            src: initialData.head?.src || 'assets/sprites/parts/robot/red_head.png',
+            src: initialData.head?.src !== undefined ? initialData.head.src : 'assets/sprites/parts/robot/red_head.png',
             animType: initialData.head?.animType || 'pivot'
         };
 
@@ -18,7 +18,7 @@ export class RobotPartsStructure {
         this.body = {
             id: initialData.body?.id || 'body_red_robot',
             name: initialData.body?.name || '기본 가슴',
-            src: initialData.body?.src || 'assets/sprites/parts/robot/red_body.png',
+            src: initialData.body?.src !== undefined ? initialData.body.src : 'assets/sprites/parts/robot/red_body.png',
             animType: initialData.body?.animType || 'pivot'
         };
 
@@ -28,12 +28,12 @@ export class RobotPartsStructure {
             name: initialData.arm?.name || '기본 팔',
             animType: initialData.arm?.animType || 'pivot',
             right: {
-                src: initialData.arm?.right?.src || 'assets/sprites/parts/robot/red_arm_l.png',
+                src: initialData.arm?.right?.src !== undefined ? initialData.arm.right.src : 'assets/sprites/parts/robot/red_arm_l.png',
                 pivotX: initialData.arm?.right?.pivotX ?? 30,
                 pivotY: initialData.arm?.right?.pivotY ?? 20
             },
             left: {
-                src: initialData.arm?.left?.src || 'assets/sprites/parts/robot/red_arm_r.png',
+                src: initialData.arm?.left?.src !== undefined ? initialData.arm.left.src : 'assets/sprites/parts/robot/red_arm_r.png',
                 pivotX: initialData.arm?.left?.pivotX ?? 30,
                 pivotY: initialData.arm?.left?.pivotY ?? 20
             }
@@ -44,62 +44,48 @@ export class RobotPartsStructure {
             id: initialData.leg?.id || 'leg_red_robot',
             name: initialData.leg?.name || '기본 다리',
             animType: initialData.leg?.animType || 'pivot',
-            right: { src: initialData.leg?.right?.src || 'assets/sprites/parts/robot/red_leg.png' },
-            left:  { src: initialData.leg?.left?.src  || 'assets/sprites/parts/robot/red_leg.png' }
+            right: { src: initialData.leg?.right?.src !== undefined ? initialData.leg.right.src : 'assets/sprites/parts/robot/red_leg.png' },
+            left:  { src: initialData.leg?.left?.src  !== undefined ? initialData.leg.left.src  : 'assets/sprites/parts/robot/red_leg.png' }
         };
     }
 
-    /**
-     * 팔(arm) 파츠 세트 변경
-     * 팔 파츠 교체 시 오른쪽(right)과 왼쪽(left) 이미지가 동시에 일괄 갱신됩니다.
-     */
+    setHead(headData) {
+        if (!headData) return;
+        this.head.id = headData.id || this.head.id;
+        this.head.name = headData.name || this.head.name;
+        this.head.src = headData.src !== undefined ? headData.src : '';
+        this.head.animType = headData.animType || 'pivot';
+    }
+
+    setBody(bodyData) {
+        if (!bodyData) return;
+        this.body.id = bodyData.id || this.body.id;
+        this.body.name = bodyData.name || this.body.name;
+        this.body.src = bodyData.src !== undefined ? bodyData.src : '';
+        this.body.animType = bodyData.animType || 'pivot';
+    }
+
     setArmSet(armData) {
         if (!armData) return;
         this.arm.id = armData.id || this.arm.id;
         this.arm.name = armData.name || this.arm.name;
         this.arm.animType = armData.animType || 'pivot';
 
-        const rSrc = armData.right?.src || armData.src || this.arm.right.src;
-        const lSrc = armData.left?.src  || armData.src || this.arm.left.src;
-        this.arm.right.src = rSrc;
-        this.arm.left.src  = lSrc;
+        const rSrc = armData.right?.src !== undefined ? armData.right.src : (armData.src !== undefined ? armData.src : '');
+        const lSrc = armData.left?.src !== undefined ? armData.left.src : (armData.src !== undefined ? armData.src : '');
+        this.arm.right = { src: rSrc, pivot: armData.right?.pivot };
+        this.arm.left  = { src: lSrc, pivot: armData.left?.pivot };
     }
 
-    /**
-     * 다리(leg) 파츠 세트 변경
-     * 다리 파츠 교체 시 오른쪽(right)과 왼쪽(left) 이미지가 동시에 일괄 갱신됩니다.
-     */
     setLegSet(legData) {
         if (!legData) return;
         this.leg.id = legData.id || this.leg.id;
         this.leg.name = legData.name || this.leg.name;
         this.leg.animType = legData.animType || 'pivot';
 
-        const rSrc = legData.right?.src || legData.src || this.leg.right.src;
-        const lSrc = legData.left?.src  || legData.src || this.leg.left.src;
-        this.leg.right.src = rSrc;
-        this.leg.left.src  = lSrc;
-    }
-
-    /**
-     * 머리(head) 파츠 변경
-     */
-    setHead(headData) {
-        if (!headData) return;
-        this.head.id = headData.id || this.head.id;
-        this.head.name = headData.name || this.head.name;
-        this.head.src = headData.src || this.head.src;
-        this.head.animType = headData.animType || this.head.animType;
-    }
-
-    /**
-     * 가슴(body) 파츠 변경
-     */
-    setBody(bodyData) {
-        if (!bodyData) return;
-        this.body = bodyData.id || this.body.id;
-        this.body.name = bodyData.name || this.body.name;
-        this.body.src = bodyData.src || this.body.src;
-        this.body.animType = bodyData.animType || this.body.animType;
+        const rSrc = legData.right?.src !== undefined ? legData.right.src : (legData.src !== undefined ? legData.src : '');
+        const lSrc = legData.left?.src !== undefined ? legData.left.src : (legData.src !== undefined ? legData.src : '');
+        this.leg.right = { src: rSrc };
+        this.leg.left  = { src: lSrc };
     }
 }

@@ -240,22 +240,24 @@ export class Renderer {
 
         if (robotStruct.body) {
             this.currentBodyId = robotStruct.body.id || this.currentBodyId;
-            this._bindSingleLayer('body', robotStruct.body.src, robotStruct.body.animType);
+            const bSrc = robotStruct.body.src !== undefined ? robotStruct.body.src : '';
+            this._bindSingleLayer('body', bSrc, robotStruct.body.animType);
         }
         if (robotStruct.head) {
-            this._bindSingleLayer('head', robotStruct.head.src, robotStruct.head.animType);
+            const hSrc = robotStruct.head.src !== undefined ? robotStruct.head.src : '';
+            this._bindSingleLayer('head', hSrc, robotStruct.head.animType);
         }
         if (robotStruct.arm) {
-            const rSrc = robotStruct.arm.right?.src || robotStruct.arm.src;
-            const lSrc = robotStruct.arm.left?.src  || robotStruct.arm.src;
+            const rSrc = robotStruct.arm.right?.src !== undefined ? robotStruct.arm.right.src : (robotStruct.arm.src !== undefined ? robotStruct.arm.src : '');
+            const lSrc = robotStruct.arm.left?.src  !== undefined ? robotStruct.arm.left.src  : (robotStruct.arm.src !== undefined ? robotStruct.arm.src : '');
             const rSize = robotStruct.arm.right?.pivot ? robotStruct.arm.right.pivot : null;
             const lSize = robotStruct.arm.left?.pivot  ? robotStruct.arm.left.pivot  : null;
             this._bindSingleLayer('rightArm', rSrc, robotStruct.arm.animType, 1, 10, rSize);
             this._bindSingleLayer('leftArm', lSrc, robotStruct.arm.animType, 1, 10, lSize);
         }
         if (robotStruct.leg) {
-            const rSrc = robotStruct.leg.right?.src || robotStruct.leg.src;
-            const lSrc = robotStruct.leg.left?.src  || robotStruct.leg.src;
+            const rSrc = robotStruct.leg.right?.src !== undefined ? robotStruct.leg.right.src : (robotStruct.leg.src !== undefined ? robotStruct.leg.src : '');
+            const lSrc = robotStruct.leg.left?.src  !== undefined ? robotStruct.leg.left.src  : (robotStruct.leg.src !== undefined ? robotStruct.leg.src : '');
             this._bindSingleLayer('rightLeg', rSrc, robotStruct.leg.animType);
             this._bindSingleLayer('leftLeg', lSrc, robotStruct.leg.animType);
         }

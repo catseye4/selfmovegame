@@ -172,8 +172,13 @@ window.addEventListener('DOMContentLoaded', () => {
             animBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             const anim = btn.dataset.anim;
-            animator.play(anim);
-            addLog(`[애니메이션 트리거] Trigger: <strong>${anim.toUpperCase()}</strong>`, "success");
+            if (anim === 'stop') {
+                animator.pause();
+                addLog(`[애니메이션 멈춤] Motion Engine Paused`, "warn");
+            } else {
+                animator.play(anim);
+                addLog(`[애니메이션 트리거] Trigger: <strong>${anim.toUpperCase()}</strong>`, "success");
+            }
         });
     });
 
