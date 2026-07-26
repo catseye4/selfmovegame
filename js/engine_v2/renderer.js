@@ -1,38 +1,50 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // ENCAPSULATED VIEW RENDERER (v2)
    Encapsulates all Canvas drawing and styles to decouple Logic from View.
-   Supports Skeletal Layered Pivot Paper-Doll Rendering.
+   Supports 6-Subpart Robot Skeletal Layered Pivot Paper-Doll Rendering.
+   Subparts: head, body, rightArm, leftArm, rightLeg, leftLeg
+   Changing arm or leg swaps both left and right assets as a unified set.
    ========================================================================== */
 
 export class Renderer {
     constructor() {
         this.contexts = new Map(); // canvas -> CanvasRenderingContext2D
 
-        // 페이퍼돌 레이어 기본 설정
+        // 6부위 로봇 페이퍼돌 레이어 기본 설정 (zIndex 순서대로 그리기)
         this.layers = {
-            leg: {
-                x: 165, y: 170, pivotX: 25, pivotY: 15, zIndex: 1,
+            leftArm: {
+                x: 145, y: 110, pivotX: 15, pivotY: 15, zIndex: 0,
                 img: null, src: '', animType: 'pivot',
-                frameCount: 1, fps: 10, defaultColor: '#00ff66'
+                frameCount: 1, fps: 10, defaultColor: '#ff9900'
+            },
+            leftLeg: {
+                x: 150, y: 170, pivotX: 25, pivotY: 15, zIndex: 1,
+                img: null, src: '', animType: 'pivot',
+                frameCount: 1, fps: 10, defaultColor: '#00cc55'
             },
             body: {
                 x: 165, y: 125, pivotX: 30, pivotY: 35, zIndex: 2,
                 img: null, src: '', animType: 'pivot',
                 frameCount: 1, fps: 10, defaultColor: '#ff0055'
             },
+            rightLeg: {
+                x: 180, y: 170, pivotX: 25, pivotY: 15, zIndex: 3,
+                img: null, src: '', animType: 'pivot',
+                frameCount: 1, fps: 10, defaultColor: '#00ff66'
+            },
             head: {
-                x: 165, y: 70, pivotX: 20, pivotY: 25, zIndex: 3,
+                x: 165, y: 70, pivotX: 20, pivotY: 25, zIndex: 4,
                 img: null, src: '', animType: 'pivot',
                 frameCount: 1, fps: 10, defaultColor: '#00ffcc'
             },
-            arm: {
-                x: 145, y: 110, pivotX: 15, pivotY: 15, zIndex: 4,
+            rightArm: {
+                x: 185, y: 110, pivotX: 15, pivotY: 15, zIndex: 5,
                 img: null, src: '', animType: 'pivot',
                 frameCount: 1, fps: 10, defaultColor: '#ffcc00'
             }
         };
 
-        // 초기 프리셋 파츠 모크 이미지 선로드 처리
+        // 초기 프리셋 파츠 모크 이미지 선로드 처리 (팔/다리는 양측 일괄 적용)
         this.changePart('head', 'assets/sprites/parts/head_mock.png', 'pivot');
         this.changePart('body', 'assets/sprites/parts/body_mock.png', 'pivot');
         this.changePart('arm', 'assets/sprites/parts/arm_mock.png', 'pivot');
@@ -70,39 +82,93 @@ export class Renderer {
         );
     }
 
-    // 파츠 스왑 인터페이스
-    changePart(layerName, imageSrc, animType = 'pivot', frameCount = 1, fps = 10) {
-        const layer = this.layers[layerName];
+    // 단일 레이어 이미지 바인딩 내부 헬퍼
+    _bindSingleLayer(layerKey, src, animType = 'pivot', frameCount = 1, fps = 10) {
+        const layer = this.layers[layerKey];
         if (!layer) return;
 
         layer.animType = animType;
         layer.frameCount = frameCount;
         layer.fps = fps;
 
-        if (!imageSrc) {
+        if (!src) {
             layer.img = null;
             layer.src = '';
             return;
         }
 
         const img = new Image();
-        img.src = imageSrc;
+        img.src = src;
         img.onload = () => {
             layer.img = img;
-            layer.src = imageSrc;
+            layer.src = src;
         };
         img.onerror = () => {
-            // 로드 실패 시에도 fallbacks를 그리기 위해 null 처리 유지
             layer.img = null;
         };
     }
 
-    // 하이브리드 관절식 페이퍼돌 드로잉 인터페이스
+    /**
+     * 파츠 스왑 인터페이스
+     * - 'head' / 'body': 해당 개별 파츠 교체
+     * - 'arm': 팔 파츠 교체 (오른팔 rightArm과 왼팔 leftArm 세트 일괄 교체)
+     * - 'leg': 다리 파츠 교체 (오른다리 rightLeg와 왼다리 leftLeg 세트 일괄 교체)
+     */
+    changePart(slotName, imageSrc, animType = 'pivot', frameCount = 1, fps = 10) {
+        if (slotName === 'arm') {
+            // 팔 변경 시 왼쪽과 오른쪽 이미지를 동시에 세트로 일괄 교체
+            const rightSrc = (typeof imageSrc === 'object' && imageSrc.right) ? imageSrc.right : imageSrc;
+            const leftSrc = (typeof imageSrc === 'object' && imageSrc.left) ? imageSrc.left : imageSrc;
+            this._bindSingleLayer('rightArm', rightSrc, animType, frameCount, fps);
+            this._bindSingleLayer('leftArm', leftSrc, animType, frameCount, fps);
+        } else if (slotName === 'leg') {
+            // 다리 변경 시 왼쪽과 오른쪽 이미지를 동시에 세트로 일괄 교체
+            const rightSrc = (typeof imageSrc === 'object' && imageSrc.right) ? imageSrc.right : imageSrc;
+            const leftSrc = (typeof imageSrc === 'object' && imageSrc.left) ? imageSrc.left : imageSrc;
+            this._bindSingleLayer('rightLeg', rightSrc, animType, frameCount, fps);
+            this._bindSingleLayer('leftLeg', leftSrc, animType, frameCount, fps);
+        } else if (slotName === 'head' || slotName === 'body') {
+            const src = (typeof imageSrc === 'object' && imageSrc.src) ? imageSrc.src : imageSrc;
+            this._bindSingleLayer(slotName, src, animType, frameCount, fps);
+        } else if (this.layers[slotName]) {
+            // 단일 서브레이어 명시 교체 (예: 'rightArm', 'leftArm' 등)
+            this._bindSingleLayer(slotName, imageSrc, animType, frameCount, fps);
+        }
+    }
+
+    /**
+     * 로봇 구조체(RobotPartsStructure) 데이터를 받아 일괄 렌더링 레이어 스왑
+     */
+    setRobotStructure(robotStruct) {
+        if (!robotStruct) return;
+        const layersMap = robotStruct.toRendererLayers ? robotStruct.toRendererLayers() : robotStruct;
+
+        if (layersMap.head) {
+            this.changePart('head', layersMap.head.src, layersMap.head.animType);
+        }
+        if (layersMap.body) {
+            this.changePart('body', layersMap.body.src, layersMap.body.animType);
+        }
+        if (layersMap.arm) {
+            this.changePart('arm', {
+                right: layersMap.arm.right?.src || layersMap.arm.src,
+                left: layersMap.arm.left?.src || layersMap.arm.src
+            }, layersMap.arm.animType);
+        }
+        if (layersMap.leg) {
+            this.changePart('leg', {
+                right: layersMap.leg.right?.src || layersMap.leg.src,
+                left: layersMap.leg.left?.src || layersMap.leg.src
+            }, layersMap.leg.animType);
+        }
+    }
+
+    // 하이브리드 6-부위 관절식 로봇 페이퍼돌 드로잉 인터페이스
     drawPaperDoll(canvas, x, y, stateName, timeSec) {
         const ctx = this.initCanvas(canvas);
         if (!ctx) return;
 
-        // 레이어 그리기 순서 정렬 (zIndex 기준)
+        // 레이어 그리기 순서 정렬 (zIndex 기준: leftArm -> leftLeg -> body -> rightLeg -> head -> rightArm)
         const sortedLayers = Object.entries(this.layers)
             .sort((a, b) => a[1].zIndex - b[1].zIndex);
 
@@ -120,28 +186,38 @@ export class Renderer {
             let offsetOffsetX = 0;
 
             if (stateName === 'walk') {
-                if (name === 'arm') {
-                    // 팔은 Math.sin()으로 앞뒤 왕복
+                if (name === 'rightArm') {
+                    // 오른팔은 Math.sin()으로 정방향 왕복
                     angle = Math.sin(timeSec * 8) * 0.5;
-                } else if (name === 'leg') {
+                } else if (name === 'leftArm') {
+                    // 왼팔은 역방향 왕복
+                    angle = -Math.sin(timeSec * 8) * 0.5;
+                } else if (name === 'rightLeg') {
                     if (layer.animType === 'pivot') {
-                        // 다리는 팔과 반대 위상으로 왕복
+                        // 오른다리는 역방향 스윙
                         angle = -Math.sin(timeSec * 8) * 0.4;
                     }
+                } else if (name === 'leftLeg') {
+                    if (layer.animType === 'pivot') {
+                        // 왼다리는 정방향 스윙
+                        angle = Math.sin(timeSec * 8) * 0.4;
+                    }
                 } else if (name === 'body') {
-                    // 몸통은 진격 방향으로 미세하게 바운싱
                     offsetOffsetY = Math.abs(Math.sin(timeSec * 8)) * 3;
+                } else if (name === 'head') {
+                    offsetOffsetY = Math.abs(Math.sin(timeSec * 8)) * 2;
                 }
             } else if (stateName === 'attack') {
-                if (name === 'arm') {
-                    // 공격 시 팔이 칼날치기 모션으로 튀어나감
+                if (name === 'rightArm') {
+                    // 공격 시 오른팔이 칼날치기 모션으로 튀어나감
                     angle = -Math.PI / 4 + Math.abs(Math.sin(timeSec * 12)) * 0.8;
                     offsetOffsetX = Math.sin(timeSec * 12) * 10;
+                } else if (name === 'leftArm') {
+                    angle = Math.sin(timeSec * 6) * 0.2;
                 } else if (name === 'body') {
                     offsetOffsetX = Math.sin(timeSec * 12) * 4;
                 }
             } else { // 'idle'
-                // 대기 시 호흡 모션
                 if (name === 'body') {
                     offsetOffsetY = Math.sin(timeSec * 2.5) * 2;
                 } else if (name === 'head') {
@@ -191,13 +267,11 @@ export class Renderer {
         ctx.shadowBlur = 12;
 
         if (name === 'head') {
-            // 미래형 바이저 헬멧
             ctx.beginPath();
             ctx.arc(20, 20, 18, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
 
-            // 바이저 네온 라인
             ctx.strokeStyle = '#00ffff';
             ctx.lineWidth = 2;
             ctx.beginPath();
@@ -206,7 +280,6 @@ export class Renderer {
             ctx.stroke();
 
         } else if (name === 'body') {
-            // 중장갑 흉갑 플레이트 및 네온 코어
             ctx.beginPath();
             ctx.moveTo(5, 5);
             ctx.lineTo(55, 5);
@@ -216,28 +289,25 @@ export class Renderer {
             ctx.fill();
             ctx.stroke();
 
-            // 가슴 앰프 핵심 코어
             ctx.fillStyle = '#ff0055';
             ctx.beginPath();
             ctx.arc(30, 25, 6, 0, Math.PI * 2);
             ctx.fill();
 
-        } else if (name === 'arm') {
-            // 네온 광선 블레이드 무장
+        } else if (name === 'rightArm' || name === 'leftArm') {
             ctx.beginPath();
             ctx.rect(5, 5, 10, 30);
             ctx.fill();
             ctx.stroke();
 
-            ctx.strokeStyle = '#ffaa00';
+            ctx.strokeStyle = (name === 'rightArm') ? '#ffaa00' : '#ff7700';
             ctx.beginPath();
             ctx.moveTo(10, 35);
-            ctx.lineTo(10, 75); // 거대한 레이저 빔 소드 연출
+            ctx.lineTo(10, 75);
             ctx.stroke();
 
-        } else if (name === 'leg') {
+        } else if (name === 'rightLeg' || name === 'leftLeg') {
             if (layer.animType === 'sprite') {
-                // 전차 무한궤도 롤러 휠 트랙 시뮬레이션
                 ctx.beginPath();
                 ctx.arc(15, 15, 12, 0, Math.PI * 2);
                 ctx.arc(45, 15, 12, 0, Math.PI * 2);
@@ -247,7 +317,6 @@ export class Renderer {
                 ctx.rect(3, 3, 54, 24);
                 ctx.stroke();
 
-                // 실시간으로 흐르는 기어 체인 핀
                 const trackOffset = (timeSec * 100) % 20;
                 ctx.strokeStyle = '#ff00ff';
                 ctx.setLineDash([4, 4]);
@@ -255,16 +324,14 @@ export class Renderer {
                 ctx.beginPath();
                 ctx.rect(3, 3, 54, 24);
                 ctx.stroke();
-                ctx.setLineDash([]); // 대시 리셋
+                ctx.setLineDash([]);
             } else {
-                // 역관절 고기동 로봇 기계 다리
                 ctx.beginPath();
                 ctx.moveTo(25, 5);
                 ctx.lineTo(10, 30);
                 ctx.lineTo(25, 55);
                 ctx.stroke();
                 
-                // 관절 발판
                 ctx.beginPath();
                 ctx.arc(25, 55, 6, 0, Math.PI * 2);
                 ctx.fill();
@@ -272,11 +339,9 @@ export class Renderer {
             }
         }
 
-        // 쉐도우 효과 리셋
         ctx.shadowBlur = 0;
     }
 
-    // 세뇌 징집 등 특수 필터 효과 렌더링 적용 (CSS 필터를 캔버스 렌더러단에서 추상화)
     applyFilter(canvas, filterString) {
         const ctx = this.initCanvas(canvas);
         if (ctx) {
@@ -284,7 +349,6 @@ export class Renderer {
         }
     }
 
-    // 픽셀 스타일 맵 적용
     applyStyle(element, styleObj) {
         if (!element || !styleObj) return;
         for (const prop in styleObj) {

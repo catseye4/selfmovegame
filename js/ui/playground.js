@@ -1,10 +1,14 @@
 import { PARTS_DB } from '../data/parts.js';
 import { SpriteAnimator } from '../engine_v2/spriteAnimator_v2.js';
 import { renderer } from '../engine_v2/renderer.js';
+import { RobotPartsStructure } from '../engine_v2/robotStructure.js';
 
 window.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('playground-canvas');
     if (!canvas) return;
+
+    // 로봇 파츠 데이터 구조체 인스턴스 생성
+    const robotParts = new RobotPartsStructure();
 
     // SpriteAnimator 및 Renderer 초기화 (기본 모드: paperdoll)
     const animator = new SpriteAnimator(canvas);
@@ -58,21 +62,42 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (slot === 'head') {
                     canvas.style.borderColor = part.pixelStyle.borderColor || '#00ffcc';
                     canvas.style.boxShadow = part.pixelStyle.boxShadow || 'none';
-                }
-
-                // 렌더러의 해당 슬롯 이미지 교체 (Renderer.changePart 호출)
-                if (slot === 'leg') {
+                    robotParts.setHead({
+                        id: part.id,
+                        name: part.name,
+                        src: 'assets/sprites/parts/head_mock.png'
+                    });
+                } else if (slot === 'body') {
+                    robotParts.setBody({
+                        id: part.id,
+                        name: part.name,
+                        src: 'assets/sprites/parts/body_mock.png'
+                    });
+                } else if (slot === 'arm') {
+                    // 팔(arm) 파츠 교체 시 오른쪽/왼쪽 이미지가 세트로 동시 변경됨!
+                    robotParts.setArmSet({
+                        id: part.id,
+                        name: part.name,
+                        right: { src: 'assets/sprites/parts/arm_mock.png' },
+                        left:  { src: 'assets/sprites/parts/arm_mock.png' }
+                    });
+                } else if (slot === 'leg') {
+                    // 다리(leg) 파츠 교체 시 오른쪽/왼쪽 이미지가 세트로 동시 변경됨!
                     const isSprite = selectLegAnimType.value === 'sprite';
-                    if (isSprite) {
-                        renderer.changePart('leg', 'assets/sprites/parts/leg_track_mock.png', 'sprite', 4, 12);
-                    } else {
-                        renderer.changePart('leg', 'assets/sprites/parts/leg_mock.png', 'pivot');
-                    }
-                } else {
-                    renderer.changePart(slot, `assets/sprites/parts/${slot}_mock.png`, 'pivot');
+                    const legSrc = isSprite ? 'assets/sprites/parts/leg_track_mock.png' : 'assets/sprites/parts/leg_mock.png';
+                    robotParts.setLegSet({
+                        id: part.id,
+                        name: part.name,
+                        animType: isSprite ? 'sprite' : 'pivot',
+                        right: { src: legSrc },
+                        left:  { src: legSrc }
+                    });
                 }
             }
         }
+
+        // 렌더러에 구조체 적용 (팔/다리는 양쪽 세트로 일괄 바인딩)
+        renderer.setRobotStructure(robotParts);
 
         // 스탯 피드백 출력
         if (statsFeedback) {
