@@ -2,7 +2,7 @@
    PROJECT: MAD OVERLORD // ENCAPSULATED VIEW RENDERER (v2)
    Encapsulates all Canvas drawing and styles to decouple Logic from View.
    Chest-Centric Anchor System with Dynamic Mobility Type Branching.
-   Shoulder-Fixed Counter-Clockwise Arc & Return Attack Motion.
+   Dual-Arm 1 O'clock Counter-Clockwise High Arc & Return Attack Motion.
    Z-Index View Order: leftArm(0) -> leftLeg(1) -> body(2) -> head(3) -> rightLeg(4) -> rightArm(5)
    ========================================================================== */
 
@@ -283,24 +283,24 @@ export class Renderer {
                     offsetOffsetY = Math.abs(Math.sin(timeSec * 8)) * 2;
                 }
             } else if (stateName === 'attack') {
-                // 어깨 피벗(Pivot) 중심축 위치 완벽 고정
+                // 어깨 피벗 중심축 고정
                 offsetOffsetX = 0;
                 offsetOffsetY = 0;
 
-                if (name === 'rightArm') {
-                    // 어깨 중심축 고정 상태에서 반시계 방향 반원 회전 상승 후 복귀
+                // 양팔(오른팔 & 왼팔) 모두 반시계 방향으로 1시 방향(-150도)까지 호쾌하게 치솟았다가 복귀
+                if (name === 'rightArm' || name === 'leftArm') {
                     const attackProgress = (timeSec * 6) % (Math.PI * 2);
                     
                     if (attackProgress < Math.PI) {
-                        // 1단계: 반시계 방향으로 반원 호(Arc)를 그리며 위로 쑤욱 치솟기 (0 rad -> -100도)
+                        // 1단계: 반시계 방향 1시 방향(약 -150도 부채꼴)까지 시원하고 높게 치솟기
                         const upRatio = attackProgress / Math.PI;
                         const easeUp = Math.sin(upRatio * Math.PI * 0.5);
-                        angle = -easeUp * (Math.PI * 0.55);
+                        angle = -easeUp * (Math.PI * 0.85);
                     } else {
-                        // 2단계: 원래 상태로 호를 따라 시계 방향 복귀 (-100도 -> 0 rad)
+                        // 2단계: 원래 상태로 호를 따라 시계 방향 복귀 (-150도 -> 0 rad)
                         const downRatio = (attackProgress - Math.PI) / Math.PI;
                         const easeDown = Math.cos(downRatio * Math.PI * 0.5);
-                        angle = -easeDown * (Math.PI * 0.55);
+                        angle = -easeDown * (Math.PI * 0.85);
                     }
                 }
             } else { // 'idle' 대기 상태: 가슴 파츠 축 중심 전신 연동 호흡 바운싱
