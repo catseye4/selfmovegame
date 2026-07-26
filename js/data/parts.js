@@ -38,7 +38,7 @@ export const PARTS_DB = {
     head: [
         {
             id: 'head_red_robot',
-            name: '레드 바이저 다안 헬멧',
+            name: '기본 머리',
             faction: '거대로봇 (메카닉)',
             cost: 0, // 기본 로봇 파츠
             src: 'assets/sprites/parts/robot/red_head.png',
@@ -132,7 +132,7 @@ export const PARTS_DB = {
     body: [
         {
             id: 'body_red_robot',
-            name: '중장갑 엑시온 코어 흉갑',
+            name: '기본 가슴',
             faction: '거대로봇 (메카닉)',
             cost: 0,
             src: 'assets/sprites/parts/robot/red_body.png',
@@ -221,7 +221,7 @@ export const PARTS_DB = {
     arm: [
         {
             id: 'arm_red_robot',
-            name: '더블 메카 바주카 암 세트',
+            name: '기본 팔',
             faction: '거대로봇 (메카닉)',
             cost: 0,
             src: 'assets/sprites/parts/robot/red_arm_r.png',
@@ -317,7 +317,7 @@ export const PARTS_DB = {
     leg: [
         {
             id: 'leg_red_robot',
-            name: '서스펜션 발목 레그 세트',
+            name: '기본 다리',
             faction: '거대로봇 (메카닉)',
             cost: 0,
             src: 'assets/sprites/parts/robot/red_leg.png',

@@ -9,7 +9,7 @@ export class RobotPartsStructure {
         // 머리 (head)
         this.head = {
             id: initialData.head?.id || 'head_red_robot',
-            name: initialData.head?.name || '레드 바이저 다안 헬멧',
+            name: initialData.head?.name || '기본 머리',
             src: initialData.head?.src || 'assets/sprites/parts/robot/red_head.png',
             animType: initialData.head?.animType || 'pivot'
         };
@@ -17,7 +17,7 @@ export class RobotPartsStructure {
         // 가슴/몸통 (body)
         this.body = {
             id: initialData.body?.id || 'body_red_robot',
-            name: initialData.body?.name || '중장갑 엑시온 코어 흉갑',
+            name: initialData.body?.name || '기본 가슴',
             src: initialData.body?.src || 'assets/sprites/parts/robot/red_body.png',
             animType: initialData.body?.animType || 'pivot'
         };
@@ -25,7 +25,7 @@ export class RobotPartsStructure {
         // 팔 (arm) 세트 -> 오른쪽, 왼쪽 묶음 관리
         this.arm = {
             id: initialData.arm?.id || 'arm_red_robot',
-            name: initialData.arm?.name || '더블 메카 바주카 암 세트',
+            name: initialData.arm?.name || '기본 팔',
             animType: initialData.arm?.animType || 'pivot',
             right: {
                 src: initialData.arm?.right?.src || 'assets/sprites/parts/robot/red_arm_l.png',
@@ -42,7 +42,7 @@ export class RobotPartsStructure {
         // 다리 (leg) 세트 -> 오른쪽, 왼쪽 묶음 관리
         this.leg = {
             id: initialData.leg?.id || 'leg_red_robot',
-            name: initialData.leg?.name || '서스펜션 발목 레그 세트',
+            name: initialData.leg?.name || '기본 다리',
             animType: initialData.leg?.animType || 'pivot',
             right: { src: initialData.leg?.right?.src || 'assets/sprites/parts/robot/red_leg.png' },
             left:  { src: initialData.leg?.left?.src  || 'assets/sprites/parts/robot/red_leg.png' }
