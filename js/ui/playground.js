@@ -63,14 +63,15 @@ window.addEventListener('DOMContentLoaded', () => {
 
                 // 렌더러를 경유한 속성 스타일 매핑 검증
                 if (slot === 'head') {
-                    canvas.style.borderColor = part.pixelStyle.borderColor || '#00ffcc';
-                    canvas.style.boxShadow = part.pixelStyle.boxShadow || 'none';
+                    canvas.style.borderColor = part.pixelStyle?.borderColor || '#00ffcc';
+                    canvas.style.boxShadow = part.pixelStyle?.boxShadow || 'none';
                     robotParts.setHead({
                         id: part.id,
                         name: part.name,
                         src: partSrc,
                         animType: animType
                     });
+                    renderer.changePart('head', partSrc, animType);
                 } else if (slot === 'body') {
                     robotParts.setBody({
                         id: part.id,
@@ -78,25 +79,32 @@ window.addEventListener('DOMContentLoaded', () => {
                         src: partSrc,
                         animType: animType
                     });
+                    renderer.changePart('body', partSrc, animType, 1, 10, part.id);
                 } else if (slot === 'arm') {
                     // 팔(arm) 파츠 교체 시 오른쪽/왼쪽 이미지가 세트로 동시 변경됨!
+                    const rSrc = part.rightSrc || partSrc;
+                    const lSrc = part.leftSrc || partSrc;
                     robotParts.setArmSet({
                         id: part.id,
                         name: part.name,
                         animType: animType,
-                        right: { src: part.rightSrc || partSrc },
-                        left:  { src: part.leftSrc || partSrc }
+                        right: { src: rSrc },
+                        left:  { src: lSrc }
                     });
+                    renderer.changePart('arm', { right: rSrc, left: lSrc }, animType);
                 } else if (slot === 'leg') {
                     // 다리(leg) 파츠 교체 시 오른쪽/왼쪽 이미지가 세트로 동시 변경됨!
                     const legSrc = animType === 'sprite' ? 'assets/sprites/parts/leg_track_mock.png' : partSrc;
+                    const rSrc = part.rightSrc || legSrc;
+                    const lSrc = part.leftSrc || legSrc;
                     robotParts.setLegSet({
                         id: part.id,
                         name: part.name,
                         animType: animType,
-                        right: { src: part.rightSrc || legSrc },
-                        left:  { src: part.leftSrc || legSrc }
+                        right: { src: rSrc },
+                        left:  { src: lSrc }
                     });
+                    renderer.changePart('leg', { right: rSrc, left: lSrc }, animType);
                 }
             }
         }

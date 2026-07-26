@@ -178,12 +178,14 @@ export class Renderer {
 
         const img = new Image();
         img.src = src;
+        layer.img = img; // 즉시 동기 할당하여 캐시/로드 대기 지연 방지
+        layer.src = src;
+
         img.onload = () => {
             layer.img = img;
-            layer.src = src;
         };
         img.onerror = () => {
-            layer.img = null;
+            console.warn(`[Renderer] Failed to load image asset: ${src}`);
         };
     }
 
