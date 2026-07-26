@@ -3,6 +3,7 @@
    Encapsulates all Canvas drawing and styles to decouple Logic from View.
    Chest-Centric Anchor System with Dynamic Mobility Type Branching.
    Dual-Arm 1 O'clock Counter-Clockwise High Arc & Return Attack Motion.
+   Image Asset Caching & Instant Part Swap Pipeline.
    Z-Index View Order: leftArm(0) -> leftLeg(1) -> body(2) -> head(3) -> rightLeg(4) -> rightArm(5)
    ========================================================================== */
 
@@ -11,6 +12,7 @@ import { BODY_ANCHORS_DB } from '../data/parts.js';
 export class Renderer {
     constructor() {
         this.contexts = new Map(); // canvas -> CanvasRenderingContext2D
+        this.imageCache = new Map(); // src -> HTMLImageElement (자산 캐싱 시스템)
 
         // 가슴(body) 파츠를 기준 앵커(x: 165, y: 98)로 설정하고, 상하/좌우 오프셋으로 연동되는 6개 독립 레이어 구조체
         // 1. 왼팔(leftArm, 0) -> 2. 왼쪽다리(leftLeg, 1) -> 3. 몸통(body, 2) -> 4. 얼굴(head, 3) -> 5. 오른쪽다리(rightLeg, 4) -> 6. 오른팔(rightArm, 5)
@@ -81,7 +83,6 @@ export class Renderer {
 
         // 기동 방식 타입 분기 예외 처리 (전차 궤도/무한궤도 vs 인간형 로봇 관절 등)
         if (mobilityType === 'track_vehicle' || customAnimType === 'sprite') {
-            // 전차 궤도 기동 파츠 앵커 스위칭 분기
             if (anchors.headAnchor) {
                 this.screenLayers.head.x = bodyLayer.x + anchors.headAnchor.offsetX;
                 this.screenLayers.head.y = bodyLayer.y + anchors.headAnchor.offsetY;
@@ -95,7 +96,6 @@ export class Renderer {
                 this.screenLayers.rightArm.y = bodyLayer.y + anchors.rightArmAnchor.offsetY;
             }
 
-            // 전차 궤도는 단일 중앙 트랙 앵커로 다리 레이어를 분기 변환
             const trackY = bodyLayer.y + (anchors.trackAnchor?.offsetY || 46);
             this.screenLayers.leftLeg.x = bodyLayer.x;
             this.screenLayers.leftLeg.y = trackY;
@@ -106,7 +106,6 @@ export class Renderer {
             this.screenLayers.rightLeg.animType = 'sprite';
 
         } else {
-            // 표준 인간형/로봇 관절 앵커 셋팅 (가슴 기준 상대 오프셋으로 연동)
             if (anchors.headAnchor) {
                 this.screenLayers.head.x = bodyLayer.x + anchors.headAnchor.offsetX;
                 this.screenLayers.head.y = bodyLayer.y + anchors.headAnchor.offsetY;
@@ -161,7 +160,7 @@ export class Renderer {
         );
     }
 
-    // 단일 화면 레이어 이미지 바인딩 내부 헬퍼
+    // 단일 화면 레이어 이미지 캐싱 및 동기 전환 바인딩 내부 헬퍼
     _bindSingleLayer(layerKey, src, animType = 'pivot', frameCount = 1, fps = 10) {
         const layer = this.screenLayers[layerKey];
         if (!layer) return;
@@ -176,13 +175,21 @@ export class Renderer {
             return;
         }
 
+        // 이미 로드 완료되어 캐시된 이미지가 있는 경우 즉시 동기 반영!
+        if (this.imageCache.has(src)) {
+            const cachedImg = this.imageCache.get(src);
+            layer.img = cachedImg;
+            layer.src = src;
+            return;
+        }
+
+        // 신규 자산 로드 처리 (onload 시점 캐싱 및 적용)
         const img = new Image();
         img.src = src;
-        layer.img = img; // 즉시 동기 할당하여 캐시/로드 대기 지연 방지
-        layer.src = src;
-
         img.onload = () => {
+            this.imageCache.set(src, img);
             layer.img = img;
+            layer.src = src;
         };
         img.onerror = () => {
             console.warn(`[Renderer] Failed to load image asset: ${src}`);
@@ -294,12 +301,10 @@ export class Renderer {
                     const attackProgress = (timeSec * 6) % (Math.PI * 2);
                     
                     if (attackProgress < Math.PI) {
-                        // 1단계: 반시계 방향 1시 방향(약 -150도 부채꼴)까지 시원하고 높게 치솟기
                         const upRatio = attackProgress / Math.PI;
                         const easeUp = Math.sin(upRatio * Math.PI * 0.5);
                         angle = -easeUp * (Math.PI * 0.85);
                     } else {
-                        // 2단계: 원래 상태로 호를 따라 시계 방향 복귀 (-150도 -> 0 rad)
                         const downRatio = (attackProgress - Math.PI) / Math.PI;
                         const easeDown = Math.cos(downRatio * Math.PI * 0.5);
                         angle = -easeDown * (Math.PI * 0.85);
