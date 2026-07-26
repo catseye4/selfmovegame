@@ -3,7 +3,8 @@
    Encapsulates all Canvas drawing and styles to decouple Logic from View.
    Chest-Centric Anchor System with Dynamic Mobility Type Branching.
    Dual-Arm 1 O'clock Counter-Clockwise High Arc & Return Attack Motion.
-   Image Asset Caching & Dynamic Part Pivot/Size Support.
+   Image Asset Caching & Dynamic Part Pivot/Size/Offset Support.
+   Top-Most Z-Index Muzzle Flash & Laser Projectile Particle Rendering Pipeline.
    Z-Index View Order: leftArm(0) -> leftLeg(1) -> body(2) -> head(3) -> rightLeg(4) -> rightArm(5)
    ========================================================================== */
 
@@ -69,8 +70,6 @@ export class Renderer {
 
     /**
      * 가슴(body) 파츠 기준 앵커 동적 재계산 및 기동 방식 타입별 분기 처리 함수
-     * @param {string} bodyPartId - 가슴 파츠 ID (예: 'body_red_robot', 'body_tank_core' 등)
-     * @param {string} customAnimType - 하위 장착 파츠의 기동 방식 (예: 'sprite' 궤도형, 'pivot' 관절형 등)
      */
     recalculateAnchors(bodyPartId = this.currentBodyId, customAnimType = null) {
         this.currentBodyId = bodyPartId || this.currentBodyId;
@@ -81,7 +80,6 @@ export class Renderer {
         const anchors = anchorConfig.anchors;
         const mobilityType = anchorConfig.type;
 
-        // 기동 방식 타입 분기 예외 처리 (전차 궤도/무한궤도 vs 인간형 로봇 관절 등)
         if (mobilityType === 'track_vehicle' || customAnimType === 'sprite') {
             if (anchors.headAnchor) {
                 this.screenLayers.head.x = bodyLayer.x + anchors.headAnchor.offsetX;
@@ -187,7 +185,6 @@ export class Renderer {
             return;
         }
 
-        // 이미 로드 완료되어 캐시된 이미지가 있는 경우 즉시 동기 반영!
         if (this.imageCache.has(src)) {
             const cachedImg = this.imageCache.get(src);
             layer.img = cachedImg;
@@ -195,7 +192,6 @@ export class Renderer {
             return;
         }
 
-        // 신규 자산 로드 처리 (onload 시점 캐싱 및 적용)
         const img = new Image();
         img.src = src;
         img.onload = () => {
@@ -208,9 +204,6 @@ export class Renderer {
         };
     }
 
-    /**
-     * 파츠 스왑 인터페이스 (가슴 기준 앵커 자동 동기화 & 커스텀 피벗/크기 지원)
-     */
     changePart(slotName, imageSrc, animType = 'pivot', frameCount = 1, fps = 10, bodyPartId = null, customSize = null) {
         if (slotName === 'arm') {
             const rightSrc = (typeof imageSrc === 'object' && imageSrc.right) ? imageSrc.right : imageSrc;
@@ -233,13 +226,9 @@ export class Renderer {
             this._bindSingleLayer(slotName, imageSrc, animType, frameCount, fps, customSize);
         }
 
-        // 파츠 교체 후 가슴 기준 앵커 재계산 및 기동 타입 분기 처리 실행
         this.recalculateAnchors(bodyPartId || this.currentBodyId, animType);
     }
 
-    /**
-     * 파츠 구조체(RobotPartsStructure) 데이터를 받아 화면 레이어 자산 동기화 및 앵커 동적 전환
-     */
     setRobotStructure(robotStruct) {
         if (!robotStruct) return;
 
@@ -267,7 +256,6 @@ export class Renderer {
             this._bindSingleLayer('leftLeg', lSrc, robotStruct.leg.animType);
         }
 
-        // 앵커 동적 재계산 실행
         this.recalculateAnchors(this.currentBodyId, robotStruct.leg?.animType);
     }
 
@@ -276,7 +264,6 @@ export class Renderer {
         const ctx = this.initCanvas(canvas);
         if (!ctx) return;
 
-        // 화면 배치 전용 레이어 변수(screenLayers)를 zIndex 기준으로 정렬 (0:leftArm -> 1:leftLeg -> 2:body -> 3:head -> 4:rightLeg -> 5:rightArm)
         const sortedLayers = Object.entries(this.screenLayers)
             .sort((a, b) => a[1].zIndex - b[1].zIndex);
 
@@ -312,105 +299,22 @@ export class Renderer {
                     offsetOffsetY = Math.abs(Math.sin(timeSec * 8)) * 2;
                 }
             } else if (stateName === 'attack') {
-                // 어깨 피벗 중심축 고정
                 offsetOffsetX = 0;
                 offsetOffsetY = 0;
 
                 const isLaserArm = this.screenLayers.rightArm.src.includes('arm_laser_r.png');
 
                 if (isLaserArm) {
-                    // [레이저 포대 세밀 공격 애니메이션 연출]
-                    // 1. 왼팔은 움직이지 않는다 (0도 고정).
-                    // 2. 레이저 포대만 반시계 방향 30도로 움직여 위치를 무한 고정한다.
-                    // 3. 포구 입구에서 직경 25px 무한 펄스 원 반짝임 가동.
-                    // 4. 빛날 때마다 직경 15px 원 형태의 레이저 발사체를 전방으로 무한 연사 발사.
                     if (name === 'leftArm') {
                         angle = 0; // 1. 왼팔 0도 고정!
                     } else if (name === 'rightArm') {
-                        const targetRad = - (30 * Math.PI / 180); // 1. 반시계 방향 30도 (-0.5236 rad)
-
-                        // 2. 0 ~ 0.2초 내 30도 조준 들어올린 후 30도 각도 무한 고정!
+                        const targetRad = - (30 * Math.PI / 180); // 반시계 30도 고정!
                         const raiseProgress = Math.min(1, timeSec * 5);
                         angle = targetRad * Math.sin(raiseProgress * Math.PI * 0.5);
-
-                        // 포구 노즐 팁 좌표 (오른쪽 +5px -> 51, 위쪽 -4px -> 41)
-                        const tipX = 51;
-                        const tipY = 41;
-
-                        // 3. 포구 입구 직경 25px 무한 펄스 원 반짝임 (Charging Pulse)
-                        const pulse = (Math.sin(timeSec * 16.0) + 1) / 2; // 0 ~ 1 무한 파동
-                        const flashRadius = (25 / 2) * (0.65 + 0.35 * pulse); // 직경 25px (반지름 12.5px)
-
-                        ctx.save();
-                        ctx.translate(tipX, tipY);
-
-                        // 외곽 청록빛 글로우 (직경 25px)
-                        ctx.fillStyle = `rgba(0, 255, 204, ${0.85 * (0.7 + 0.3 * pulse)})`;
-                        ctx.shadowColor = '#00ffcc';
-                        ctx.shadowBlur = 20;
-                        ctx.beginPath();
-                        ctx.arc(0, 0, Math.max(1, flashRadius), 0, Math.PI * 2);
-                        ctx.fill();
-
-                        // 중심 고광도 화이트 코어
-                        ctx.fillStyle = `rgba(255, 255, 255, ${0.95 * pulse})`;
-                        ctx.shadowColor = '#ffffff';
-                        ctx.shadowBlur = 12;
-                        ctx.beginPath();
-                        ctx.arc(0, 0, Math.max(1, flashRadius - 4), 0, Math.PI * 2);
-                        ctx.fill();
-
-                        // 4. 직경 15px 레이저 플라즈마 발사체를 +25도 방향으로 연사 발사 (위쪽 5도 상향 조종)
-                        const numBullets = 3;
-                        const fireAngle = (25 * Math.PI / 180); // 위쪽으로 5도 올린 +25도 사격 각도
-
-                        for (let i = 0; i < numBullets; i++) {
-                            const bulletPhase = (timeSec * 4.5 + i * (Math.PI * 2 / numBullets)) % (Math.PI * 2);
-                            const travelDist = (bulletPhase / (Math.PI * 2)) * 220; // 0 ~ 220px 전방 진행
-                            const fadeAlpha = 1 - (travelDist / 220); // 멀어질수록 소멸
-                            const projRadius = (15 / 2); // 직경 15px (반지름 7.5px)
-
-                            if (travelDist > 5) {
-                                ctx.save();
-                                // 4시 방향 (+30도) 각도로 비스듬히 사격
-                                ctx.rotate(fireAngle);
-                                ctx.translate(travelDist, 0);
-
-                                // 레이저 잔상 꼬리 (Laser Trail)
-                                ctx.strokeStyle = `rgba(0, 255, 204, ${0.6 * fadeAlpha})`;
-                                ctx.lineWidth = projRadius * 1.5;
-                                ctx.beginPath();
-                                ctx.moveTo(-18, 0);
-                                ctx.lineTo(0, 0);
-                                ctx.stroke();
-
-                                // 발사체 외곽 글로우 (직경 15px)
-                                ctx.fillStyle = `rgba(0, 255, 204, ${0.9 * fadeAlpha})`;
-                                ctx.shadowColor = '#00ffcc';
-                                ctx.shadowBlur = 15;
-                                ctx.beginPath();
-                                ctx.arc(0, 0, projRadius, 0, Math.PI * 2);
-                                ctx.fill();
-
-                                // 발사체 화이트 구체 코어
-                                ctx.fillStyle = `rgba(255, 255, 255, ${1.0 * fadeAlpha})`;
-                                ctx.shadowColor = '#ffffff';
-                                ctx.shadowBlur = 8;
-                                ctx.beginPath();
-                                ctx.arc(0, 0, Math.max(1, projRadius - 2.5), 0, Math.PI * 2);
-                                ctx.fill();
-
-                                ctx.restore();
-                            }
-                        }
-
-                        ctx.restore();
                     }
                 } else {
-                    // [기본 파츠 일반 공격 모션] 양팔 1시 방향 호쾌 상승
                     if (name === 'rightArm' || name === 'leftArm') {
                         const attackProgress = (timeSec * 6) % (Math.PI * 2);
-                        
                         if (attackProgress < Math.PI) {
                             const upRatio = attackProgress / Math.PI;
                             const easeUp = Math.sin(upRatio * Math.PI * 0.5);
@@ -422,7 +326,7 @@ export class Renderer {
                         }
                     }
                 }
-            } else { // 'idle' 대기 상태: 가슴 파츠 축 중심 전신 연동 호흡 바운싱
+            } else { // 'idle' 대기 상태
                 const bodyBounceY = Math.sin(timeSec * 2.5) * 2.5;
 
                 if (name === 'body') {
@@ -439,15 +343,13 @@ export class Renderer {
 
             ctx.translate(offsetOffsetX, offsetOffsetY);
 
-            // pivot 타입인 경우에만 각도 회전 적용
             if (layer.animType === 'pivot') {
                 ctx.rotate(angle);
             }
 
-            // 피벗 중심으로 드로잉 영역 밀어내기
             ctx.translate(-layer.pivotX, -layer.pivotY);
 
-            // 3. 실체 그리기
+            // 3. 부위별 실체 이미지 드로잉
             if (layer.img && layer.img.complete && layer.img.naturalWidth > 0) {
                 const targetW = layer.renderWidth || layer.img.naturalWidth;
                 const targetH = layer.renderHeight || layer.img.naturalHeight;
@@ -465,6 +367,82 @@ export class Renderer {
                 }
             } else {
                 this.drawFallbackPart(ctx, name, layer, timeSec);
+            }
+
+            // 4. [레이저 포대 전용 최상단 Z-Index 덮어쓰기 파티클 렌더링]
+            // 이미지 드로잉이 완료된 바로 그 위(Z-Index 최상단)에 포구 입구 25px 차징 원 & 15px 레이저 연사 렌더링!
+            if (stateName === 'attack' && name === 'rightArm' && this.screenLayers.rightArm.src.includes('arm_laser_r.png')) {
+                // 포구 노즐 팁 좌표 (이미지 드로잉 로컬 좌표계 기준: layer.pivotX + 51, layer.pivotY + 41)
+                const tipX = layer.pivotX + 51;
+                const tipY = layer.pivotY + 41;
+
+                // 포구 입구 직경 25px 무한 펄스 원 반짝임 (Charging Pulse)
+                const pulse = (Math.sin(timeSec * 16.0) + 1) / 2;
+                const flashRadius = (25 / 2) * (0.65 + 0.35 * pulse); // 직경 25px (반지름 12.5px)
+
+                ctx.save();
+                ctx.translate(tipX, tipY);
+
+                // 외곽 청록빛 글로우 (직경 25px)
+                ctx.fillStyle = `rgba(0, 255, 204, ${0.85 * (0.7 + 0.3 * pulse)})`;
+                ctx.shadowColor = '#00ffcc';
+                ctx.shadowBlur = 22;
+                ctx.beginPath();
+                ctx.arc(0, 0, Math.max(1, flashRadius), 0, Math.PI * 2);
+                ctx.fill();
+
+                // 중심 고광도 화이트 코어
+                ctx.fillStyle = `rgba(255, 255, 255, ${0.95 * pulse})`;
+                ctx.shadowColor = '#ffffff';
+                ctx.shadowBlur = 14;
+                ctx.beginPath();
+                ctx.arc(0, 0, Math.max(1, flashRadius - 4), 0, Math.PI * 2);
+                ctx.fill();
+
+                // 직경 15px 레이저 플라즈마 발사체 +25도 사격 각도 연사 발사
+                const numBullets = 3;
+                const fireAngle = (25 * Math.PI / 180);
+
+                for (let i = 0; i < numBullets; i++) {
+                    const bulletPhase = (timeSec * 4.5 + i * (Math.PI * 2 / numBullets)) % (Math.PI * 2);
+                    const travelDist = (bulletPhase / (Math.PI * 2)) * 220;
+                    const fadeAlpha = 1 - (travelDist / 220);
+                    const projRadius = (15 / 2);
+
+                    if (travelDist > 5) {
+                        ctx.save();
+                        ctx.rotate(fireAngle);
+                        ctx.translate(travelDist, 0);
+
+                        // 레이저 잔상 꼬리 (Laser Trail)
+                        ctx.strokeStyle = `rgba(0, 255, 204, ${0.6 * fadeAlpha})`;
+                        ctx.lineWidth = projRadius * 1.5;
+                        ctx.beginPath();
+                        ctx.moveTo(-18, 0);
+                        ctx.lineTo(0, 0);
+                        ctx.stroke();
+
+                        // 발사체 외곽 글로우 (직경 15px)
+                        ctx.fillStyle = `rgba(0, 255, 204, ${0.9 * fadeAlpha})`;
+                        ctx.shadowColor = '#00ffcc';
+                        ctx.shadowBlur = 15;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, projRadius, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // 발사체 화이트 구체 코어
+                        ctx.fillStyle = `rgba(255, 255, 255, ${1.0 * fadeAlpha})`;
+                        ctx.shadowColor = '#ffffff';
+                        ctx.shadowBlur = 8;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, Math.max(1, projRadius - 2.5), 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.restore();
+                    }
+                }
+
+                ctx.restore();
             }
 
             ctx.restore();
