@@ -319,62 +319,89 @@ export class Renderer {
                 const isLaserArm = this.screenLayers.rightArm.src.includes('arm_laser_r.png');
 
                 if (isLaserArm) {
-                    // [레이저 포대 전용 특수 공격 애니메이션 모션]
-                    // 1. 왼팔은 고정되어 움직이지 않는다.
-                    // 2. 레이저 포대만 반시계 방향으로 15도 움직인다.
-                    // 3. 레이저 포대 위치를 고정한다.
-                    // 4. 레이저 포대 입구에서 직경 15px 원 형태의 반짝임 (3회)
-                    // 5. 레이저 포대를 원래 위치로 복귀한다.
+                    // [레이저 포대 세밀 공격 애니메이션 연출]
+                    // 1. 왼팔은 움직이지 않는다 (0도 고정).
+                    // 2. 레이저 포대만 반시계 방향 30도로 움직여 위치를 무한 고정한다.
+                    // 3. 포구 입구에서 직경 25px 무한 펄스 원 반짝임 가동.
+                    // 4. 빛날 때마다 직경 15px 원 형태의 레이저 발사체를 전방으로 무한 연사 발사.
                     if (name === 'leftArm') {
-                        angle = 0; // 1. 왼팔 고정!
+                        angle = 0; // 1. 왼팔 0도 고정!
                     } else if (name === 'rightArm') {
-                        const cycle = (timeSec * 3.5) % (Math.PI * 2); // 공격 1주기 타임라인
-                        const targetRad = - (15 * Math.PI / 180); // 반시계 방향 15도 (-0.2618 rad)
+                        const targetRad = - (30 * Math.PI / 180); // 1. 반시계 방향 30도 (-0.5236 rad)
 
-                        if (cycle < Math.PI * 0.4) {
-                            // Phase 1: 반시계 방향 15도 조준 들어올리기
-                            const ratio = cycle / (Math.PI * 0.4);
-                            angle = targetRad * Math.sin(ratio * Math.PI * 0.5);
-                        } else if (cycle < Math.PI * 1.6) {
-                            // Phase 2 & 3: 15도 각도 조준 위치 고정!
-                            angle = targetRad;
+                        // 2. 0 ~ 0.2초 내 30도 조준 들어올린 후 30도 각도 무한 고정!
+                        const raiseProgress = Math.min(1, timeSec * 5);
+                        angle = targetRad * Math.sin(raiseProgress * Math.PI * 0.5);
 
-                            // Phase 4: 레이저 포대 입구에서 직경 15px 원 형태의 반짝임 (3회 파동)
-                            const flashProgress = (cycle - Math.PI * 0.4) / (Math.PI * 1.2); // 0 ~ 1
-                            const pulse = Math.sin(flashProgress * Math.PI * 3); // 3회 파동 펄스
+                        // 포구 노즐 팁 좌표 (피벗 기준 노즐 위치)
+                        const tipX = 36;
+                        const tipY = 70;
 
-                            if (pulse > 0) {
-                                // 포구 입구 팁 위치 좌표 (피벗 기준 노즐 위치)
-                                const tipX = 36;
-                                const tipY = 70;
-                                const flashRadius = (15 / 2) * pulse; // 직경 15px (반지름 7.5px)
+                        // 3. 포구 입구 직경 25px 무한 펄스 원 반짝임 (Charging Pulse)
+                        const pulse = (Math.sin(timeSec * 16.0) + 1) / 2; // 0 ~ 1 무한 파동
+                        const flashRadius = (25 / 2) * (0.65 + 0.35 * pulse); // 직경 25px (반지름 12.5px)
 
+                        ctx.save();
+                        ctx.translate(tipX, tipY);
+
+                        // 외곽 청록빛 글로우 (직경 25px)
+                        ctx.fillStyle = `rgba(0, 255, 204, ${0.85 * (0.7 + 0.3 * pulse)})`;
+                        ctx.shadowColor = '#00ffcc';
+                        ctx.shadowBlur = 20;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, Math.max(1, flashRadius), 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // 중심 고광도 화이트 코어
+                        ctx.fillStyle = `rgba(255, 255, 255, ${0.95 * pulse})`;
+                        ctx.shadowColor = '#ffffff';
+                        ctx.shadowBlur = 12;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, Math.max(1, flashRadius - 4), 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // 4. 직경 15px 레이저 플라즈마 발사체 전방 무한 연사 발사 (Laser Projectile Streams)
+                        const numBullets = 3;
+
+                        for (let i = 0; i < numBullets; i++) {
+                            const bulletPhase = (timeSec * 4.5 + i * (Math.PI * 2 / numBullets)) % (Math.PI * 2);
+                            const travelDist = (bulletPhase / (Math.PI * 2)) * 220; // 0 ~ 220px 전방 진행
+                            const fadeAlpha = 1 - (travelDist / 220); // 멀어질수록 소멸
+                            const projRadius = (15 / 2); // 직경 15px (반지름 7.5px)
+
+                            if (travelDist > 5) {
                                 ctx.save();
-                                ctx.translate(tipX, tipY);
+                                ctx.translate(travelDist, 0);
 
-                                // 1. 외곽 청록빛 글로우 반짝임 (직경 15px)
-                                ctx.fillStyle = `rgba(0, 255, 204, ${0.85 * pulse})`;
-                                ctx.shadowColor = '#00ffcc';
-                                ctx.shadowBlur = 16;
+                                // 레이저 잔상 꼬리 (Laser Trail)
+                                ctx.strokeStyle = `rgba(0, 255, 204, ${0.6 * fadeAlpha})`;
+                                ctx.lineWidth = projRadius * 1.5;
                                 ctx.beginPath();
-                                ctx.arc(0, 0, Math.max(1, flashRadius), 0, Math.PI * 2);
+                                ctx.moveTo(-18, 0);
+                                ctx.lineTo(0, 0);
+                                ctx.stroke();
+
+                                // 발사체 외곽 글로우 (직경 15px)
+                                ctx.fillStyle = `rgba(0, 255, 204, ${0.9 * fadeAlpha})`;
+                                ctx.shadowColor = '#00ffcc';
+                                ctx.shadowBlur = 15;
+                                ctx.beginPath();
+                                ctx.arc(0, 0, projRadius, 0, Math.PI * 2);
                                 ctx.fill();
 
-                                // 2. 중심 고광도 화이트 코어 반짝임
-                                ctx.fillStyle = `rgba(255, 255, 255, ${0.95 * pulse})`;
+                                // 발사체 화이트 구체 코어
+                                ctx.fillStyle = `rgba(255, 255, 255, ${1.0 * fadeAlpha})`;
                                 ctx.shadowColor = '#ffffff';
-                                ctx.shadowBlur = 10;
+                                ctx.shadowBlur = 8;
                                 ctx.beginPath();
-                                ctx.arc(0, 0, Math.max(1, flashRadius - 2), 0, Math.PI * 2);
+                                ctx.arc(0, 0, Math.max(1, projRadius - 2.5), 0, Math.PI * 2);
                                 ctx.fill();
 
                                 ctx.restore();
                             }
-                        } else {
-                            // Phase 5: 레이저 포대를 원래 위치(0도)로 이동
-                            const ratio = (cycle - Math.PI * 1.6) / (Math.PI * 0.4);
-                            angle = targetRad * (1 - Math.sin(ratio * Math.PI * 0.5));
                         }
+
+                        ctx.restore();
                     }
                 } else {
                     // [기본 파츠 일반 공격 모션] 양팔 1시 방향 호쾌 상승
