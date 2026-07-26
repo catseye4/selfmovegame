@@ -13,8 +13,8 @@ export class Renderer {
         // 1. 왼팔(leftArm, 0) -> 2. 왼쪽다리(leftLeg, 1) -> 3. 몸통(body, 2) -> 4. 얼굴(head, 3) -> 5. 오른쪽다리(rightLeg, 4) -> 6. 오른팔(rightArm, 5)
         this.screenLayers = {
             leftArm: {
-                zIndex: 0, // 가장 뒤쪽 최하단 뒤 팔 (기존 148에서 오른쪽으로 25px 이동: x 173)
-                x: 173, y: 96, pivotX: 20, pivotY: 18,
+                zIndex: 0, // 가장 뒤쪽 최하단 뒤 팔 (기존 173에서 오른쪽으로 17px 이동: x 190)
+                x: 190, y: 96, pivotX: 20, pivotY: 18,
                 renderWidth: 42, renderHeight: 84, defaultColor: '#ff9900',
                 img: null, src: 'assets/sprites/parts/robot/red_arm_r.png', animType: 'pivot', frameCount: 1, fps: 10
             },
@@ -43,8 +43,8 @@ export class Renderer {
                 img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             rightArm: {
-                zIndex: 5, // 모든 이미지의 가장 앞쪽 최상단 전면 팔 (왼쪽으로 7px: x 151, 위쪽으로 3px: y 93)
-                x: 151, y: 93, pivotX: 22, pivotY: 18,
+                zIndex: 5, // 모든 이미지의 가장 앞쪽 최상단 전면 팔 (왼쪽으로 5px: x 146, 위쪽으로 5px: y 88)
+                x: 146, y: 88, pivotX: 22, pivotY: 18,
                 renderWidth: 44, renderHeight: 86, defaultColor: '#ffcc00',
                 img: null, src: 'assets/sprites/parts/robot/red_arm_l.png', animType: 'pivot', frameCount: 1, fps: 10
             }
