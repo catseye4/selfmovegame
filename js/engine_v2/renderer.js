@@ -2,7 +2,7 @@
    PROJECT: MAD OVERLORD // ENCAPSULATED VIEW RENDERER (v2)
    Encapsulates all Canvas drawing and styles to decouple Logic from View.
    Chest-Centric Anchor System with Dynamic Mobility Type Branching.
-   Chest-Linked Idle Bounce & Right Arm Heavy Slam Attack Motion.
+   Shoulder-Fixed Counter-Clockwise Arc & Return Attack Motion.
    Z-Index View Order: leftArm(0) -> leftLeg(1) -> body(2) -> head(3) -> rightLeg(4) -> rightArm(5)
    ========================================================================== */
 
@@ -283,31 +283,24 @@ export class Renderer {
                     offsetOffsetY = Math.abs(Math.sin(timeSec * 8)) * 2;
                 }
             } else if (stateName === 'attack') {
-                // 공격 모션: 몸통과 왼팔은 멈추고(Static), 오른팔만 위로 들었다가 전방 내려찍기!
+                // 어깨 피벗(Pivot) 중심축 위치 완벽 고정
                 offsetOffsetX = 0;
                 offsetOffsetY = 0;
 
                 if (name === 'rightArm') {
-                    const attackCycle = (timeSec * 7) % (Math.PI * 2);
+                    // 어깨 중심축 고정 상태에서 반시계 방향 반원 회전 상승 후 복귀
+                    const attackProgress = (timeSec * 6) % (Math.PI * 2);
                     
-                    if (attackCycle < Math.PI * 0.6) {
-                        // 1. 와인드업 (위/뒤로 크게 올리기)
-                        const progress = attackCycle / (Math.PI * 0.6);
-                        angle = -Math.sin(progress * Math.PI * 0.5) * 1.25; // 위로 약 72도 쑤욱 들기
-                        offsetOffsetX = -progress * 6;
-                        offsetOffsetY = -progress * 12;
-                    } else if (attackCycle < Math.PI * 1.1) {
-                        // 2. 고속 내려찍기 (Slam Down Heavy Impact)
-                        const progress = (attackCycle - Math.PI * 0.6) / (Math.PI * 0.5);
-                        angle = -1.25 + progress * 2.1; // 위에서 아래 전방으로 강력 임팩트 내려찍기 (+48도)
-                        offsetOffsetX = -6 + progress * 20;
-                        offsetOffsetY = -12 + progress * 20;
+                    if (attackProgress < Math.PI) {
+                        // 1단계: 반시계 방향으로 반원 호(Arc)를 그리며 위로 쑤욱 치솟기 (0 rad -> -100도)
+                        const upRatio = attackProgress / Math.PI;
+                        const easeUp = Math.sin(upRatio * Math.PI * 0.5);
+                        angle = -easeUp * (Math.PI * 0.55);
                     } else {
-                        // 3. 빠른 복귀 (Recovery)
-                        const progress = (attackCycle - Math.PI * 1.1) / (Math.PI * 0.9);
-                        angle = 0.85 * (1 - progress);
-                        offsetOffsetX = 14 * (1 - progress);
-                        offsetOffsetY = 8 * (1 - progress);
+                        // 2단계: 원래 상태로 호를 따라 시계 방향 복귀 (-100도 -> 0 rad)
+                        const downRatio = (attackProgress - Math.PI) / Math.PI;
+                        const easeDown = Math.cos(downRatio * Math.PI * 0.5);
+                        angle = -easeDown * (Math.PI * 0.55);
                     }
                 }
             } else { // 'idle' 대기 상태: 가슴 파츠 축 중심 전신 연동 호흡 바운싱
