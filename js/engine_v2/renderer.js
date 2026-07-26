@@ -2,41 +2,43 @@
    PROJECT: MAD OVERLORD // ENCAPSULATED VIEW RENDERER (v2)
    Encapsulates all Canvas drawing and styles to decouple Logic from View.
    Supports 6-Subpart Red Robot Skeletal Layered Pivot Paper-Doll Rendering.
+   Z-Index Layer Order: leftArm(0) -> leftLeg(1) -> body(2) -> head(3) -> rightLeg(4) -> rightArm(5)
    ========================================================================== */
 
 export class Renderer {
     constructor() {
         this.contexts = new Map(); // canvas -> CanvasRenderingContext2D
 
-        // 6부위 레드 메카 로봇 페이퍼돌 레이어 정밀 좌표 바인딩 (zIndex 순서대로 그리기)
+        // 사용자가 명시한 6부위 레이어 그리기 순서 (뒤 -> 앞)
+        // 1. 왼팔(leftArm, 0) -> 2. 왼쪽다리(leftLeg, 1) -> 3. 몸통(body, 2) -> 4. 얼굴(head, 3) -> 5. 오른쪽다리(rightLeg, 4) -> 6. 오른팔(rightArm, 5)
         this.layers = {
             leftArm: {
-                x: 132, y: 110, pivotX: 20, pivotY: 18, zIndex: 0,
+                x: 135, y: 104, pivotX: 20, pivotY: 18, zIndex: 0,
                 img: null, src: 'assets/sprites/parts/robot/red_arm_l.png', animType: 'pivot',
                 renderWidth: 42, renderHeight: 84, frameCount: 1, fps: 10, defaultColor: '#ff9900'
             },
             leftLeg: {
-                x: 148, y: 146, pivotX: 25, pivotY: 15, zIndex: 1,
+                x: 148, y: 150, pivotX: 25, pivotY: 15, zIndex: 1,
                 img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot',
                 renderWidth: 52, renderHeight: 82, frameCount: 1, fps: 10, defaultColor: '#00cc55'
             },
             body: {
-                x: 165, y: 118, pivotX: 36, pivotY: 48, zIndex: 2,
+                x: 165, y: 106, pivotX: 36, pivotY: 48, zIndex: 2,
                 img: null, src: 'assets/sprites/parts/robot/red_body.png', animType: 'pivot',
                 renderWidth: 72, renderHeight: 96, frameCount: 1, fps: 10, defaultColor: '#ff0055'
             },
-            rightLeg: {
-                x: 182, y: 146, pivotX: 25, pivotY: 15, zIndex: 3,
-                img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot',
-                renderWidth: 52, renderHeight: 82, frameCount: 1, fps: 10, defaultColor: '#00ff66'
-            },
             head: {
-                x: 165, y: 86, pivotX: 26, pivotY: 48, zIndex: 4,
+                x: 165, y: 74, pivotX: 26, pivotY: 48, zIndex: 3,
                 img: null, src: 'assets/sprites/parts/robot/red_head.png', animType: 'pivot',
                 renderWidth: 52, renderHeight: 52, frameCount: 1, fps: 10, defaultColor: '#00ffcc'
             },
+            rightLeg: {
+                x: 178, y: 150, pivotX: 25, pivotY: 15, zIndex: 4,
+                img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot',
+                renderWidth: 52, renderHeight: 82, frameCount: 1, fps: 10, defaultColor: '#00ff66'
+            },
             rightArm: {
-                x: 198, y: 110, pivotX: 22, pivotY: 18, zIndex: 5,
+                x: 195, y: 104, pivotX: 22, pivotY: 18, zIndex: 5,
                 img: null, src: 'assets/sprites/parts/robot/red_arm_r.png', animType: 'pivot',
                 renderWidth: 44, renderHeight: 86, frameCount: 1, fps: 10, defaultColor: '#ffcc00'
             }
@@ -163,7 +165,7 @@ export class Renderer {
         const ctx = this.initCanvas(canvas);
         if (!ctx) return;
 
-        // 레이어 그리기 순서 정렬 (zIndex 기준: leftArm -> leftLeg -> body -> rightLeg -> head -> rightArm)
+        // 사용자가 지시한 레이어 순서(zIndex 기준: leftArm(0) -> leftLeg(1) -> body(2) -> head(3) -> rightLeg(4) -> rightArm(5))대로 정열 드로잉
         const sortedLayers = Object.entries(this.layers)
             .sort((a, b) => a[1].zIndex - b[1].zIndex);
 
