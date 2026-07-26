@@ -296,6 +296,7 @@ export const PARTS_DB = {
             src: 'assets/sprites/parts/robot/arm_laser_r.png',
             rightSrc: 'assets/sprites/parts/robot/arm_laser_r.png',
             leftSrc: 'assets/sprites/parts/robot/red_arm_r.png',
+            rightPivot: { pivotX: 22, pivotY: 18, renderWidth: 44, renderHeight: 79 },
             animType: 'pivot',
             stats: { hp: 200, dps: 350, range: 350, speed: 0 },
             skillDesc: '단일 보스급 영웅 타겟 방어력 관통 지속 레이저 파동 딜링',
