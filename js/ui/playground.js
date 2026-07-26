@@ -1,7 +1,7 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // PLAYGROUND UI CONTROLLER (v2)
    Includes [파츠제거] support, Wireframe fallback mode, Real-time Debug Log Console,
-   Monster Preset Exception Handling & Automatic Selection Reversal.
+   Faction-based Monster Part Filtering & 3-Step Laser Cannon Sequence.
    ========================================================================== */
 
 import { PARTS_DB } from '../data/parts.js';
@@ -65,6 +65,34 @@ window.addEventListener('DOMContentLoaded', () => {
 
     let currentMonsterPreset = 'red_robot';
 
+    // 몬스터/기체 팩션 필터링 기반 드롭다운 파츠 채우기 함수
+    function populatePartSelectors(targetFaction = '거대로봇 (메카닉)') {
+        for (const slot in PARTS_DB) {
+            if (!selectors[slot]) continue;
+            const selector = selectors[slot];
+            const prevValue = selector.value;
+            selector.innerHTML = '';
+
+            const allParts = PARTS_DB[slot];
+            // [파츠제거] ('none') 또는 targetFaction과 일치하는 파츠만 필터링!
+            const filteredParts = allParts.filter(p => p.id === 'none' || p.faction === targetFaction);
+
+            filteredParts.forEach(part => {
+                const opt = document.createElement('option');
+                opt.value = part.id;
+                opt.textContent = part.id === 'none' ? part.name : `${part.name} (${part.faction})`;
+                selector.appendChild(opt);
+            });
+
+            // 1번 인덱스 기본 파츠 또는 이전 선택값 유지
+            if (filteredParts.some(p => p.id === prevValue)) {
+                selector.value = prevValue;
+            } else {
+                selector.value = filteredParts[1]?.id || filteredParts[0]?.id || 'none';
+            }
+        }
+    }
+
     // 몬스터/기체 선택 드롭다운 이벤트 (거대괴수 & 타락영웅 선택 시 뼈대 미존재 에러 표출 및 선택 취소 원복)
     if (selectMonsterType) {
         selectMonsterType.addEventListener('change', (e) => {
@@ -76,24 +104,14 @@ window.addEventListener('DOMContentLoaded', () => {
             } else {
                 currentMonsterPreset = selectedVal;
                 addLog(`[몬스터 선택] Preset Loaded -> <strong>거대로봇 (메카닉)</strong>`, "success");
+                populatePartSelectors('거대로봇 (메카닉)');
+                updateSelectedParts();
             }
         });
     }
 
-    // 각 파츠 드롭다운 채우기 (0번: [파츠제거], 초기 기본 선택: 1번 인덱스 기본 메카 파츠)
-    for (const slot in PARTS_DB) {
-        if (!selectors[slot]) continue;
-        const parts = PARTS_DB[slot];
-        parts.forEach(part => {
-            const opt = document.createElement('option');
-            opt.value = part.id;
-            opt.textContent = `${part.name} (${part.faction})`;
-            selectors[slot].appendChild(opt);
-        });
-
-        // 초기 기본 선택: 1번 인덱스 (기본 메카 파츠)
-        selectors[slot].value = parts[1]?.id || parts[0]?.id || 'none';
-    }
+    // 초기 파츠 드롭다운 채우기 (거대로봇 계통 파츠만 채움)
+    populatePartSelectors('거대로봇 (메카닉)');
 
     // 선택된 파츠들 스탯 계산 및 렌더링 스타일 연동 함수
     function updateSelectedParts() {
