@@ -9,44 +9,45 @@ export class Renderer {
     constructor() {
         this.contexts = new Map(); // canvas -> CanvasRenderingContext2D
 
-        // 화면 배치를 위한 렌더러 독자적인 6개 독립 레이어 구조체 (Z-Index 및 오프셋 좌표는 파츠 변경 시 절대 오염되지 않음)
+        // 화면 배치를 위한 렌더러 독자적인 6개 독립 레이어 구조체
+        // 원본 red_robot 비주얼과 100% 일치하는 정밀 결합 좌표 (뒤 -> 앞)
         // 1. 왼팔(leftArm, 0) -> 2. 왼쪽다리(leftLeg, 1) -> 3. 몸통(body, 2) -> 4. 얼굴(head, 3) -> 5. 오른쪽다리(rightLeg, 4) -> 6. 오른팔(rightArm, 5)
         this.screenLayers = {
             leftArm: {
                 zIndex: 0, // 가장 뒤쪽 최하단
-                x: 135, y: 104, pivotX: 20, pivotY: 18,
-                renderWidth: 42, renderHeight: 84, defaultColor: '#ff9900',
-                img: null, src: '', animType: 'pivot', frameCount: 1, fps: 10
+                x: 140, y: 94, pivotX: 20, pivotY: 16,
+                renderWidth: 44, renderHeight: 88, defaultColor: '#ff9900',
+                img: null, src: 'assets/sprites/parts/robot/red_arm_l.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             leftLeg: {
-                zIndex: 1,
-                x: 148, y: 150, pivotX: 25, pivotY: 15,
+                zIndex: 1, // 원근감 뒤쪽 다리 (살짝 위/왼쪽)
+                x: 154, y: 138, pivotX: 25, pivotY: 15,
                 renderWidth: 52, renderHeight: 82, defaultColor: '#00cc55',
-                img: null, src: '', animType: 'pivot', frameCount: 1, fps: 10
+                img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             body: {
-                zIndex: 2,
-                x: 165, y: 106, pivotX: 36, pivotY: 48,
+                zIndex: 2, // 메인 코어 흉갑
+                x: 165, y: 98, pivotX: 36, pivotY: 48,
                 renderWidth: 72, renderHeight: 96, defaultColor: '#ff0055',
-                img: null, src: '', animType: 'pivot', frameCount: 1, fps: 10
+                img: null, src: 'assets/sprites/parts/robot/red_body.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             head: {
-                zIndex: 3,
-                x: 165, y: 74, pivotX: 26, pivotY: 48,
+                zIndex: 3, // 얼굴/머리 (목 소켓 완벽 밀착)
+                x: 165, y: 62, pivotX: 26, pivotY: 48,
                 renderWidth: 52, renderHeight: 52, defaultColor: '#00ffcc',
-                img: null, src: '', animType: 'pivot', frameCount: 1, fps: 10
+                img: null, src: 'assets/sprites/parts/robot/red_head.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             rightLeg: {
-                zIndex: 4, // 몸통과 얼굴 앞쪽 입체 배치
-                x: 178, y: 150, pivotX: 25, pivotY: 15,
+                zIndex: 4, // 전면 입체 다리 (몸통/얼굴 앞쪽 배치!)
+                x: 168, y: 142, pivotX: 25, pivotY: 15,
                 renderWidth: 52, renderHeight: 82, defaultColor: '#00ff66',
-                img: null, src: '', animType: 'pivot', frameCount: 1, fps: 10
+                img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             rightArm: {
-                zIndex: 5, // 모든 이미지의 가장 앞쪽 최상단!
-                x: 195, y: 104, pivotX: 22, pivotY: 18,
-                renderWidth: 44, renderHeight: 86, defaultColor: '#ffcc00',
-                img: null, src: '', animType: 'pivot', frameCount: 1, fps: 10
+                zIndex: 5, // 모든 이미지의 가장 앞쪽 최상단 전면 무장!
+                x: 186, y: 94, pivotX: 22, pivotY: 16,
+                renderWidth: 46, renderHeight: 90, defaultColor: '#ffcc00',
+                img: null, src: 'assets/sprites/parts/robot/red_arm_r.png', animType: 'pivot', frameCount: 1, fps: 10
             }
         };
 
