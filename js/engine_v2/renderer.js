@@ -9,42 +9,42 @@ export class Renderer {
     constructor() {
         this.contexts = new Map(); // canvas -> CanvasRenderingContext2D
 
-        // 화면 배치를 위한 렌더러 독자적인 6개 독립 레이어 구조체
+        // 화면 배치를 위한 렌더러 독자적인 6개 독립 레이어 구조체 (정밀 픽셀 조정 좌표)
         // 1. 왼팔(leftArm, 0) -> 2. 왼쪽다리(leftLeg, 1) -> 3. 몸통(body, 2) -> 4. 얼굴(head, 3) -> 5. 오른쪽다리(rightLeg, 4) -> 6. 오른팔(rightArm, 5)
         this.screenLayers = {
             leftArm: {
-                zIndex: 0, // 가장 뒤쪽 최하단 뒤 팔 (몸통 왼어깨 소켓)
-                x: 148, y: 96, pivotX: 20, pivotY: 18,
+                zIndex: 0, // 가장 뒤쪽 최하단 뒤 팔 (기존 148에서 오른쪽으로 25px 이동: x 173)
+                x: 173, y: 96, pivotX: 20, pivotY: 18,
                 renderWidth: 42, renderHeight: 84, defaultColor: '#ff9900',
                 img: null, src: 'assets/sprites/parts/robot/red_arm_r.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             leftLeg: {
-                zIndex: 1, // 뒤쪽 다리 (둔부 뒤쪽 관절 링)
+                zIndex: 1, // 뒤쪽 다리
                 x: 152, y: 140, pivotX: 25, pivotY: 15,
                 renderWidth: 52, renderHeight: 82, defaultColor: '#00cc55',
                 img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             body: {
-                zIndex: 2, // 메인 코어 흉갑 (중앙 조인트)
+                zIndex: 2, // 메인 코어 흉갑
                 x: 165, y: 98, pivotX: 36, pivotY: 48,
                 renderWidth: 72, renderHeight: 96, defaultColor: '#ff0055',
                 img: null, src: 'assets/sprites/parts/robot/red_body.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             head: {
-                zIndex: 3, // 얼굴/머리 (목 소켓 밀착)
+                zIndex: 3, // 얼굴/머리
                 x: 165, y: 62, pivotX: 26, pivotY: 48,
                 renderWidth: 52, renderHeight: 52, defaultColor: '#00ffcc',
                 img: null, src: 'assets/sprites/parts/robot/red_head.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             rightLeg: {
-                zIndex: 4, // 전면 앞쪽 다리 (둔부 전면 관절 링)
+                zIndex: 4, // 전면 앞쪽 다리
                 x: 166, y: 144, pivotX: 25, pivotY: 15,
                 renderWidth: 52, renderHeight: 82, defaultColor: '#00ff66',
                 img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             rightArm: {
-                zIndex: 5, // 모든 이미지의 가장 앞쪽 최상단 전면 팔 (오른쪽에서 20px 왼쪽으로 이동: x 158)
-                x: 158, y: 96, pivotX: 22, pivotY: 18,
+                zIndex: 5, // 모든 이미지의 가장 앞쪽 최상단 전면 팔 (왼쪽으로 7px: x 151, 위쪽으로 3px: y 93)
+                x: 151, y: 93, pivotX: 22, pivotY: 18,
                 renderWidth: 44, renderHeight: 86, defaultColor: '#ffcc00',
                 img: null, src: 'assets/sprites/parts/robot/red_arm_l.png', animType: 'pivot', frameCount: 1, fps: 10
             }
