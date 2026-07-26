@@ -58,6 +58,9 @@ window.addEventListener('DOMContentLoaded', () => {
                 totalRange += part.stats.range || 0;
                 totalSpeed += part.stats.speed || 0;
 
+                const partSrc = part.src || `assets/sprites/parts/${slot}_mock.png`;
+                const animType = (slot === 'leg' && selectLegAnimType.value === 'sprite') ? 'sprite' : (part.animType || 'pivot');
+
                 // 렌더러를 경유한 속성 스타일 매핑 검증
                 if (slot === 'head') {
                     canvas.style.borderColor = part.pixelStyle.borderColor || '#00ffcc';
@@ -65,32 +68,34 @@ window.addEventListener('DOMContentLoaded', () => {
                     robotParts.setHead({
                         id: part.id,
                         name: part.name,
-                        src: 'assets/sprites/parts/head_mock.png'
+                        src: partSrc,
+                        animType: animType
                     });
                 } else if (slot === 'body') {
                     robotParts.setBody({
                         id: part.id,
                         name: part.name,
-                        src: 'assets/sprites/parts/body_mock.png'
+                        src: partSrc,
+                        animType: animType
                     });
                 } else if (slot === 'arm') {
                     // 팔(arm) 파츠 교체 시 오른쪽/왼쪽 이미지가 세트로 동시 변경됨!
                     robotParts.setArmSet({
                         id: part.id,
                         name: part.name,
-                        right: { src: 'assets/sprites/parts/arm_mock.png' },
-                        left:  { src: 'assets/sprites/parts/arm_mock.png' }
+                        animType: animType,
+                        right: { src: part.rightSrc || partSrc },
+                        left:  { src: part.leftSrc || partSrc }
                     });
                 } else if (slot === 'leg') {
                     // 다리(leg) 파츠 교체 시 오른쪽/왼쪽 이미지가 세트로 동시 변경됨!
-                    const isSprite = selectLegAnimType.value === 'sprite';
-                    const legSrc = isSprite ? 'assets/sprites/parts/leg_track_mock.png' : 'assets/sprites/parts/leg_mock.png';
+                    const legSrc = animType === 'sprite' ? 'assets/sprites/parts/leg_track_mock.png' : partSrc;
                     robotParts.setLegSet({
                         id: part.id,
                         name: part.name,
-                        animType: isSprite ? 'sprite' : 'pivot',
-                        right: { src: legSrc },
-                        left:  { src: legSrc }
+                        animType: animType,
+                        right: { src: part.rightSrc || legSrc },
+                        left:  { src: part.leftSrc || legSrc }
                     });
                 }
             }

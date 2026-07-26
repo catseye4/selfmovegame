@@ -88,15 +88,22 @@ export class MonsterController {
             }
 
             // 4. 격리 렌더러의 페이퍼돌 레이어 실시간 스왑 연동 (changePart)
-            if (slot === 'leg') {
-                const isSprite = part.id === 'leg_mech_wheel';
-                if (isSprite) {
-                    renderer.changePart('leg', 'assets/sprites/parts/leg_track_mock.png', 'sprite', 4, 12);
-                } else {
-                    renderer.changePart('leg', 'assets/sprites/parts/leg_mock.png', 'pivot');
-                }
+            const src = part.src || `assets/sprites/parts/${slot}_mock.png`;
+            const animType = part.animType || (slot === 'leg' && part.id === 'leg_mech_wheel' ? 'sprite' : 'pivot');
+
+            if (slot === 'arm') {
+                renderer.changePart('arm', {
+                    right: part.rightSrc || src,
+                    left: part.leftSrc || src
+                }, animType);
+            } else if (slot === 'leg') {
+                const legSrc = animType === 'sprite' ? 'assets/sprites/parts/leg_track_mock.png' : (part.rightSrc || src);
+                renderer.changePart('leg', {
+                    right: legSrc,
+                    left: legSrc
+                }, animType);
             } else {
-                renderer.changePart(slot, `assets/sprites/parts/${slot}_mock.png`, 'pivot');
+                renderer.changePart(slot, src, animType);
             }
         }
     }

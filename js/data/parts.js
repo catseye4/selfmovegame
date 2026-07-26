@@ -9,6 +9,8 @@ export const PARTS_DB = {
             name: '레드 바이저 다안 헬멧',
             faction: '거대로봇 (메카닉)',
             cost: 0, // 기본 로봇 파츠
+            src: 'assets/sprites/parts/robot/red_head.png',
+            animType: 'pivot',
             stats: { hp: 800, dps: 80, range: 40, speed: 10 },
             skillDesc: '다안 레이저 센서: 치명타 확률 20% 및 범위 조준',
             live2dStyle: {
@@ -101,6 +103,8 @@ export const PARTS_DB = {
             name: '중장갑 엑시온 코어 흉갑',
             faction: '거대로봇 (메카닉)',
             cost: 0,
+            src: 'assets/sprites/parts/robot/red_body.png',
+            animType: 'pivot',
             stats: { hp: 1600, dps: 60, range: 0, speed: 5 },
             skillDesc: '중앙 엑시온 코어: 피격 시 에너지 반사 파동 방출 및 방어력 상승',
             live2dStyle: {
@@ -188,6 +192,8 @@ export const PARTS_DB = {
             name: '더블 블레이드 메카 암 세트',
             faction: '거대로봇 (메카닉)',
             cost: 0,
+            src: 'assets/sprites/parts/arm_mock.png',
+            animType: 'pivot',
             stats: { hp: 400, dps: 300, range: 200, speed: 10 },
             skillDesc: '양팔 더블 블레이드 고속 연타 참격 및 범위 공격',
             attackType: 'melee',
@@ -280,6 +286,8 @@ export const PARTS_DB = {
             name: '서스펜션 발목 레그 세트',
             faction: '거대로봇 (메카닉)',
             cost: 0,
+            src: 'assets/sprites/parts/robot/red_leg.png',
+            animType: 'pivot',
             stats: { hp: 500, dps: 30, range: 0, speed: 20 },
             skillDesc: '충격 흡수 유압 서스펜션: 이동속도 증가 및 진격 기동',
             live2dStyle: {
