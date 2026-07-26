@@ -8,15 +8,15 @@ export class Renderer {
     constructor() {
         this.contexts = new Map(); // canvas -> CanvasRenderingContext2D
 
-        // 6부위 레드 메카 로봇 페이퍼돌 레이어 기본 설정 (zIndex 순서대로 그리기)
+        // 6부위 레드 메카 로봇 페이퍼돌 레이어 정밀 좌표 바인딩 (zIndex 순서대로 그리기)
         this.layers = {
             leftArm: {
-                x: 138, y: 108, pivotX: 18, pivotY: 18, zIndex: 0,
-                img: null, src: 'assets/sprites/parts/arm_mock.png', animType: 'pivot',
-                renderWidth: 36, renderHeight: 72, frameCount: 1, fps: 10, defaultColor: '#ff9900'
+                x: 140, y: 116, pivotX: 20, pivotY: 12, zIndex: 0,
+                img: null, src: 'assets/sprites/parts/robot/red_arm.png', animType: 'pivot',
+                renderWidth: 42, renderHeight: 84, frameCount: 1, fps: 10, defaultColor: '#ff9900'
             },
             leftLeg: {
-                x: 148, y: 165, pivotX: 25, pivotY: 15, zIndex: 1,
+                x: 148, y: 158, pivotX: 25, pivotY: 15, zIndex: 1,
                 img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot',
                 renderWidth: 52, renderHeight: 82, frameCount: 1, fps: 10, defaultColor: '#00cc55'
             },
@@ -26,26 +26,26 @@ export class Renderer {
                 renderWidth: 72, renderHeight: 96, frameCount: 1, fps: 10, defaultColor: '#ff0055'
             },
             rightLeg: {
-                x: 182, y: 165, pivotX: 25, pivotY: 15, zIndex: 3,
+                x: 182, y: 158, pivotX: 25, pivotY: 15, zIndex: 3,
                 img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot',
                 renderWidth: 52, renderHeight: 82, frameCount: 1, fps: 10, defaultColor: '#00ff66'
             },
             head: {
-                x: 165, y: 66, pivotX: 26, pivotY: 48, zIndex: 4,
+                x: 165, y: 86, pivotX: 26, pivotY: 48, zIndex: 4,
                 img: null, src: 'assets/sprites/parts/robot/red_head.png', animType: 'pivot',
                 renderWidth: 52, renderHeight: 52, frameCount: 1, fps: 10, defaultColor: '#00ffcc'
             },
             rightArm: {
-                x: 192, y: 108, pivotX: 18, pivotY: 18, zIndex: 5,
-                img: null, src: 'assets/sprites/parts/arm_mock.png', animType: 'pivot',
-                renderWidth: 36, renderHeight: 72, frameCount: 1, fps: 10, defaultColor: '#ffcc00'
+                x: 190, y: 116, pivotX: 20, pivotY: 12, zIndex: 5,
+                img: null, src: 'assets/sprites/parts/robot/red_arm.png', animType: 'pivot',
+                renderWidth: 42, renderHeight: 84, frameCount: 1, fps: 10, defaultColor: '#ffcc00'
             }
         };
 
         // 초기 레드 메카 파츠 자산 선로드
         this.changePart('head', 'assets/sprites/parts/robot/red_head.png', 'pivot');
         this.changePart('body', 'assets/sprites/parts/robot/red_body.png', 'pivot');
-        this.changePart('arm', 'assets/sprites/parts/arm_mock.png', 'pivot');
+        this.changePart('arm', 'assets/sprites/parts/robot/red_arm.png', 'pivot');
         this.changePart('leg', 'assets/sprites/parts/robot/red_leg.png', 'pivot');
     }
 

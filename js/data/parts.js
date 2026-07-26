@@ -192,7 +192,7 @@ export const PARTS_DB = {
             name: '더블 블레이드 메카 암 세트',
             faction: '거대로봇 (메카닉)',
             cost: 0,
-            src: 'assets/sprites/parts/arm_mock.png',
+            src: 'assets/sprites/parts/robot/red_arm.png',
             animType: 'pivot',
             stats: { hp: 400, dps: 300, range: 200, speed: 10 },
             skillDesc: '양팔 더블 블레이드 고속 연타 참격 및 범위 공격',
