@@ -333,9 +333,9 @@ export class Renderer {
                         const raiseProgress = Math.min(1, timeSec * 5);
                         angle = targetRad * Math.sin(raiseProgress * Math.PI * 0.5);
 
-                        // 포구 노즐 팁 좌표 (오른쪽 +5px -> 51, 위쪽 -10px -> 45)
+                        // 포구 노즐 팁 좌표 (오른쪽 +5px -> 51, 위쪽 -4px -> 41)
                         const tipX = 51;
-                        const tipY = 45;
+                        const tipY = 41;
 
                         // 3. 포구 입구 직경 25px 무한 펄스 원 반짝임 (Charging Pulse)
                         const pulse = (Math.sin(timeSec * 16.0) + 1) / 2; // 0 ~ 1 무한 파동
