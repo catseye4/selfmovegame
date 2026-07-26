@@ -333,9 +333,9 @@ export class Renderer {
                         const raiseProgress = Math.min(1, timeSec * 5);
                         angle = targetRad * Math.sin(raiseProgress * Math.PI * 0.5);
 
-                        // 포구 노즐 팁 좌표 (오른쪽 +10px -> 46, 위쪽 -15px -> 55)
-                        const tipX = 46;
-                        const tipY = 55;
+                        // 포구 노즐 팁 좌표 (오른쪽 +5px -> 51, 위쪽 -10px -> 45)
+                        const tipX = 51;
+                        const tipY = 45;
 
                         // 3. 포구 입구 직경 25px 무한 펄스 원 반짝임 (Charging Pulse)
                         const pulse = (Math.sin(timeSec * 16.0) + 1) / 2; // 0 ~ 1 무한 파동
@@ -360,9 +360,9 @@ export class Renderer {
                         ctx.arc(0, 0, Math.max(1, flashRadius - 4), 0, Math.PI * 2);
                         ctx.fill();
 
-                        // 4. 직경 15px 레이저 플라즈마 발사체를 4시 방향 (+30도 대각선)으로 연사 발사
+                        // 4. 직경 15px 레이저 플라즈마 발사체를 +25도 방향으로 연사 발사 (위쪽 5도 상향 조종)
                         const numBullets = 3;
-                        const fireAngle = (30 * Math.PI / 180); // 4시 방향 (+30도)
+                        const fireAngle = (25 * Math.PI / 180); // 위쪽으로 5도 올린 +25도 사격 각도
 
                         for (let i = 0; i < numBullets; i++) {
                             const bulletPhase = (timeSec * 4.5 + i * (Math.PI * 2 / numBullets)) % (Math.PI * 2);
