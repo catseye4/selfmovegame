@@ -1,7 +1,7 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // PLAYGROUND UI CONTROLLER (v2)
    Includes [파츠제거] support, Wireframe fallback mode, Real-time Debug Log Console,
-   Asset binding & HTTP 404 load error validation, and 3-step laser attack sequence.
+   Monster Preset Exception Handling & Automatic Selection Reversal.
    ========================================================================== */
 
 import { PARTS_DB } from '../data/parts.js';
@@ -61,7 +61,24 @@ window.addEventListener('DOMContentLoaded', () => {
     };
 
     const selectEngineMode = document.getElementById('select-engine-mode');
-    const selectLegAnimType = document.getElementById('select-leg-anim-type');
+    const selectMonsterType = document.getElementById('select-monster-type');
+
+    let currentMonsterPreset = 'red_robot';
+
+    // 몬스터/기체 선택 드롭다운 이벤트 (거대괴수 & 타락영웅 선택 시 뼈대 미존재 에러 표출 및 선택 취소 원복)
+    if (selectMonsterType) {
+        selectMonsterType.addEventListener('change', (e) => {
+            const selectedVal = e.target.value;
+            if (selectedVal === 'kaiju' || selectedVal === 'corrupted_hero') {
+                const presetName = selectedVal === 'kaiju' ? '거대괴수 (바이오)' : '타락영웅 (다크엔젤)';
+                addLog(`[몬스터 선택 오류 ❌] <strong>${presetName}</strong>의 뼈대(Skeleton) 및 마운트 앵커(Anchor DB) 데이터가 존재하지 않습니다! (선택 취소됨)`, "error");
+                selectMonsterType.value = currentMonsterPreset; // 이전 선택값으로 원복!
+            } else {
+                currentMonsterPreset = selectedVal;
+                addLog(`[몬스터 선택] Preset Loaded -> <strong>거대로봇 (메카닉)</strong>`, "success");
+            }
+        });
+    }
 
     // 각 파츠 드롭다운 채우기 (0번: [파츠제거], 초기 기본 선택: 1번 인덱스 기본 메카 파츠)
     for (const slot in PARTS_DB) {
@@ -110,7 +127,7 @@ window.addEventListener('DOMContentLoaded', () => {
                         addLog(`[파츠 바인딩 오류 ⚠️] Slot: <strong>${slot.toUpperCase()}</strong> | ID: <strong>${part.id}</strong> (${part.name}) -> 연결된 이미지 파일 경로(src)가 없습니다!`, "error");
                     }
 
-                    const animType = (slot === 'leg' && selectLegAnimType.value === 'sprite') ? 'sprite' : (part.animType || 'pivot');
+                    const animType = part.animType || 'pivot';
 
                     if (slot === 'head') {
                         addLog(`[파츠 선택] Head -> <strong>${part.name}</strong> (${part.id}) | Src: ${partSrc}`, "info");
@@ -135,9 +152,8 @@ window.addEventListener('DOMContentLoaded', () => {
                         });
                         renderer.changePart('arm', { right: rSrc, left: lSrc }, animType, 1, 10, null, { right: rPivot, left: lPivot });
                     } else if (slot === 'leg') {
-                        const legSrc = animType === 'sprite' ? 'assets/sprites/parts/leg_track_mock.png' : partSrc;
-                        const finalRSrc = part.rightSrc || legSrc;
-                        const finalLSrc = part.leftSrc || legSrc;
+                        const finalRSrc = part.rightSrc || partSrc;
+                        const finalLSrc = part.leftSrc || partSrc;
                         addLog(`[파츠 선택] Leg -> <strong>${part.name}</strong> (${part.id}) | AnimType: ${animType} | Src: ${finalRSrc}`, "info");
                         robotParts.setLegSet({
                             id: part.id,
@@ -173,14 +189,6 @@ window.addEventListener('DOMContentLoaded', () => {
         selectEngineMode.addEventListener('change', (e) => {
             animator.mode = e.target.value;
             addLog(`[엔진 모드 변경] Render Mode: <strong>${animator.mode.toUpperCase()}</strong>`, "warn");
-            updateSelectedParts();
-        });
-    }
-
-    // 다리 궤도 타입 스위치 연동
-    if (selectLegAnimType) {
-        selectLegAnimType.addEventListener('change', (e) => {
-            addLog(`[다리 메커니즘 변경] Leg Anim Type: <strong>${e.target.value.toUpperCase()}</strong>`, "info");
             updateSelectedParts();
         });
     }

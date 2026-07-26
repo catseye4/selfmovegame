@@ -168,11 +168,13 @@
                 </select>
             </div>
 
+            <!-- 몬스터/기체 프리셋 선택 드롭다운 -->
             <div class="control-group">
-                <label>다리 애니메이션 물리 방식 (Leg Anim Type)</label>
-                <select id="select-leg-anim-type">
-                    <option value="pivot">관절 스윙 회전 (Pivot swing)</option>
-                    <option value="sprite">스프라이트 무한궤도 흐름 (Sprite sheet/treads)</option>
+                <label>몬스터/기체 선택 (Monster Preset)</label>
+                <select id="select-monster-type">
+                    <option value="red_robot" selected>거대로봇 (메카닉)</option>
+                    <option value="kaiju">거대괴수 (바이오)</option>
+                    <option value="corrupted_hero">타락영웅 (다크엔젤)</option>
                 </select>
             </div>
 
@@ -197,7 +199,7 @@
                 <select id="select-leg"></select>
             </div>
 
-            <!-- 스탯 피드백 대신 디버그 로그 콘솔 필드 구축 -->
+            <!-- 디버그 로그 콘솔 필드 -->
             <div class="control-group" style="margin-top: 10px;">
                 <label style="color:#00ffcc; display:flex; justify-content:space-between; align-items:center;">
                     <span>실시간 시스템 & 파츠 디버그 로그 (Debug Log)</span>
