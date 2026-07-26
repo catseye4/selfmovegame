@@ -118,14 +118,14 @@
             color: #000;
             box-shadow: 0 0 12px #ff0055;
         }
-        .stats-display {
-            background: rgba(0,0,0,0.5);
-            padding: 15px;
-            border-radius: 6px;
-            font-size: 14px;
-            line-height: 1.6;
-            border-left: 3px solid #ffcc00;
+        .log-entry {
+            margin-bottom: 3px;
+            word-break: break-all;
         }
+        .log-entry.info { color: #00ffcc; }
+        .log-entry.warn { color: #ffcc00; }
+        .log-entry.error { color: #ff0055; }
+        .log-entry.success { color: #00ff66; }
     </style>
 </head>
 <body>
@@ -175,7 +175,7 @@
                 </select>
             </div>
 
-            <!-- 기존 슬롯 파츠 스왑 -->
+            <!-- 슬롯 파츠 스왑 -->
             <div class="control-group">
                 <label>머리 파츠 (Head)</label>
                 <select id="select-head"></select>
@@ -196,13 +196,13 @@
                 <select id="select-leg"></select>
             </div>
 
+            <!-- 스탯 피드백 대신 디버그 로그 콘솔 필드 구축 -->
             <div class="control-group" style="margin-top: 10px;">
-                <label>조합된 파츠 스탯 데이터 피드백</label>
-                <div class="stats-display" id="stats-feedback">
-                    HP: -<br>
-                    DPS: -<br>
-                    사거리: -<br>
-                    속도: -
+                <label style="color:#00ffcc; display:flex; justify-content:space-between; align-items:center;">
+                    <span>실시간 시스템 & 파츠 디버그 로그 (Debug Log)</span>
+                    <button id="btn-clear-log" style="background:#111; border:1px solid #00ffcc; color:#00ffcc; font-size:10px; cursor:pointer; padding:2px 8px; border-radius:3px;">Log 비우기</button>
+                </label>
+                <div id="debug-log-console" style="background: #020208; border: 1px solid #00ffcc; color: #00ffcc; font-family: 'Consolas', monospace; font-size: 11px; height: 160px; overflow-y: auto; padding: 8px; border-radius: 6px; line-height: 1.5; box-shadow: inset 0 0 10px rgba(0,255,204,0.2);">
                 </div>
             </div>
         </div>

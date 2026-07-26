@@ -37,6 +37,15 @@ export const BODY_ANCHORS_DB = {
 export const PARTS_DB = {
     head: [
         {
+            id: 'none',
+            name: '[파츠제거]',
+            faction: '해제',
+            cost: 0,
+            src: '',
+            animType: 'pivot',
+            stats: { hp: 0, dps: 0, range: 0, speed: 0 }
+        },
+        {
             id: 'head_red_robot',
             name: '기본 머리',
             faction: '거대로봇 (메카닉)',
@@ -131,6 +140,15 @@ export const PARTS_DB = {
     ],
     body: [
         {
+            id: 'none',
+            name: '[파츠제거]',
+            faction: '해제',
+            cost: 0,
+            src: '',
+            animType: 'pivot',
+            stats: { hp: 0, dps: 0, range: 0, speed: 0 }
+        },
+        {
             id: 'body_red_robot',
             name: '기본 가슴',
             faction: '거대로봇 (메카닉)',
@@ -219,6 +237,17 @@ export const PARTS_DB = {
         }
     ],
     arm: [
+        {
+            id: 'none',
+            name: '[파츠제거]',
+            faction: '해제',
+            cost: 0,
+            src: '',
+            rightSrc: '',
+            leftSrc: '',
+            animType: 'pivot',
+            stats: { hp: 0, dps: 0, range: 0, speed: 0 }
+        },
         {
             id: 'arm_red_robot',
             name: '기본 팔',
@@ -320,6 +349,17 @@ export const PARTS_DB = {
         }
     ],
     leg: [
+        {
+            id: 'none',
+            name: '[파츠제거]',
+            faction: '해제',
+            cost: 0,
+            src: '',
+            rightSrc: '',
+            leftSrc: '',
+            animType: 'pivot',
+            stats: { hp: 0, dps: 0, range: 0, speed: 0 }
+        },
         {
             id: 'leg_red_robot',
             name: '기본 다리',
