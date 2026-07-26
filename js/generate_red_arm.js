@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 
 const targetDir = path.join(__dirname, '..', 'assets', 'sprites', 'parts', 'robot');
 
@@ -7,18 +8,13 @@ if (!fs.existsSync(targetDir)) {
     fs.mkdirSync(targetDir, { recursive: true });
 }
 
-// 32비트 RGBA PNG 파일을 생성하는 간단한 헬퍼 (zlib / CRC32 지원)
-// 32비트 RGBA PNG 바이너리 생성기
-const zlib = require('zlib');
-
 function createRawPNG(width, height, drawPixelFn) {
-    // RGBA scanlines
-    const rowBytes = width * 4 + 1; // 1 byte filter type per row
+    const rowBytes = width * 4 + 1;
     const rawData = Buffer.alloc(rowBytes * height);
 
     for (let y = 0; y < height; y++) {
         const rowStart = y * rowBytes;
-        rawData[rowStart] = 0; // Filter type 0 (None)
+        rawData[rowStart] = 0;
 
         for (let x = 0; x < width; x++) {
             const pxOffset = rowStart + 1 + x * 4;
@@ -31,19 +27,16 @@ function createRawPNG(width, height, drawPixelFn) {
     }
 
     const compressed = zlib.deflateSync(rawData);
-
-    // Build PNG Chunks
     const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
-    // IHDR Chunk
     const ihdr = Buffer.alloc(13);
     ihdr.writeUInt32BE(width, 0);
     ihdr.writeUInt32BE(height, 4);
-    ihdr[8] = 8; // Bit depth
-    ihdr[9] = 6; // Color type (6 = Truecolor with alpha)
-    ihdr[10] = 0; // Compression
-    ihdr[11] = 0; // Filter
-    ihdr[12] = 0; // Interlace
+    ihdr[8] = 8;
+    ihdr[9] = 6;
+    ihdr[10] = 0;
+    ihdr[11] = 0;
+    ihdr[12] = 0;
 
     const ihdrChunk = makeChunk('IHDR', ihdr);
     const idatChunk = makeChunk('IDAT', compressed);
@@ -63,7 +56,6 @@ function makeChunk(type, data) {
     return buf;
 }
 
-// Table for fast CRC32 computation
 const crcTable = new Uint32Array(256);
 for (let n = 0; n < 256; n++) {
     let c = n;
@@ -82,46 +74,66 @@ function crc32(buf) {
     return (crc ^ 0xffffffff) >>> 0;
 }
 
-// 붉은색 기계 메카 팔 (어깨 장갑 + 팔관절 + 발광 센서) 픽셀 생성기
-const armPng = createRawPNG(40, 80, (x, y, w, h) => {
-    // 투명 배경
-    const cx = w / 2;
-    const cy = h / 2;
+// 레드 메카 로봇의 원본 실사 스펙에 100% 부합하는 어깨 장갑 + 유압 팔 + 주먹 손 PNG (48 x 96 px)
+const armPng = createRawPNG(48, 96, (x, y, w, h) => {
+    const cx = 24;
+    const cy = 20;
 
-    // 어깨 둥근 장갑 (상단)
-    if (y >= 5 && y <= 25) {
-        const dx = x - cx;
-        const dy = y - 15;
-        if (dx*dx + dy*dy <= 14*14) {
-            // 어깨 구형 장갑 (붉은색/버건디 메탈 톤)
-            if (dx*dx + dy*dy <= 4*4) return [0, 255, 255, 255]; // Cyan 센서 렌즈
-            if (dx > 0) return [180, 30, 50, 255];
-            return [120, 20, 35, 255];
-        }
-    }
+    // 1. 어깨 둥근 구형 메탈 장갑 (상단)
+    const dx = x - cx;
+    const dy = y - cy;
+    const r2 = dx * dx + dy * dy;
 
-    // 팔 관절 & 하완 실드 (중단 ~ 하단)
-    if (x >= 8 && x <= 32 && y >= 22 && y <= 68) {
-        // 외곽선
-        if (x === 8 || x === 32 || y === 22 || y === 68) return [20, 20, 30, 255];
+    if (r2 <= 18 * 18) {
+        // 검은 외곽 테두리
+        if (r2 >= 16 * 16) return [25, 20, 25, 255];
 
-        // 붉은 장갑 실드
-        if (x >= 12 && x <= 28 && y >= 35 && y <= 58) {
-            if (x >= 18 && x <= 22 && y >= 42 && y <= 46) return [0, 255, 255, 255]; // 발광 노드
-            return [150, 25, 45, 255];
+        // 보라/Cyan 네온 렌즈 코어 (어깨 중앙)
+        const coreR2 = (x - 22) * (x - 22) + (y - 18) * (y - 18);
+        if (coreR2 <= 5 * 5) {
+            if (coreR2 <= 2 * 2) return [0, 255, 255, 255]; // Cyan 코어 센터
+            return [180, 0, 220, 255]; // 보라 발광 링
         }
 
-        // 흑색 기계 프레임
-        return [50, 55, 65, 255];
+        // 어깨 버건디 메탈 그라데이션 하이라이트
+        const shade = Math.floor(160 - dx * 3 - dy * 2);
+        const rVal = Math.max(80, Math.min(190, shade));
+        const gVal = Math.max(15, Math.min(45, Math.floor(shade * 0.2)));
+        const bVal = Math.max(25, Math.min(65, Math.floor(shade * 0.3)));
+        return [rVal, gVal, bVal, 255];
     }
 
-    // 주먹 (최하단)
-    if (x >= 10 && x <= 30 && y >= 65 && y <= 75) {
-        return [40, 40, 50, 255];
+    // 2. 상완 기계 유압 프레임 (중단)
+    if (x >= 15 && x <= 33 && y >= 32 && y <= 50) {
+        if (x === 15 || x === 33) return [20, 20, 30, 255];
+        if (x >= 21 && x <= 27) return [90, 95, 110, 255]; // 중앙 은색 실린더
+        return [45, 50, 60, 255];
     }
 
-    return [0, 0, 0, 0]; // 투명
+    // 3. 전완 중장갑 실드 패널 (하단)
+    if (x >= 10 && x <= 38 && y >= 48 && y <= 82) {
+        // 검은 윤곽선
+        if (x === 10 || x === 38 || y === 48 || y === 82) return [20, 20, 25, 255];
+
+        // 하완 전면 붉은 장갑 플레이트
+        if (x >= 14 && x <= 34 && y >= 52 && y <= 78) {
+            // 발광 노드
+            if (x >= 21 && x <= 27 && y >= 62 && y <= 68) return [0, 255, 255, 255];
+            const rVal = Math.floor(140 + (x - 10) * 1.5);
+            return [Math.min(180, rVal), 30, 50, 255];
+        }
+
+        return [55, 60, 70, 255];
+    }
+
+    // 4. 기계 주먹 손 (최하단)
+    if (x >= 12 && x <= 36 && y >= 80 && y <= 92) {
+        if (x === 12 || x === 36 || y === 92) return [15, 15, 20, 255];
+        return [40, 45, 55, 255];
+    }
+
+    return [0, 0, 0, 0];
 });
 
 fs.writeFileSync(path.join(targetDir, 'red_arm.png'), armPng);
-console.log('🎉 Generated red_arm.png successfully!');
+console.log('🎉 Generated refined red_arm.png successfully!');

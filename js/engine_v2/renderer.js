@@ -11,12 +11,12 @@ export class Renderer {
         // 6부위 레드 메카 로봇 페이퍼돌 레이어 정밀 좌표 바인딩 (zIndex 순서대로 그리기)
         this.layers = {
             leftArm: {
-                x: 140, y: 116, pivotX: 20, pivotY: 12, zIndex: 0,
+                x: 135, y: 112, pivotX: 24, pivotY: 18, zIndex: 0,
                 img: null, src: 'assets/sprites/parts/robot/red_arm.png', animType: 'pivot',
-                renderWidth: 42, renderHeight: 84, frameCount: 1, fps: 10, defaultColor: '#ff9900'
+                renderWidth: 48, renderHeight: 96, frameCount: 1, fps: 10, defaultColor: '#ff9900'
             },
             leftLeg: {
-                x: 148, y: 158, pivotX: 25, pivotY: 15, zIndex: 1,
+                x: 148, y: 146, pivotX: 25, pivotY: 15, zIndex: 1,
                 img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot',
                 renderWidth: 52, renderHeight: 82, frameCount: 1, fps: 10, defaultColor: '#00cc55'
             },
@@ -26,7 +26,7 @@ export class Renderer {
                 renderWidth: 72, renderHeight: 96, frameCount: 1, fps: 10, defaultColor: '#ff0055'
             },
             rightLeg: {
-                x: 182, y: 158, pivotX: 25, pivotY: 15, zIndex: 3,
+                x: 182, y: 146, pivotX: 25, pivotY: 15, zIndex: 3,
                 img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot',
                 renderWidth: 52, renderHeight: 82, frameCount: 1, fps: 10, defaultColor: '#00ff66'
             },
@@ -36,9 +36,9 @@ export class Renderer {
                 renderWidth: 52, renderHeight: 52, frameCount: 1, fps: 10, defaultColor: '#00ffcc'
             },
             rightArm: {
-                x: 190, y: 116, pivotX: 20, pivotY: 12, zIndex: 5,
+                x: 195, y: 112, pivotX: 24, pivotY: 18, zIndex: 5,
                 img: null, src: 'assets/sprites/parts/robot/red_arm.png', animType: 'pivot',
-                renderWidth: 42, renderHeight: 84, frameCount: 1, fps: 10, defaultColor: '#ffcc00'
+                renderWidth: 48, renderHeight: 96, frameCount: 1, fps: 10, defaultColor: '#ffcc00'
             }
         };
 
