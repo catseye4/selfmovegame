@@ -160,7 +160,7 @@ export class Renderer {
         );
     }
 
-    // 단일 화면 레이어 이미지 캐싱 및 동기 전환 바인딩 내부 헬퍼 (customSize 지원)
+    // 단일 화면 레이어 이미지 캐싱 및 동기 전환 바인딩 내부 헬퍼 (customSize & 개별 오프셋 지원)
     _bindSingleLayer(layerKey, src, animType = 'pivot', frameCount = 1, fps = 10, customSize = null) {
         const layer = this.screenLayers[layerKey];
         if (!layer) return;
@@ -174,6 +174,11 @@ export class Renderer {
             if (customSize.renderHeight) layer.renderHeight = customSize.renderHeight;
             if (customSize.pivotX !== undefined) layer.pivotX = customSize.pivotX;
             if (customSize.pivotY !== undefined) layer.pivotY = customSize.pivotY;
+            layer.offsetX = customSize.offsetX || 0;
+            layer.offsetY = customSize.offsetY || 0;
+        } else {
+            layer.offsetX = 0;
+            layer.offsetY = 0;
         }
 
         if (!src) {
@@ -278,9 +283,9 @@ export class Renderer {
         sortedLayers.forEach(([name, layer]) => {
             ctx.save();
 
-            // 1. 관절(Pivot) 결합부 좌표로 이동
-            const drawX = x + (layer.x - 165); // 중앙 기준 보정
-            const drawY = y + (layer.y - 124);
+            // 1. 관절(Pivot) 결합부 좌표로 이동 (개별 파츠 전용 오프셋 offsetX/offsetY 반영)
+            const drawX = x + (layer.x - 165) + (layer.offsetX || 0);
+            const drawY = y + (layer.y - 124) + (layer.offsetY || 0);
             ctx.translate(drawX, drawY);
 
             // 2. 애니메이션에 따른 변형 각도/위프 계산
