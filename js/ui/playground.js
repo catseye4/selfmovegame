@@ -1,6 +1,7 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // PLAYGROUND UI CONTROLLER (v2)
-   Includes [파츠제거] support, Wireframe fallback mode, and Real-time Debug Log Console.
+   Includes [파츠제거] support, Wireframe fallback mode, Real-time Debug Log Console,
+   Synchronous immediate canvas redrawing on part change, and STOP motion handling.
    ========================================================================== */
 
 import { PARTS_DB } from '../data/parts.js';
@@ -107,6 +108,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     } else if (slot === 'body') {
                         addLog(`[파츠 선택] Body -> <strong>${part.name}</strong> (${part.id}) | Src: ${partSrc}`, "info");
                         robotParts.setBody({ id: part.id, name: part.name, src: partSrc, animType: animType });
+                        robotParts.setBody({ id: part.id, name: part.name, src: partSrc, animType: animType });
                         renderer.changePart('body', partSrc, animType, 1, 10, part.id);
                     } else if (slot === 'arm') {
                         const rSrc = part.rightSrc || partSrc;
@@ -142,6 +144,13 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // 렌더러에 구조체 적용 (팔/다리는 양쪽 세트로 일괄 바인딩)
         renderer.setRobotStructure(robotParts);
+
+        // 파츠 변경 즉시 애니메이션 재생/정지 상태와 무관하게 캔버스를 동기식 1회 재드로잉 (즉각 반응 100%)
+        if (animator.mode === 'paperdoll') {
+            const timeSec = animator.elapsedMs / 1000;
+            renderer.clear(canvas);
+            renderer.drawPaperDoll(canvas, 165, 124, animator.currentName || 'idle', timeSec);
+        }
     }
 
     // 드롭다운 변경 리스너
@@ -154,6 +163,7 @@ window.addEventListener('DOMContentLoaded', () => {
         selectEngineMode.addEventListener('change', (e) => {
             animator.mode = e.target.value;
             addLog(`[엔진 모드 변경] Render Mode: <strong>${animator.mode.toUpperCase()}</strong>`, "warn");
+            updateSelectedParts();
         });
     }
 
@@ -175,6 +185,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (anim === 'stop') {
                 animator.pause();
                 addLog(`[애니메이션 멈춤] Motion Engine Paused`, "warn");
+                updateSelectedParts();
             } else {
                 animator.play(anim);
                 addLog(`[애니메이션 트리거] Trigger: <strong>${anim.toUpperCase()}</strong>`, "success");
