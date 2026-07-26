@@ -1,7 +1,7 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // ROBOT PARTS STRUCTURE DATA DEFINITION (v2)
-   Manages robot sub-assemblies (head, body, arm [right+left], leg [right+left])
-   Changing arm or leg updates both right & left side assets simultaneously.
+   Manages robot part data (head, body, arm [right+left], leg [right+left]) for item/stat management.
+   This data structure is purely for inventory/part logic and does NOT control rendering Z-indices or positions.
    ========================================================================== */
 
 export class RobotPartsStructure {
@@ -11,9 +11,7 @@ export class RobotPartsStructure {
             id: initialData.head?.id || 'head_red_robot',
             name: initialData.head?.name || '레드 바이저 다안 헬멧',
             src: initialData.head?.src || 'assets/sprites/parts/robot/red_head.png',
-            animType: initialData.head?.animType || 'pivot',
-            pivotX: initialData.head?.pivotX ?? 26,
-            pivotY: initialData.head?.pivotY ?? 48
+            animType: initialData.head?.animType || 'pivot'
         };
 
         // 가슴/몸통 (body)
@@ -21,9 +19,7 @@ export class RobotPartsStructure {
             id: initialData.body?.id || 'body_red_robot',
             name: initialData.body?.name || '중장갑 엑시온 코어 흉갑',
             src: initialData.body?.src || 'assets/sprites/parts/robot/red_body.png',
-            animType: initialData.body?.animType || 'pivot',
-            pivotX: initialData.body?.pivotX ?? 36,
-            pivotY: initialData.body?.pivotY ?? 48
+            animType: initialData.body?.animType || 'pivot'
         };
 
         // 팔 (arm) 세트 -> 오른쪽, 왼쪽 묶음 관리
@@ -31,16 +27,8 @@ export class RobotPartsStructure {
             id: initialData.arm?.id || 'arm_red_robot',
             name: initialData.arm?.name || '더블 메카 바주카 암 세트',
             animType: initialData.arm?.animType || 'pivot',
-            right: {
-                src: initialData.arm?.right?.src || 'assets/sprites/parts/robot/red_arm_r.png',
-                pivotX: initialData.arm?.right?.pivotX ?? 30,
-                pivotY: initialData.arm?.right?.pivotY ?? 20
-            },
-            left: {
-                src: initialData.arm?.left?.src || 'assets/sprites/parts/robot/red_arm_l.png',
-                pivotX: initialData.arm?.left?.pivotX ?? 30,
-                pivotY: initialData.arm?.left?.pivotY ?? 20
-            }
+            right: { src: initialData.arm?.right?.src || 'assets/sprites/parts/robot/red_arm_r.png' },
+            left:  { src: initialData.arm?.left?.src  || 'assets/sprites/parts/robot/red_arm_l.png' }
         };
 
         // 다리 (leg) 세트 -> 오른쪽, 왼쪽 묶음 관리
@@ -48,16 +36,8 @@ export class RobotPartsStructure {
             id: initialData.leg?.id || 'leg_red_robot',
             name: initialData.leg?.name || '서스펜션 발목 레그 세트',
             animType: initialData.leg?.animType || 'pivot',
-            right: {
-                src: initialData.leg?.right?.src || 'assets/sprites/parts/robot/red_leg.png',
-                pivotX: initialData.leg?.right?.pivotX ?? 25,
-                pivotY: initialData.leg?.right?.pivotY ?? 15
-            },
-            left: {
-                src: initialData.leg?.left?.src || 'assets/sprites/parts/robot/red_leg.png',
-                pivotX: initialData.leg?.left?.pivotX ?? 25,
-                pivotY: initialData.leg?.left?.pivotY ?? 15
-            }
+            right: { src: initialData.leg?.right?.src || 'assets/sprites/parts/robot/red_leg.png' },
+            left:  { src: initialData.leg?.left?.src  || 'assets/sprites/parts/robot/red_leg.png' }
         };
     }
 
@@ -71,12 +51,10 @@ export class RobotPartsStructure {
         this.arm.name = armData.name || this.arm.name;
         this.arm.animType = armData.animType || 'pivot';
 
-        if (armData.right) {
-            this.arm.right = { ...this.arm.right, ...armData.right };
-        }
-        if (armData.left) {
-            this.arm.left = { ...this.arm.left, ...armData.left };
-        }
+        const rSrc = armData.right?.src || armData.src || this.arm.right.src;
+        const lSrc = armData.left?.src  || armData.src || this.arm.left.src;
+        this.arm.right.src = rSrc;
+        this.arm.left.src  = lSrc;
     }
 
     /**
@@ -89,12 +67,10 @@ export class RobotPartsStructure {
         this.leg.name = legData.name || this.leg.name;
         this.leg.animType = legData.animType || 'pivot';
 
-        if (legData.right) {
-            this.leg.right = { ...this.leg.right, ...legData.right };
-        }
-        if (legData.left) {
-            this.leg.left = { ...this.leg.left, ...legData.left };
-        }
+        const rSrc = legData.right?.src || legData.src || this.leg.right.src;
+        const lSrc = legData.left?.src  || legData.src || this.leg.left.src;
+        this.leg.right.src = rSrc;
+        this.leg.left.src  = lSrc;
     }
 
     /**
@@ -102,7 +78,10 @@ export class RobotPartsStructure {
      */
     setHead(headData) {
         if (!headData) return;
-        this.head = { ...this.head, ...headData };
+        this.head.id = headData.id || this.head.id;
+        this.head.name = headData.name || this.head.name;
+        this.head.src = headData.src || this.head.src;
+        this.head.animType = headData.animType || this.head.animType;
     }
 
     /**
@@ -110,36 +89,9 @@ export class RobotPartsStructure {
      */
     setBody(bodyData) {
         if (!bodyData) return;
-        this.body = { ...this.body, ...bodyData };
-    }
-
-    /**
-     * 렌더러(Renderer)로 넘길 통합 레이어 맵 추출
-     */
-    toRendererLayers() {
-        return {
-            head: {
-                src: this.head.src,
-                animType: this.head.animType,
-                pivotX: this.head.pivotX,
-                pivotY: this.head.pivotY
-            },
-            body: {
-                src: this.body.src,
-                animType: this.body.animType,
-                pivotX: this.body.pivotX,
-                pivotY: this.body.pivotY
-            },
-            arm: {
-                animType: this.arm.animType,
-                right: { ...this.arm.right },
-                left: { ...this.arm.left }
-            },
-            leg: {
-                animType: this.leg.animType,
-                right: { ...this.leg.right },
-                left: { ...this.leg.left }
-            }
-        };
+        this.body = bodyData.id || this.body.id;
+        this.body.name = bodyData.name || this.body.name;
+        this.body.src = bodyData.src || this.body.src;
+        this.body.animType = bodyData.animType || this.body.animType;
     }
 }

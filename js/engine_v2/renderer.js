@@ -1,46 +1,52 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // ENCAPSULATED VIEW RENDERER (v2)
    Encapsulates all Canvas drawing and styles to decouple Logic from View.
-   Supports 6-Subpart Red Robot Skeletal Layered Pivot Paper-Doll Rendering.
-   Z-Index Layer Order: leftArm(0) -> leftLeg(1) -> body(2) -> head(3) -> rightLeg(4) -> rightArm(5)
+   Independent View Layout Layers & Z-Indices.
+   Z-Index View Order: leftArm(0) -> leftLeg(1) -> body(2) -> head(3) -> rightLeg(4) -> rightArm(5)
    ========================================================================== */
 
 export class Renderer {
     constructor() {
         this.contexts = new Map(); // canvas -> CanvasRenderingContext2D
 
-        // 사용자가 명시한 6부위 레이어 그리기 순서 (뒤 -> 앞)
+        // 화면 배치를 위한 렌더러 독자적인 6개 독립 레이어 구조체 (Z-Index 및 오프셋 좌표는 파츠 변경 시 절대 오염되지 않음)
         // 1. 왼팔(leftArm, 0) -> 2. 왼쪽다리(leftLeg, 1) -> 3. 몸통(body, 2) -> 4. 얼굴(head, 3) -> 5. 오른쪽다리(rightLeg, 4) -> 6. 오른팔(rightArm, 5)
-        this.layers = {
+        this.screenLayers = {
             leftArm: {
-                x: 135, y: 104, pivotX: 20, pivotY: 18, zIndex: 0,
-                img: null, src: 'assets/sprites/parts/robot/red_arm_l.png', animType: 'pivot',
-                renderWidth: 42, renderHeight: 84, frameCount: 1, fps: 10, defaultColor: '#ff9900'
+                zIndex: 0, // 가장 뒤쪽 최하단
+                x: 135, y: 104, pivotX: 20, pivotY: 18,
+                renderWidth: 42, renderHeight: 84, defaultColor: '#ff9900',
+                img: null, src: '', animType: 'pivot', frameCount: 1, fps: 10
             },
             leftLeg: {
-                x: 148, y: 150, pivotX: 25, pivotY: 15, zIndex: 1,
-                img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot',
-                renderWidth: 52, renderHeight: 82, frameCount: 1, fps: 10, defaultColor: '#00cc55'
+                zIndex: 1,
+                x: 148, y: 150, pivotX: 25, pivotY: 15,
+                renderWidth: 52, renderHeight: 82, defaultColor: '#00cc55',
+                img: null, src: '', animType: 'pivot', frameCount: 1, fps: 10
             },
             body: {
-                x: 165, y: 106, pivotX: 36, pivotY: 48, zIndex: 2,
-                img: null, src: 'assets/sprites/parts/robot/red_body.png', animType: 'pivot',
-                renderWidth: 72, renderHeight: 96, frameCount: 1, fps: 10, defaultColor: '#ff0055'
+                zIndex: 2,
+                x: 165, y: 106, pivotX: 36, pivotY: 48,
+                renderWidth: 72, renderHeight: 96, defaultColor: '#ff0055',
+                img: null, src: '', animType: 'pivot', frameCount: 1, fps: 10
             },
             head: {
-                x: 165, y: 74, pivotX: 26, pivotY: 48, zIndex: 3,
-                img: null, src: 'assets/sprites/parts/robot/red_head.png', animType: 'pivot',
-                renderWidth: 52, renderHeight: 52, frameCount: 1, fps: 10, defaultColor: '#00ffcc'
+                zIndex: 3,
+                x: 165, y: 74, pivotX: 26, pivotY: 48,
+                renderWidth: 52, renderHeight: 52, defaultColor: '#00ffcc',
+                img: null, src: '', animType: 'pivot', frameCount: 1, fps: 10
             },
             rightLeg: {
-                x: 178, y: 150, pivotX: 25, pivotY: 15, zIndex: 4,
-                img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot',
-                renderWidth: 52, renderHeight: 82, frameCount: 1, fps: 10, defaultColor: '#00ff66'
+                zIndex: 4, // 몸통과 얼굴 앞쪽 입체 배치
+                x: 178, y: 150, pivotX: 25, pivotY: 15,
+                renderWidth: 52, renderHeight: 82, defaultColor: '#00ff66',
+                img: null, src: '', animType: 'pivot', frameCount: 1, fps: 10
             },
             rightArm: {
-                x: 195, y: 104, pivotX: 22, pivotY: 18, zIndex: 5,
-                img: null, src: 'assets/sprites/parts/robot/red_arm_r.png', animType: 'pivot',
-                renderWidth: 44, renderHeight: 86, frameCount: 1, fps: 10, defaultColor: '#ffcc00'
+                zIndex: 5, // 모든 이미지의 가장 앞쪽 최상단!
+                x: 195, y: 104, pivotX: 22, pivotY: 18,
+                renderWidth: 44, renderHeight: 86, defaultColor: '#ffcc00',
+                img: null, src: '', animType: 'pivot', frameCount: 1, fps: 10
             }
         };
 
@@ -85,9 +91,9 @@ export class Renderer {
         );
     }
 
-    // 단일 레이어 이미지 바인딩 내부 헬퍼
+    // 단일 화면 레이어 이미지 바인딩 내부 헬퍼 (Z-Index 및 좌표는 절대로 건드리지 않고 오직 이미지 자산과 animType만 바인딩)
     _bindSingleLayer(layerKey, src, animType = 'pivot', frameCount = 1, fps = 10) {
-        const layer = this.layers[layerKey];
+        const layer = this.screenLayers[layerKey];
         if (!layer) return;
 
         layer.animType = animType;
@@ -112,7 +118,7 @@ export class Renderer {
     }
 
     /**
-     * 파츠 스왑 인터페이스
+     * 파츠 스왑 인터페이스 (화면 레이어 Z-Index 및 좌표는 유지하며 자산만 변경)
      */
     changePart(slotName, imageSrc, animType = 'pivot', frameCount = 1, fps = 10) {
         if (slotName === 'arm') {
@@ -128,45 +134,44 @@ export class Renderer {
         } else if (slotName === 'head' || slotName === 'body') {
             const src = (typeof imageSrc === 'object' && imageSrc.src) ? imageSrc.src : imageSrc;
             this._bindSingleLayer(slotName, src, animType, frameCount, fps);
-        } else if (this.layers[slotName]) {
+        } else if (this.screenLayers[slotName]) {
             this._bindSingleLayer(slotName, imageSrc, animType, frameCount, fps);
         }
     }
 
     /**
-     * 로봇 구조체(RobotPartsStructure) 데이터를 받아 일괄 렌더링 레이어 스왑
+     * 파츠 구조체(RobotPartsStructure) 데이터를 받아 화면 레이어 자산 동기화
      */
     setRobotStructure(robotStruct) {
         if (!robotStruct) return;
-        const layersMap = robotStruct.toRendererLayers ? robotStruct.toRendererLayers() : robotStruct;
 
-        if (layersMap.head) {
-            this.changePart('head', layersMap.head.src, layersMap.head.animType);
+        if (robotStruct.head) {
+            this._bindSingleLayer('head', robotStruct.head.src, robotStruct.head.animType);
         }
-        if (layersMap.body) {
-            this.changePart('body', layersMap.body.src, layersMap.body.animType);
+        if (robotStruct.body) {
+            this._bindSingleLayer('body', robotStruct.body.src, robotStruct.body.animType);
         }
-        if (layersMap.arm) {
-            this.changePart('arm', {
-                right: layersMap.arm.right?.src || layersMap.arm.src,
-                left: layersMap.arm.left?.src || layersMap.arm.src
-            }, layersMap.arm.animType);
+        if (robotStruct.arm) {
+            const rSrc = robotStruct.arm.right?.src || robotStruct.arm.src;
+            const lSrc = robotStruct.arm.left?.src  || robotStruct.arm.src;
+            this._bindSingleLayer('rightArm', rSrc, robotStruct.arm.animType);
+            this._bindSingleLayer('leftArm', lSrc, robotStruct.arm.animType);
         }
-        if (layersMap.leg) {
-            this.changePart('leg', {
-                right: layersMap.leg.right?.src || layersMap.leg.src,
-                left: layersMap.leg.left?.src || layersMap.leg.src
-            }, layersMap.leg.animType);
+        if (robotStruct.leg) {
+            const rSrc = robotStruct.leg.right?.src || robotStruct.leg.src;
+            const lSrc = robotStruct.leg.left?.src  || robotStruct.leg.src;
+            this._bindSingleLayer('rightLeg', rSrc, robotStruct.leg.animType);
+            this._bindSingleLayer('leftLeg', lSrc, robotStruct.leg.animType);
         }
     }
 
-    // 하이브리드 6-부위 관절식 로봇 페이퍼돌 드로잉 인터페이스
+    // 독립된 6-부위 화면 배치 레이어(screenLayers) 순서대로 관절식 로봇 페이퍼돌 드로잉
     drawPaperDoll(canvas, x, y, stateName, timeSec) {
         const ctx = this.initCanvas(canvas);
         if (!ctx) return;
 
-        // 사용자가 지시한 레이어 순서(zIndex 기준: leftArm(0) -> leftLeg(1) -> body(2) -> head(3) -> rightLeg(4) -> rightArm(5))대로 정열 드로잉
-        const sortedLayers = Object.entries(this.layers)
+        // 화면 배치 전용 레이어 변수(screenLayers)를 zIndex 기준으로 정렬 (0:leftArm -> 1:leftLeg -> 2:body -> 3:head -> 4:rightLeg -> 5:rightArm)
+        const sortedLayers = Object.entries(this.screenLayers)
             .sort((a, b) => a[1].zIndex - b[1].zIndex);
 
         sortedLayers.forEach(([name, layer]) => {
