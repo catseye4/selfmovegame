@@ -3,7 +3,7 @@
    Encapsulates all Canvas drawing and styles to decouple Logic from View.
    Chest-Centric Anchor System with Dynamic Mobility Type Branching.
    Dual-Arm 1 O'clock Counter-Clockwise High Arc & Return Attack Motion.
-   Image Asset Caching & Instant Part Swap Pipeline.
+   Image Asset Caching & Dynamic Part Pivot/Size Support.
    Z-Index View Order: leftArm(0) -> leftLeg(1) -> body(2) -> head(3) -> rightLeg(4) -> rightArm(5)
    ========================================================================== */
 
@@ -160,14 +160,21 @@ export class Renderer {
         );
     }
 
-    // 단일 화면 레이어 이미지 캐싱 및 동기 전환 바인딩 내부 헬퍼
-    _bindSingleLayer(layerKey, src, animType = 'pivot', frameCount = 1, fps = 10) {
+    // 단일 화면 레이어 이미지 캐싱 및 동기 전환 바인딩 내부 헬퍼 (customSize 지원)
+    _bindSingleLayer(layerKey, src, animType = 'pivot', frameCount = 1, fps = 10, customSize = null) {
         const layer = this.screenLayers[layerKey];
         if (!layer) return;
 
         layer.animType = animType;
         layer.frameCount = frameCount;
         layer.fps = fps;
+
+        if (customSize) {
+            if (customSize.renderWidth) layer.renderWidth = customSize.renderWidth;
+            if (customSize.renderHeight) layer.renderHeight = customSize.renderHeight;
+            if (customSize.pivotX !== undefined) layer.pivotX = customSize.pivotX;
+            if (customSize.pivotY !== undefined) layer.pivotY = customSize.pivotY;
+        }
 
         if (!src) {
             layer.img = null;
@@ -197,24 +204,28 @@ export class Renderer {
     }
 
     /**
-     * 파츠 스왑 인터페이스 (가슴 기준 앵커 자동 동기화)
+     * 파츠 스왑 인터페이스 (가슴 기준 앵커 자동 동기화 & 커스텀 피벗/크기 지원)
      */
-    changePart(slotName, imageSrc, animType = 'pivot', frameCount = 1, fps = 10, bodyPartId = null) {
+    changePart(slotName, imageSrc, animType = 'pivot', frameCount = 1, fps = 10, bodyPartId = null, customSize = null) {
         if (slotName === 'arm') {
             const rightSrc = (typeof imageSrc === 'object' && imageSrc.right) ? imageSrc.right : imageSrc;
             const leftSrc = (typeof imageSrc === 'object' && imageSrc.left) ? imageSrc.left : imageSrc;
-            this._bindSingleLayer('rightArm', rightSrc, animType, frameCount, fps);
-            this._bindSingleLayer('leftArm', leftSrc, animType, frameCount, fps);
+            const rSize = customSize?.right || null;
+            const lSize = customSize?.left || null;
+            this._bindSingleLayer('rightArm', rightSrc, animType, frameCount, fps, rSize);
+            this._bindSingleLayer('leftArm', leftSrc, animType, frameCount, fps, lSize);
         } else if (slotName === 'leg') {
             const rightSrc = (typeof imageSrc === 'object' && imageSrc.right) ? imageSrc.right : imageSrc;
             const leftSrc = (typeof imageSrc === 'object' && imageSrc.left) ? imageSrc.left : imageSrc;
-            this._bindSingleLayer('rightLeg', rightSrc, animType, frameCount, fps);
-            this._bindSingleLayer('leftLeg', leftSrc, animType, frameCount, fps);
+            const rSize = customSize?.right || null;
+            const lSize = customSize?.left || null;
+            this._bindSingleLayer('rightLeg', rightSrc, animType, frameCount, fps, rSize);
+            this._bindSingleLayer('leftLeg', leftSrc, animType, frameCount, fps, lSize);
         } else if (slotName === 'head' || slotName === 'body') {
             const src = (typeof imageSrc === 'object' && imageSrc.src) ? imageSrc.src : imageSrc;
-            this._bindSingleLayer(slotName, src, animType, frameCount, fps);
+            this._bindSingleLayer(slotName, src, animType, frameCount, fps, customSize);
         } else if (this.screenLayers[slotName]) {
-            this._bindSingleLayer(slotName, imageSrc, animType, frameCount, fps);
+            this._bindSingleLayer(slotName, imageSrc, animType, frameCount, fps, customSize);
         }
 
         // 파츠 교체 후 가슴 기준 앵커 재계산 및 기동 타입 분기 처리 실행
@@ -237,8 +248,10 @@ export class Renderer {
         if (robotStruct.arm) {
             const rSrc = robotStruct.arm.right?.src || robotStruct.arm.src;
             const lSrc = robotStruct.arm.left?.src  || robotStruct.arm.src;
-            this._bindSingleLayer('rightArm', rSrc, robotStruct.arm.animType);
-            this._bindSingleLayer('leftArm', lSrc, robotStruct.arm.animType);
+            const rSize = robotStruct.arm.right?.pivot ? robotStruct.arm.right.pivot : null;
+            const lSize = robotStruct.arm.left?.pivot  ? robotStruct.arm.left.pivot  : null;
+            this._bindSingleLayer('rightArm', rSrc, robotStruct.arm.animType, 1, 10, rSize);
+            this._bindSingleLayer('leftArm', lSrc, robotStruct.arm.animType, 1, 10, lSize);
         }
         if (robotStruct.leg) {
             const rSrc = robotStruct.leg.right?.src || robotStruct.leg.src;

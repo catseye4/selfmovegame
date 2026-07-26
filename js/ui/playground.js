@@ -84,14 +84,16 @@ window.addEventListener('DOMContentLoaded', () => {
                     // 팔(arm) 파츠 교체 시 오른쪽/왼쪽 이미지가 세트로 동시 변경됨!
                     const rSrc = part.rightSrc || partSrc;
                     const lSrc = part.leftSrc || partSrc;
+                    const rPivot = part.rightPivot || null;
+                    const lPivot = part.leftPivot || null;
                     robotParts.setArmSet({
                         id: part.id,
                         name: part.name,
                         animType: animType,
-                        right: { src: rSrc },
-                        left:  { src: lSrc }
+                        right: { src: rSrc, pivot: rPivot },
+                        left:  { src: lSrc, pivot: lPivot }
                     });
-                    renderer.changePart('arm', { right: rSrc, left: lSrc }, animType);
+                    renderer.changePart('arm', { right: rSrc, left: lSrc }, animType, 1, 10, null, { right: rPivot, left: lPivot });
                 } else if (slot === 'leg') {
                     // 다리(leg) 파츠 교체 시 오른쪽/왼쪽 이미지가 세트로 동시 변경됨!
                     const legSrc = animType === 'sprite' ? 'assets/sprites/parts/leg_track_mock.png' : partSrc;
