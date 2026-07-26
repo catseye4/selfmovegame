@@ -9,11 +9,11 @@ export class Renderer {
     constructor() {
         this.contexts = new Map(); // canvas -> CanvasRenderingContext2D
 
-        // 화면 배치를 위한 렌더러 독자적인 6개 독립 레이어 구조체 (가슴 원형 어깨 소켓 정밀 피팅 좌표)
+        // 화면 배치를 위한 렌더러 독자적인 6개 독립 레이어 구조체
         // 1. 왼팔(leftArm, 0) -> 2. 왼쪽다리(leftLeg, 1) -> 3. 몸통(body, 2) -> 4. 얼굴(head, 3) -> 5. 오른쪽다리(rightLeg, 4) -> 6. 오른팔(rightArm, 5)
         this.screenLayers = {
             leftArm: {
-                zIndex: 0, // 가장 뒤쪽 최하단 뒤 팔 (가슴 뒤쪽 원형 어깨 소켓 안으로 정밀 수축)
+                zIndex: 0, // 가장 뒤쪽 최하단 뒤 팔 (몸통 왼어깨 소켓)
                 x: 148, y: 96, pivotX: 20, pivotY: 18,
                 renderWidth: 42, renderHeight: 84, defaultColor: '#ff9900',
                 img: null, src: 'assets/sprites/parts/robot/red_arm_r.png', animType: 'pivot', frameCount: 1, fps: 10
@@ -25,7 +25,7 @@ export class Renderer {
                 img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             body: {
-                zIndex: 2, // 메인 코어 흉갑 (중앙 기준)
+                zIndex: 2, // 메인 코어 흉갑 (중앙 조인트)
                 x: 165, y: 98, pivotX: 36, pivotY: 48,
                 renderWidth: 72, renderHeight: 96, defaultColor: '#ff0055',
                 img: null, src: 'assets/sprites/parts/robot/red_body.png', animType: 'pivot', frameCount: 1, fps: 10
@@ -43,8 +43,8 @@ export class Renderer {
                 img: null, src: 'assets/sprites/parts/robot/red_leg.png', animType: 'pivot', frameCount: 1, fps: 10
             },
             rightArm: {
-                zIndex: 5, // 모든 이미지의 가장 앞쪽 최상단 전면 팔 (가슴 전면 어깨 흉갑 소켓 정밀 안착)
-                x: 178, y: 96, pivotX: 22, pivotY: 18,
+                zIndex: 5, // 모든 이미지의 가장 앞쪽 최상단 전면 팔 (오른쪽에서 20px 왼쪽으로 이동: x 158)
+                x: 158, y: 96, pivotX: 22, pivotY: 18,
                 renderWidth: 44, renderHeight: 86, defaultColor: '#ffcc00',
                 img: null, src: 'assets/sprites/parts/robot/red_arm_l.png', animType: 'pivot', frameCount: 1, fps: 10
             }
@@ -215,11 +215,9 @@ export class Renderer {
                     offsetOffsetX = Math.sin(timeSec * 12) * 4;
                 }
             } else { // 'idle'
-                if (name === 'body') {
-                    offsetOffsetY = Math.sin(timeSec * 2.5) * 2;
-                } else if (name === 'head') {
-                    offsetOffsetY = Math.sin(timeSec * 2.5) * 3;
-                }
+                // 대기(아이들) 상태에서의 상하 위아래 바운싱 모션 일시 정지
+                offsetOffsetY = 0;
+                offsetOffsetX = 0;
             }
 
             ctx.translate(offsetOffsetX, offsetOffsetY);
