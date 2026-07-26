@@ -299,6 +299,10 @@ export class Renderer {
                     offsetOffsetY = Math.abs(Math.sin(timeSec * 8)) * 2;
                 }
             } else if (stateName === 'attack') {
+                if (!this.attackStartTime) {
+                    this.attackStartTime = timeSec;
+                }
+
                 offsetOffsetX = 0;
                 offsetOffsetY = 0;
 
@@ -308,9 +312,12 @@ export class Renderer {
                     if (name === 'leftArm') {
                         angle = 0; // 1. 왼팔 0도 고정!
                     } else if (name === 'rightArm') {
+                        const attackElapsed = timeSec - this.attackStartTime;
                         const targetRad = - (30 * Math.PI / 180); // 반시계 30도 고정!
-                        const raiseProgress = Math.min(1, timeSec * 5);
-                        angle = targetRad * Math.sin(raiseProgress * Math.PI * 0.5);
+
+                        // Step 1: 0 ~ 0.35초 내 팔 먼저 30도 들어올리고 고정
+                        const raiseRatio = Math.min(1, attackElapsed / 0.35);
+                        angle = targetRad * Math.sin(raiseRatio * Math.PI * 0.5);
                     }
                 } else {
                     if (name === 'rightArm' || name === 'leftArm') {
@@ -327,6 +334,7 @@ export class Renderer {
                     }
                 }
             } else { // 'idle' 대기 상태
+                this.attackStartTime = null;
                 const bodyBounceY = Math.sin(timeSec * 2.5) * 2.5;
 
                 if (name === 'body') {
@@ -369,80 +377,91 @@ export class Renderer {
                 this.drawFallbackPart(ctx, name, layer, timeSec);
             }
 
-            // 4. [레이저 포대 전용 최상단 Z-Index 덮어쓰기 파티클 렌더링]
-            // 이미지 드로잉이 완료된 바로 그 위(Z-Index 최상단)에 포구 입구 25px 차징 원 & 15px 레이저 연사 렌더링!
+            // 4. [레이저 포대 전용 최상단 Z-Index 덮어쓰기 순차 파티클 렌더링]
+            // 시퀀스: [Step 1: 팔 들어올리기 (0~0.35s)] -> [Step 2: 25px 차징 원 생성 (0.35s~)] -> [Step 3: 15px 레이저구체 연사 (0.65s~)]
             if (stateName === 'attack' && name === 'rightArm' && this.screenLayers.rightArm.src.includes('arm_laser_r.png')) {
-                // 포구 노즐 팁 좌표 (이미지 드로잉 로컬 좌표계 기준: 왼쪽 -15px -> 36, 아래쪽 +25px -> 66)
-                const tipX = layer.pivotX + 36;
-                const tipY = layer.pivotY + 66;
+                const attackElapsed = this.attackStartTime ? (timeSec - this.attackStartTime) : 0;
 
-                // 포구 입구 직경 25px 무한 펄스 원 반짝임 (Charging Pulse)
-                const pulse = (Math.sin(timeSec * 16.0) + 1) / 2;
-                const flashRadius = (25 / 2) * (0.65 + 0.35 * pulse); // 직경 25px (반지름 12.5px)
+                // Step 2 & 3: 0.35초 이후부터 차징 원 생성!
+                if (attackElapsed >= 0.35) {
+                    const chargeT = attackElapsed - 0.35;
+                    const chargeScale = Math.min(1, chargeT / 0.3); // 0.3초간 차징 원 생성
 
-                ctx.save();
-                ctx.translate(tipX, tipY);
+                    // 포구 노즐 팁 좌표 (이미지 드로잉 로컬 좌표계 기준: 왼쪽 -10px -> 26, 아래쪽 +2px -> 68)
+                    const tipX = layer.pivotX + 26;
+                    const tipY = layer.pivotY + 68;
 
-                // 외곽 청록빛 글로우 (직경 25px)
-                ctx.fillStyle = `rgba(0, 255, 204, ${0.85 * (0.7 + 0.3 * pulse)})`;
-                ctx.shadowColor = '#00ffcc';
-                ctx.shadowBlur = 22;
-                ctx.beginPath();
-                ctx.arc(0, 0, Math.max(1, flashRadius), 0, Math.PI * 2);
-                ctx.fill();
+                    // Step 2: 포구 입구 직경 25px 무한 펄스 원 차징 생성 (Charging Pulse)
+                    const pulse = (Math.sin(timeSec * 16.0) + 1) / 2;
+                    const flashRadius = (25 / 2) * chargeScale * (0.65 + 0.35 * pulse); // 직경 25px
 
-                // 중심 고광도 화이트 코어
-                ctx.fillStyle = `rgba(255, 255, 255, ${0.95 * pulse})`;
-                ctx.shadowColor = '#ffffff';
-                ctx.shadowBlur = 14;
-                ctx.beginPath();
-                ctx.arc(0, 0, Math.max(1, flashRadius - 4), 0, Math.PI * 2);
-                ctx.fill();
+                    ctx.save();
+                    ctx.translate(tipX, tipY);
 
-                // 직경 15px 레이저 플라즈마 발사체 +45도 사격 각도 연사 발사 (아래쪽 20도 하향 조종)
-                const numBullets = 3;
-                const fireAngle = (45 * Math.PI / 180);
+                    // 외곽 청록빛 글로우 (직경 25px)
+                    ctx.fillStyle = `rgba(0, 255, 204, ${0.85 * chargeScale * (0.7 + 0.3 * pulse)})`;
+                    ctx.shadowColor = '#00ffcc';
+                    ctx.shadowBlur = 22;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, Math.max(1, flashRadius), 0, Math.PI * 2);
+                    ctx.fill();
 
-                for (let i = 0; i < numBullets; i++) {
-                    const bulletPhase = (timeSec * 4.5 + i * (Math.PI * 2 / numBullets)) % (Math.PI * 2);
-                    const travelDist = (bulletPhase / (Math.PI * 2)) * 220;
-                    const fadeAlpha = 1 - (travelDist / 220);
-                    const projRadius = (15 / 2);
+                    // 중심 고광도 화이트 코어
+                    ctx.fillStyle = `rgba(255, 255, 255, ${0.95 * chargeScale * pulse})`;
+                    ctx.shadowColor = '#ffffff';
+                    ctx.shadowBlur = 14;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, Math.max(1, flashRadius - 4), 0, Math.PI * 2);
+                    ctx.fill();
 
-                    if (travelDist > 5) {
-                        ctx.save();
-                        ctx.rotate(fireAngle);
-                        ctx.translate(travelDist, 0);
+                    // Step 3: 0.65초 이후부터 비로소 직경 15px 레이저 구체 +45도 사격 각도 무한 연사 발사!
+                    if (attackElapsed >= 0.65) {
+                        const fireT = attackElapsed - 0.65;
+                        const numBullets = 3;
+                        const fireAngle = (45 * Math.PI / 180);
 
-                        // 레이저 잔상 꼬리 (Laser Trail)
-                        ctx.strokeStyle = `rgba(0, 255, 204, ${0.6 * fadeAlpha})`;
-                        ctx.lineWidth = projRadius * 1.5;
-                        ctx.beginPath();
-                        ctx.moveTo(-18, 0);
-                        ctx.lineTo(0, 0);
-                        ctx.stroke();
+                        for (let i = 0; i < numBullets; i++) {
+                            const bulletPhase = (fireT * 4.5 + i * (Math.PI * 2 / numBullets)) % (Math.PI * 2);
+                            const travelDist = (bulletPhase / (Math.PI * 2)) * 220;
+                            const fadeAlpha = 1 - (travelDist / 220);
+                            const projRadius = (15 / 2);
 
-                        // 발사체 외곽 글로우 (직경 15px)
-                        ctx.fillStyle = `rgba(0, 255, 204, ${0.9 * fadeAlpha})`;
-                        ctx.shadowColor = '#00ffcc';
-                        ctx.shadowBlur = 15;
-                        ctx.beginPath();
-                        ctx.arc(0, 0, projRadius, 0, Math.PI * 2);
-                        ctx.fill();
+                            if (travelDist > 5) {
+                                ctx.save();
+                                ctx.rotate(fireAngle);
+                                ctx.translate(travelDist, 0);
 
-                        // 발사체 화이트 구체 코어
-                        ctx.fillStyle = `rgba(255, 255, 255, ${1.0 * fadeAlpha})`;
-                        ctx.shadowColor = '#ffffff';
-                        ctx.shadowBlur = 8;
-                        ctx.beginPath();
-                        ctx.arc(0, 0, Math.max(1, projRadius - 2.5), 0, Math.PI * 2);
-                        ctx.fill();
+                                // 레이저 잔상 꼬리 (Laser Trail)
+                                ctx.strokeStyle = `rgba(0, 255, 204, ${0.6 * fadeAlpha})`;
+                                ctx.lineWidth = projRadius * 1.5;
+                                ctx.beginPath();
+                                ctx.moveTo(-18, 0);
+                                ctx.lineTo(0, 0);
+                                ctx.stroke();
 
-                        ctx.restore();
+                                // 발사체 외곽 글로우 (직경 15px)
+                                ctx.fillStyle = `rgba(0, 255, 204, ${0.9 * fadeAlpha})`;
+                                ctx.shadowColor = '#00ffcc';
+                                ctx.shadowBlur = 15;
+                                ctx.beginPath();
+                                ctx.arc(0, 0, projRadius, 0, Math.PI * 2);
+                                ctx.fill();
+
+                                // 발사체 화이트 구체 코어
+                                ctx.fillStyle = `rgba(255, 255, 255, ${1.0 * fadeAlpha})`;
+                                ctx.shadowColor = '#ffffff';
+                                ctx.shadowBlur = 8;
+                                ctx.beginPath();
+                                ctx.arc(0, 0, Math.max(1, projRadius - 2.5), 0, Math.PI * 2);
+                                ctx.fill();
+
+                                ctx.restore();
+                            }
+                        }
                     }
-                }
 
-                ctx.restore();
+                    ctx.restore();
+                }
             }
 
             ctx.restore();
