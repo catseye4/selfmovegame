@@ -2,7 +2,7 @@
    PROJECT: MAD OVERLORD // ENCAPSULATED VIEW RENDERER (v2)
    Encapsulates all Canvas drawing and styles to decouple Logic from View.
    Chest-Centric Anchor System with Dynamic Mobility Type Branching.
-   Chest-Linked Idle Bounce Motion (Full Body Synchronized Idle).
+   Chest-Linked Idle Bounce & Right Arm Heavy Slam Attack Motion.
    Z-Index View Order: leftArm(0) -> leftLeg(1) -> body(2) -> head(3) -> rightLeg(4) -> rightArm(5)
    ========================================================================== */
 
@@ -242,7 +242,7 @@ export class Renderer {
         this.recalculateAnchors(this.currentBodyId, robotStruct.leg?.animType);
     }
 
-    // 독립된 6-부위 화면 배치 레이어(screenLayers) 순서대로 관절식 로봇 페이퍼돌 드로잉 (가슴 기준 호흡 바운싱 연동)
+    // 독립된 6-부위 화면 배치 레이어(screenLayers) 순서대로 관절식 로봇 페이퍼돌 드로잉
     drawPaperDoll(canvas, x, y, stateName, timeSec) {
         const ctx = this.initCanvas(canvas);
         if (!ctx) return;
@@ -283,13 +283,32 @@ export class Renderer {
                     offsetOffsetY = Math.abs(Math.sin(timeSec * 8)) * 2;
                 }
             } else if (stateName === 'attack') {
+                // 공격 모션: 몸통과 왼팔은 멈추고(Static), 오른팔만 위로 들었다가 전방 내려찍기!
+                offsetOffsetX = 0;
+                offsetOffsetY = 0;
+
                 if (name === 'rightArm') {
-                    angle = -Math.PI / 4 + Math.abs(Math.sin(timeSec * 12)) * 0.8;
-                    offsetOffsetX = Math.sin(timeSec * 12) * 10;
-                } else if (name === 'leftArm') {
-                    angle = Math.sin(timeSec * 6) * 0.2;
-                } else if (name === 'body') {
-                    offsetOffsetX = Math.sin(timeSec * 12) * 4;
+                    const attackCycle = (timeSec * 7) % (Math.PI * 2);
+                    
+                    if (attackCycle < Math.PI * 0.6) {
+                        // 1. 와인드업 (위/뒤로 크게 올리기)
+                        const progress = attackCycle / (Math.PI * 0.6);
+                        angle = -Math.sin(progress * Math.PI * 0.5) * 1.25; // 위로 약 72도 쑤욱 들기
+                        offsetOffsetX = -progress * 6;
+                        offsetOffsetY = -progress * 12;
+                    } else if (attackCycle < Math.PI * 1.1) {
+                        // 2. 고속 내려찍기 (Slam Down Heavy Impact)
+                        const progress = (attackCycle - Math.PI * 0.6) / (Math.PI * 0.5);
+                        angle = -1.25 + progress * 2.1; // 위에서 아래 전방으로 강력 임팩트 내려찍기 (+48도)
+                        offsetOffsetX = -6 + progress * 20;
+                        offsetOffsetY = -12 + progress * 20;
+                    } else {
+                        // 3. 빠른 복귀 (Recovery)
+                        const progress = (attackCycle - Math.PI * 1.1) / (Math.PI * 0.9);
+                        angle = 0.85 * (1 - progress);
+                        offsetOffsetX = 14 * (1 - progress);
+                        offsetOffsetY = 8 * (1 - progress);
+                    }
                 }
             } else { // 'idle' 대기 상태: 가슴 파츠 축 중심 전신 연동 호흡 바운싱
                 const bodyBounceY = Math.sin(timeSec * 2.5) * 2.5;
@@ -297,12 +316,12 @@ export class Renderer {
                 if (name === 'body') {
                     offsetOffsetY = bodyBounceY;
                 } else if (name === 'head') {
-                    offsetOffsetY = bodyBounceY + Math.sin(timeSec * 2.5) * 0.8; // 머리는 흉부 호흡에 부드럽게 지연 반응
+                    offsetOffsetY = bodyBounceY + Math.sin(timeSec * 2.5) * 0.8;
                 } else if (name === 'rightArm' || name === 'leftArm') {
-                    offsetOffsetY = bodyBounceY; // 가슴 어깨 소켓과 100% 동기화 바운싱
-                    angle = Math.sin(timeSec * 2.5) * 0.04; // 팔이 부드럽게 살랑거리는 호흡 흔들림
+                    offsetOffsetY = bodyBounceY;
+                    angle = Math.sin(timeSec * 2.5) * 0.04;
                 } else if (name === 'rightLeg' || name === 'leftLeg') {
-                    offsetOffsetY = bodyBounceY * 0.3; // 다리는 둔부 소켓 완충 연동
+                    offsetOffsetY = bodyBounceY * 0.3;
                 }
             }
 
