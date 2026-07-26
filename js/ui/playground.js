@@ -1,7 +1,7 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // PLAYGROUND UI CONTROLLER (v2)
    Includes [파츠제거] support, Wireframe fallback mode, Real-time Debug Log Console,
-   Synchronous immediate canvas redrawing on part change, and STOP motion handling.
+   Asset binding & HTTP 404 load error validation, and 3-step laser attack sequence.
    ========================================================================== */
 
 import { PARTS_DB } from '../data/parts.js';
@@ -35,6 +35,11 @@ window.addEventListener('DOMContentLoaded', () => {
             if (logConsole) logConsole.innerHTML = '';
         });
     }
+
+    // 렌더러 이미지 자산 로드 실패 (HTTP 404 / 403 / 파일 미존재 등) 실시간 에러 로깅 바인딩
+    renderer.onAssetError = (layerKey, src) => {
+        addLog(`[자산 로드 오류 ❌] Layer: <strong>${layerKey.toUpperCase()}</strong> -> 이미지 파일이 존재하지 않거나 로드에 실패했습니다! (Path: ${src})`, "error");
+    };
 
     addLog("=== PARTS PLAYGROUND DEBUGGER STARTED ===", "success");
     addLog("Decoupled Renderer v2 & Anchor System Initialized", "info");
@@ -97,6 +102,14 @@ window.addEventListener('DOMContentLoaded', () => {
                     }
                 } else {
                     const partSrc = part.src || '';
+                    const rSrc = part.rightSrc || partSrc;
+                    const lSrc = part.leftSrc || partSrc;
+
+                    // 연결된 이미지 파일 경로(src) 부재 체크
+                    if (!partSrc && !rSrc && !lSrc) {
+                        addLog(`[파츠 바인딩 오류 ⚠️] Slot: <strong>${slot.toUpperCase()}</strong> | ID: <strong>${part.id}</strong> (${part.name}) -> 연결된 이미지 파일 경로(src)가 없습니다!`, "error");
+                    }
+
                     const animType = (slot === 'leg' && selectLegAnimType.value === 'sprite') ? 'sprite' : (part.animType || 'pivot');
 
                     if (slot === 'head') {
@@ -108,11 +121,8 @@ window.addEventListener('DOMContentLoaded', () => {
                     } else if (slot === 'body') {
                         addLog(`[파츠 선택] Body -> <strong>${part.name}</strong> (${part.id}) | Src: ${partSrc}`, "info");
                         robotParts.setBody({ id: part.id, name: part.name, src: partSrc, animType: animType });
-                        robotParts.setBody({ id: part.id, name: part.name, src: partSrc, animType: animType });
                         renderer.changePart('body', partSrc, animType, 1, 10, part.id);
                     } else if (slot === 'arm') {
-                        const rSrc = part.rightSrc || partSrc;
-                        const lSrc = part.leftSrc || partSrc;
                         const rPivot = part.rightPivot || null;
                         const lPivot = part.leftPivot || null;
                         addLog(`[파츠 선택] Arm -> <strong>${part.name}</strong> (${part.id}) | Right: ${rSrc} | Left: ${lSrc}`, "success");
@@ -126,17 +136,17 @@ window.addEventListener('DOMContentLoaded', () => {
                         renderer.changePart('arm', { right: rSrc, left: lSrc }, animType, 1, 10, null, { right: rPivot, left: lPivot });
                     } else if (slot === 'leg') {
                         const legSrc = animType === 'sprite' ? 'assets/sprites/parts/leg_track_mock.png' : partSrc;
-                        const rSrc = part.rightSrc || legSrc;
-                        const lSrc = part.leftSrc || legSrc;
-                        addLog(`[파츠 선택] Leg -> <strong>${part.name}</strong> (${part.id}) | AnimType: ${animType} | Src: ${rSrc}`, "info");
+                        const finalRSrc = part.rightSrc || legSrc;
+                        const finalLSrc = part.leftSrc || legSrc;
+                        addLog(`[파츠 선택] Leg -> <strong>${part.name}</strong> (${part.id}) | AnimType: ${animType} | Src: ${finalRSrc}`, "info");
                         robotParts.setLegSet({
                             id: part.id,
                             name: part.name,
                             animType: animType,
-                            right: { src: rSrc },
-                            left:  { src: lSrc }
+                            right: { src: finalRSrc },
+                            left:  { src: finalLSrc }
                         });
-                        renderer.changePart('leg', { right: rSrc, left: lSrc }, animType);
+                        renderer.changePart('leg', { right: finalRSrc, left: finalLSrc }, animType);
                     }
                 }
             }
@@ -145,7 +155,7 @@ window.addEventListener('DOMContentLoaded', () => {
         // 렌더러에 구조체 적용 (팔/다리는 양쪽 세트로 일괄 바인딩)
         renderer.setRobotStructure(robotParts);
 
-        // 파츠 변경 즉시 애니메이션 재생/정지 상태와 무관하게 캔버스를 동기식 1회 재드로잉 (즉각 반응 100%)
+        // 파츠 변경 즉시 캔버스 동기식 1회 재드로잉
         if (animator.mode === 'paperdoll') {
             const timeSec = animator.elapsedMs / 1000;
             renderer.clear(canvas);

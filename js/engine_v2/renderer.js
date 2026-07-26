@@ -201,6 +201,9 @@ export class Renderer {
         };
         img.onerror = () => {
             console.warn(`[Renderer] Failed to load image asset: ${src}`);
+            if (this.onAssetError) {
+                this.onAssetError(layerKey, src);
+            }
         };
     }
 
