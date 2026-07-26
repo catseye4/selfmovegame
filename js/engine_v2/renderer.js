@@ -11,9 +11,9 @@ export class Renderer {
         // 6부위 레드 메카 로봇 페이퍼돌 레이어 정밀 좌표 바인딩 (zIndex 순서대로 그리기)
         this.layers = {
             leftArm: {
-                x: 135, y: 112, pivotX: 24, pivotY: 18, zIndex: 0,
-                img: null, src: 'assets/sprites/parts/robot/red_arm.png', animType: 'pivot',
-                renderWidth: 48, renderHeight: 96, frameCount: 1, fps: 10, defaultColor: '#ff9900'
+                x: 132, y: 110, pivotX: 20, pivotY: 18, zIndex: 0,
+                img: null, src: 'assets/sprites/parts/robot/red_arm_l.png', animType: 'pivot',
+                renderWidth: 42, renderHeight: 84, frameCount: 1, fps: 10, defaultColor: '#ff9900'
             },
             leftLeg: {
                 x: 148, y: 146, pivotX: 25, pivotY: 15, zIndex: 1,
@@ -36,16 +36,19 @@ export class Renderer {
                 renderWidth: 52, renderHeight: 52, frameCount: 1, fps: 10, defaultColor: '#00ffcc'
             },
             rightArm: {
-                x: 195, y: 112, pivotX: 24, pivotY: 18, zIndex: 5,
-                img: null, src: 'assets/sprites/parts/robot/red_arm.png', animType: 'pivot',
-                renderWidth: 48, renderHeight: 96, frameCount: 1, fps: 10, defaultColor: '#ffcc00'
+                x: 198, y: 110, pivotX: 22, pivotY: 18, zIndex: 5,
+                img: null, src: 'assets/sprites/parts/robot/red_arm_r.png', animType: 'pivot',
+                renderWidth: 44, renderHeight: 86, frameCount: 1, fps: 10, defaultColor: '#ffcc00'
             }
         };
 
         // 초기 레드 메카 파츠 자산 선로드
         this.changePart('head', 'assets/sprites/parts/robot/red_head.png', 'pivot');
         this.changePart('body', 'assets/sprites/parts/robot/red_body.png', 'pivot');
-        this.changePart('arm', 'assets/sprites/parts/robot/red_arm.png', 'pivot');
+        this.changePart('arm', {
+            right: 'assets/sprites/parts/robot/red_arm_r.png',
+            left: 'assets/sprites/parts/robot/red_arm_l.png'
+        }, 'pivot');
         this.changePart('leg', 'assets/sprites/parts/robot/red_leg.png', 'pivot');
     }
 

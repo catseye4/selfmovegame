@@ -8,53 +8,53 @@ export class RobotPartsStructure {
     constructor(initialData = {}) {
         // 머리 (head)
         this.head = {
-            id: initialData.head?.id || 'head_robot_01',
-            name: initialData.head?.name || '하이퍼 네온 바이저 헤드',
-            src: initialData.head?.src || 'assets/sprites/parts/head_mock.png',
+            id: initialData.head?.id || 'head_red_robot',
+            name: initialData.head?.name || '레드 바이저 다안 헬멧',
+            src: initialData.head?.src || 'assets/sprites/parts/robot/red_head.png',
             animType: initialData.head?.animType || 'pivot',
-            pivotX: initialData.head?.pivotX ?? 20,
-            pivotY: initialData.head?.pivotY ?? 25
+            pivotX: initialData.head?.pivotX ?? 26,
+            pivotY: initialData.head?.pivotY ?? 48
         };
 
         // 가슴/몸통 (body)
         this.body = {
-            id: initialData.body?.id || 'body_robot_01',
-            name: initialData.body?.name || '중장갑 코어 체스트',
-            src: initialData.body?.src || 'assets/sprites/parts/body_mock.png',
+            id: initialData.body?.id || 'body_red_robot',
+            name: initialData.body?.name || '중장갑 엑시온 코어 흉갑',
+            src: initialData.body?.src || 'assets/sprites/parts/robot/red_body.png',
             animType: initialData.body?.animType || 'pivot',
-            pivotX: initialData.body?.pivotX ?? 30,
-            pivotY: initialData.body?.pivotY ?? 35
+            pivotX: initialData.body?.pivotX ?? 36,
+            pivotY: initialData.body?.pivotY ?? 48
         };
 
         // 팔 (arm) 세트 -> 오른쪽, 왼쪽 묶음 관리
         this.arm = {
-            id: initialData.arm?.id || 'arm_robot_01',
-            name: initialData.arm?.name || '더블 블레이드 암 세트',
+            id: initialData.arm?.id || 'arm_red_robot',
+            name: initialData.arm?.name || '더블 메카 바주카 암 세트',
             animType: initialData.arm?.animType || 'pivot',
             right: {
-                src: initialData.arm?.right?.src || 'assets/sprites/parts/arm_mock.png',
-                pivotX: initialData.arm?.right?.pivotX ?? 15,
-                pivotY: initialData.arm?.right?.pivotY ?? 15
+                src: initialData.arm?.right?.src || 'assets/sprites/parts/robot/red_arm_r.png',
+                pivotX: initialData.arm?.right?.pivotX ?? 30,
+                pivotY: initialData.arm?.right?.pivotY ?? 20
             },
             left: {
-                src: initialData.arm?.left?.src || 'assets/sprites/parts/arm_mock.png',
-                pivotX: initialData.arm?.left?.pivotX ?? 15,
-                pivotY: initialData.arm?.left?.pivotY ?? 15
+                src: initialData.arm?.left?.src || 'assets/sprites/parts/robot/red_arm_l.png',
+                pivotX: initialData.arm?.left?.pivotX ?? 30,
+                pivotY: initialData.arm?.left?.pivotY ?? 20
             }
         };
 
         // 다리 (leg) 세트 -> 오른쪽, 왼쪽 묶음 관리
         this.leg = {
-            id: initialData.leg?.id || 'leg_robot_01',
-            name: initialData.leg?.name || '고기동 로봇 레그 세트',
+            id: initialData.leg?.id || 'leg_red_robot',
+            name: initialData.leg?.name || '서스펜션 발목 레그 세트',
             animType: initialData.leg?.animType || 'pivot',
             right: {
-                src: initialData.leg?.right?.src || 'assets/sprites/parts/leg_mock.png',
+                src: initialData.leg?.right?.src || 'assets/sprites/parts/robot/red_leg.png',
                 pivotX: initialData.leg?.right?.pivotX ?? 25,
                 pivotY: initialData.leg?.right?.pivotY ?? 15
             },
             left: {
-                src: initialData.leg?.left?.src || 'assets/sprites/parts/leg_mock.png',
+                src: initialData.leg?.left?.src || 'assets/sprites/parts/robot/red_leg.png',
                 pivotX: initialData.leg?.left?.pivotX ?? 25,
                 pivotY: initialData.leg?.left?.pivotY ?? 15
             }
