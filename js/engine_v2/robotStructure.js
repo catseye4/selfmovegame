@@ -27,8 +27,16 @@ export class RobotPartsStructure {
             id: initialData.arm?.id || 'arm_red_robot',
             name: initialData.arm?.name || '더블 메카 바주카 암 세트',
             animType: initialData.arm?.animType || 'pivot',
-            right: { src: initialData.arm?.right?.src || 'assets/sprites/parts/robot/red_arm_r.png' },
-            left:  { src: initialData.arm?.left?.src  || 'assets/sprites/parts/robot/red_arm_l.png' }
+            right: {
+                src: initialData.arm?.right?.src || 'assets/sprites/parts/robot/red_arm_l.png',
+                pivotX: initialData.arm?.right?.pivotX ?? 30,
+                pivotY: initialData.arm?.right?.pivotY ?? 20
+            },
+            left: {
+                src: initialData.arm?.left?.src || 'assets/sprites/parts/robot/red_arm_r.png',
+                pivotX: initialData.arm?.left?.pivotX ?? 30,
+                pivotY: initialData.arm?.left?.pivotY ?? 20
+            }
         };
 
         // 다리 (leg) 세트 -> 오른쪽, 왼쪽 묶음 관리
