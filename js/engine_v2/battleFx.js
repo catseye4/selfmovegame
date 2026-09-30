@@ -4,7 +4,7 @@
    - 거대괴수 산란: addEgg(x, 부화 시간, onHatch) — 알이 떨어져 맥동하다 흔들리며 깨지고 onHatch 호출
    - 거대로봇 스웜 드론: launchDrone({from, index, getTarget, onHit}) — 발사구에서 솟아 공중 대기 후
      목표에 돌진해 폭발, onHit(폭발 위치) 호출
-   - 스킬 이펙트(VfxPlayer): play(정의, x, b, {to: [x, b]}) · setAura/pulseAura(계속 깔리는 마법진)
+   - 스킬 이펙트(VfxPlayer): play(정의, x, b, {to: [x, b]}) · setAura/pulseAura(계속 깔리는 마법진/저주 장판)
      · launchWave · launchOrb · launchMissile — 알 부화/드론 폭발도 이펙트 정의(vfx/*.js)로 재생
      바닥 이펙트(마법진, 균열 등)는 적/캐릭터 아래 캔버스, 나머지는 위 캔버스에 그림
    좌표: entity-layer 기준 x(left px), b(bottom px). 캔버스 y = 높이 - b
@@ -69,8 +69,11 @@ export class BattleFx {
         this.vfx.play(def, x, this.H - b, { ...opts, follow, to });
     }
 
-    setAura(key, layer, follow) {
-        this.vfx.setPersistent(key, layer, layer ? () => { const [x, b] = follow(); return [x, this.H - b]; } : null);
+    /** follow() → [x, b]. targets() → [{key, x, b, w}] (장판 안 대상, 저주 장판의 촉수 위치) */
+    setAura(key, layer, follow, targets = null) {
+        this.vfx.setPersistent(key, layer, layer ? () => { const [x, b] = follow(); return [x, this.H - b]; } : null, 1, {
+            targets: targets ? () => targets().map(t => ({ ...t, y: this.H - t.b })) : null
+        });
     }
 
     pulseAura(key) {
@@ -150,12 +153,12 @@ export class BattleFx {
 
     // ---- 스웜 드론 ----
     /**
-     * @param {Object} o { from: {x, b}, index, getTarget: () => {x, b} | null, onHit: (pos) => void }
+     * @param {Object} o { from: {x, b}, index(0~2 좌우 퍼짐), delay?(초), getTarget: () => {x, b} | null, onHit: (pos) => void }
      */
     launchDrone(o) {
         const side = o.index - 1;   // -1, 0, 1 → 좌우로 퍼짐
         this.drones.push({
-            x: o.from.x, b: o.from.b, state: 'launch', t: -o.index * 0.08,
+            x: o.from.x, b: o.from.b, state: 'launch', t: -(o.index * 0.08 + (o.delay || 0)),
             sx: o.from.x, sb: o.from.b,
             hx: o.from.x - 30 + side * 34, hb: o.from.b + 80 + (1 - Math.abs(side)) * 26,
             getTarget: o.getTarget, onHit: o.onHit, spin: Math.random() * 6, trail: []
@@ -164,7 +167,7 @@ export class BattleFx {
 
     _loop(now) {
         if (!this.running) return;
-        const dt = gameTime.frozen(now) ? 0 : Math.min(0.05, (now - this.last) / 1000);   // 히트스톱 중 정지
+        const dt = Math.min(0.05, (now - this.last) / 1000) * gameTime.scale(now);   // 히트스톱/일시정지 0, 배속 적용
         this.last = now;
         this._resize();
         this._update(dt);

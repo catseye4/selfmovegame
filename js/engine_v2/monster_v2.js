@@ -370,6 +370,26 @@ export class MonsterController {
         if (this.useRig) this.rigBattle.breakShield();
     }
 
+    shieldOn(color) {
+        if (this.useRig) this.rigBattle.shieldOn(color ? color : undefined);
+    }
+
+    shieldOff() {
+        if (this.useRig) this.rigBattle.shieldOff();
+    }
+
+    /** 스킬 사용 모션 (리그가 없으면 생략) */
+    playSkillAnim(kind) {
+        if (this.useRig) this.rigBattle.playSkillAnim(kind);
+    }
+
+    /** HUD 초상화: 리그 캐릭터 머리 이미지와 이름 (페이퍼돌이면 null) */
+    getPortrait() {
+        if (!this.useRig || !this.rigBattle.character) return null;
+        const c = this.rigBattle.character;
+        return { id: c.id, name: c.name, src: `${c.assetDir}head.png` };
+    }
+
     // 리그 캔버스 좌표 → entity-layer 기준 {x: left px, bottom: px}
     _toEntity(p) {
         if (!p) return null;

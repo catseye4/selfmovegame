@@ -54,6 +54,19 @@ export const KAIJU_VFX = {
         ]
     },
 
+    // [필살기] 대지 포효: 발밑에서 퍼지는 산성 충격파 + 균열 + 포자 폭풍
+    roarBurst: {
+        sfx: 'kaiju_roar',
+        layers: [
+            { type: 'ring', at: 0, dur: 0.6, r: 280, ground: true, color: ACID, width: 9 },
+            { type: 'ring', at: 0.1, dur: 0.6, r: 210, ground: true, color: MOSS, width: 5 },
+            { type: 'cracks', at: 0, dur: 1.3, count: 10, len: 190, color: ACID },
+            { type: 'glow', at: 0, dur: 1.2, r: 150, color: ACID },
+            { type: 'smoke', at: 0.05, count: 12, spread: 150, spreadY: 20, size: 26, life: [0.9, 1.5], rise: 30, color: SPORE },
+            { type: 'motes', at: 0.05, count: 18, spread: 150, rise: [60, 140], life: [0.8, 1.3], size: 3, color: ACID }
+        ]
+    },
+
     // [머리] 재생: 몸을 따라 떠오르는 초록 빛가루 (1초마다)
     regen: {
         sfx: 'kaiju_regen',

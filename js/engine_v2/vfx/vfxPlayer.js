@@ -8,7 +8,7 @@
      type (모양)
        flash   : 순간 섬광 {r}
        fireball: 부풀었다 사그라드는 불덩이 (흰 중심 → 노랑 → 색) {r}
-       ring    : 퍼지는 고리 {r, width, ground?(바닥 타원)}
+       ring    : 퍼지는 고리 {r, width, ground?(바닥 타원), inward?(조여드는 고리)}
        glow    : 바닥 잔광 {r}
        pillar  : 바닥에서 솟는 빛기둥 {h, w}
        rune    : 바닥 마법진 (회전하는 룬 고리 + 별) {r, spin}
@@ -22,11 +22,16 @@
        motes   : 떠오르는 빛가루 {count, spread, rise:[min,max], life:[min,max], size}
        smoke   : 퍼지며 흩어지는 연기 {count, spread, spreadY, size, life:[min,max], rise}
        debris  : 중력으로 떨어지는 파편 {count, speed, size, angle?, cone?}
+       chevrons: 가라앉는 ▼ 표식 (디버프) {count, spread, fall, life:[min,max], size}
    크기 단위: 게임 전장 px. play(..., {scale})로 배율 지정 (테스트 화면은 캐릭터가 커서 배율 ↑)
    좌표: 화면 좌표(y 아래로 증가). 바닥 이펙트는 발 높이 y 기준.
 
    그 밖에
-     setPersistent(key, layer, follow): 계속 떠 있는 이펙트 (예: 흑마법 오라 마법진). pulse(key)로 번쩍임
+     setPersistent(key, layer, follow, scale, {targets}): 계속 떠 있는 이펙트. pulse(key)로 번쩍임
+       layer.kind 'rune'(기본): 바닥 마법진 {r, spin}
+       layer.kind 'field': 저주 장판 — 어두운 웅덩이 + 일렁이는 테두리 + 피어오르는 기운 + 틱마다 앞으로 쓸리는 파문
+                          {rx, flat, dy, color, dark, haze, wisps(초당), origin(발밑 근원 위치), rune?}
+                          targets() → [{key, x, y, w}]: 장판 안 대상의 발 위치 → 발목을 휘감는 촉수
      launchWave / launchOrb / launchMissile: 이동하는 투사체
      onSfx(name): 효과음 연결 지점 (지금은 비어 있음 — 효과 확정 후 사운드 매니저를 연결)
    ========================================================================== */
@@ -72,12 +77,13 @@ export class VfxPlayer {
         if (def.sfx && this.onSfx) this.onSfx(def.sfx);
     }
 
-    setPersistent(key, layer, follow, scale = 1) {
+    setPersistent(key, layer, follow, scale = 1, opts = {}) {
         if (!layer) {
             this.persistent.delete(key);
             return;
         }
-        this.persistent.set(key, { ...layer, follow, s: scale, t: 0, pulse: 0, open: 0 });
+        this.persistent.set(key, { ...layer, follow, s: scale, t: 0, pulse: 0, open: 0, emit: 0,
+            targets: opts.targets || null, targetList: [], grips: new Map() });
     }
 
     pulse(key) {
@@ -119,7 +125,8 @@ export class VfxPlayer {
         for (const p of this.persistent.values()) {
             p.t += dt;
             p.open = Math.min(1, p.open + dt / 0.4);
-            p.pulse = Math.max(0, p.pulse - dt / 0.35);
+            p.pulse = Math.max(0, p.pulse - dt / (p.pulseSec || 0.35));
+            if (p.kind === 'field') this._updateField(p, dt);
         }
 
         for (const p of this.parts) {
@@ -136,6 +143,34 @@ export class VfxPlayer {
 
         for (const pr of this.projectiles) this._updateProjectile(pr, dt);
         this.projectiles = this.projectiles.filter(pr => !pr.done);
+    }
+
+    // 저주 장판: 장판 곳곳에서 기운이 피어오르고, 안에 들어온 대상마다 촉수가 자라남
+    _updateField(p, dt) {
+        const [cx, cy] = p.follow();
+        const s = p.s;
+        const rx = p.rx * s * p.open, ry = rx * (p.flat || 0.22);
+        const y = cy + (p.dy || 0) * s;
+        p.emit += dt * (p.wisps || 0);
+        while (p.emit >= 1) {
+            p.emit -= 1;
+            const a = this.rand() * Math.PI * 2, r = Math.sqrt(this.rand()) * 0.9;
+            const px = cx + Math.cos(a) * rx * r, py = y + Math.sin(a) * ry * r;
+            this.parts.push({ kind: 'smoke', x: px, y: py, vx: (this.rand() - 0.5) * 12 * s, vy: -(16 + this.rand() * 22) * s,
+                t: 0, dur: 1.0 + this.rand() * 0.8, drag: 0.5, color: p.haze || p.dark, r: (12 + this.rand() * 12) * s, layer: 'ground' });
+            if (this.rand() < 0.4) {
+                this.parts.push({ kind: 'mote', x: px, y: py, vx: 0, vy: -(26 + this.rand() * 36) * s, t: 0,
+                    dur: 0.7 + this.rand() * 0.6, color: p.color, r: 1.7 * s, phase: this.rand() * 6 });
+            }
+        }
+        if (!p.targets) return;
+        p.targetList = p.targets();
+        const seen = new Set();
+        for (const tg of p.targetList) {
+            seen.add(tg.key);
+            p.grips.set(tg.key, (p.grips.get(tg.key) || 0) + dt);
+        }
+        for (const k of [...p.grips.keys()]) if (!seen.has(k)) p.grips.delete(k);
     }
 
     _pos(it) {
@@ -181,6 +216,13 @@ export class VfxPlayer {
                 this.parts.push({ kind: 'debris', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0,
                     dur: 0.55 + this.rand() * 0.35, g: 950 * s, rot: this.rand() * 6, vr: (this.rand() - 0.5) * 16,
                     color: it.color, r: (it.size || 4) * s * (0.6 + this.rand() * 0.8) });
+            }
+        } else if (it.type === 'chevrons') {
+            // 위아래로 겹친 ▼ 표식이 천천히 가라앉음 (능력치 감소 느낌)
+            for (let i = 0; i < (it.count || 2); i++) {
+                this.parts.push({ kind: 'chevron', x: x + (this.rand() - 0.5) * 2 * (it.spread || 6) * s,
+                    y: y - i * (it.size || 5) * 1.6 * s, vx: 0, vy: (it.fall || 30) * s, t: 0,
+                    dur: this.range(it.life || [0.5, 0.75]), color: it.color, r: (it.size || 5) * s, s });
             }
         } else if (it.type === 'cracks') {
             // 균열 모양은 시작할 때 한 번 정함 (지그재그 선)
@@ -269,9 +311,12 @@ export class VfxPlayer {
     /** layer: 'ground'(캐릭터/적 아래) | 'front'(위) */
     draw(ctx, layer) {
         ctx.save();
-        if (layer === 'ground') {
-            for (const p of this.persistent.values()) {
-                const [x, y] = p.follow();
+        for (const p of this.persistent.values()) {
+            const [x, y] = p.follow();
+            if (p.kind === 'field') {
+                if (layer === 'ground') drawField(ctx, x, y, p, p.t);
+                else drawGrips(ctx, p, p.t);
+            } else if (layer === 'ground') {
                 drawRune(ctx, x, y, p, p.t, p.open, p.pulse);
             }
         }
@@ -320,6 +365,22 @@ export class VfxPlayer {
                 const a = Math.min(1, u / 0.2) * (1 - u);
                 ctx.globalCompositeOperation = 'source-over';
                 glow(ctx, p.x, p.y, p.r * (1 + u * 1.3), `rgba(${p.color}, ${0.6 * a})`);
+            } else if (p.kind === 'chevron') {
+                const a = Math.min(1, u / 0.2) * (1 - u);
+                const r = p.r;
+                ctx.globalCompositeOperation = 'lighter';
+                glow(ctx, p.x, p.y, r * 2.2, `rgba(${p.color}, ${0.35 * a})`);
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                for (const [w, color, al] of [[3.2, p.color, 0.9], [1.1, WHITE, 0.9]]) {
+                    ctx.strokeStyle = `rgba(${color}, ${al * a})`;
+                    ctx.lineWidth = w * p.s;
+                    ctx.beginPath();
+                    ctx.moveTo(p.x - r, p.y - r * 0.55);
+                    ctx.lineTo(p.x, p.y + r * 0.45);
+                    ctx.lineTo(p.x + r, p.y - r * 0.55);
+                    ctx.stroke();
+                }
             } else if (p.kind === 'debris') {
                 const a = u > 0.7 ? 1 - (u - 0.7) / 0.3 : 1;
                 ctx.globalCompositeOperation = 'source-over';
@@ -377,7 +438,7 @@ const DRAW = {
     },
     ring(ctx, x, y, it, u, s) {
         ctx.globalCompositeOperation = 'lighter';
-        const r = it.r * s * easeOut(u);
+        const r = it.r * s * (it.inward ? 1 - 0.85 * easeOut(u) : easeOut(u));
         ctx.strokeStyle = `rgba(${it.color}, ${1 - u})`;
         ctx.lineWidth = (it.width || 5) * s * (1 - u) + 1;
         ctx.beginPath();
@@ -595,6 +656,120 @@ function drawRune(ctx, x, y, p, time, open, pulse) {
         ctx.stroke();
     }
     ctx.restore();
+}
+
+// 저주 장판 (바닥 레이어): 검보라 웅덩이 + 일렁이는 테두리 + 발밑 근원 + 옅은 마법진 + 틱 파문
+function drawField(ctx, cx, cy, p, time) {
+    const s = p.s || 1;
+    const rx = p.rx * s * easeOut(p.open), ry = rx * (p.flat || 0.22);
+    if (rx < 1) return;
+    const y = cy + (p.dy || 0) * s;
+    const pulse = p.pulse;
+    const ox = cx - rx + (p.origin || 30) * s;     // 근원 (캐릭터 발밑)
+    ctx.save();
+    // 바닥을 검보라로 물들임 (밝히지 않고 어둡게)
+    ctx.globalCompositeOperation = 'source-over';
+    ellipseGlow(ctx, cx, y, rx * 1.08, ry * 1.08, `rgba(${p.dark}, 0.6)`);
+    ellipseGlow(ctx, ox, y, rx * 0.55, ry * 0.9, `rgba(${p.dark}, 0.45)`);
+    // 장판 면: 가장자리로 갈수록 진해지는 보라 막 (어두운 배경에서도 범위가 보이게)
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.save();
+    ctx.translate(cx, y);
+    ctx.scale(1, ry / rx);
+    const fill = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+    fill.addColorStop(0, `rgba(${p.color}, ${0.04 + 0.1 * pulse})`);
+    fill.addColorStop(0.75, `rgba(${p.color}, ${0.13 + 0.15 * pulse})`);
+    fill.addColorStop(0.95, `rgba(${p.color}, ${0.22 + 0.2 * pulse})`);
+    fill.addColorStop(1, `rgba(${p.color}, 0)`);
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.arc(0, 0, rx, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    // 일렁이는 테두리
+    ctx.lineWidth = 1.8 * s;
+    ctx.strokeStyle = `rgba(${p.color}, ${0.38 + 0.45 * pulse})`;
+    ctx.beginPath();
+    for (let i = 0; i <= 72; i++) {
+        const a = (i / 72) * Math.PI * 2;
+        const w = 1 + 0.045 * Math.sin(a * 7 + time * 2.3) + 0.03 * Math.sin(a * 13 - time * 3.4);
+        const px = cx + Math.cos(a) * rx * w, py = y + Math.sin(a) * ry * w;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    // 발밑 근원: 가장 진하게 맥동
+    const beat = 0.5 + 0.5 * Math.sin(time * 3);
+    ellipseGlow(ctx, ox, y, 44 * s, 13 * s, `rgba(${p.color}, ${0.28 + 0.12 * beat + 0.35 * pulse})`);
+    // 안쪽 마법진 (옅게, 틱마다 번쩍)
+    if (p.rune) {
+        drawRune(ctx, cx + (p.rune.dx || 0) * s, y, { r: p.rune.r, s, color: p.color, spin: p.rune.spin },
+            time, easeOut(p.open), 0.05 + 0.75 * pulse);
+    }
+    // 틱 파문: 근원에서 장판 끝으로 쓸려가는 물결
+    if (pulse > 0) {
+        const u = easeOut(1 - pulse);
+        const wx = ox + (cx + rx - ox) * u;
+        const k = (wx - cx) / rx;
+        const h = ry * Math.sqrt(Math.max(0, 1 - k * k)) * 0.95;
+        if (h > 1) {
+            ctx.lineCap = 'round';
+            for (const [w, color, a] of [[7, p.color, 0.3], [2.4, p.color, 0.85], [0.9, WHITE, 0.7]]) {
+                ctx.strokeStyle = `rgba(${color}, ${a * pulse})`;
+                ctx.lineWidth = w * s;
+                ctx.beginPath();
+                ctx.ellipse(wx, y, Math.max(2, 10 * s), h, 0, -Math.PI / 2, Math.PI / 2);
+                ctx.stroke();
+            }
+        }
+    }
+    ctx.restore();
+}
+
+// 저주 장판 (앞 레이어): 장판 안 대상의 발목을 휘감는 검은 촉수
+function drawGrips(ctx, p, time) {
+    if (!p.targetList.length) return;
+    const s = p.s || 1;
+    ctx.save();
+    for (const tg of p.targetList) {
+        const g = easeOut(Math.min(1, (p.grips.get(tg.key) || 0) / 0.35));
+        if (g <= 0) continue;
+        const w = (tg.w || 16) * s;
+        ctx.globalCompositeOperation = 'source-over';
+        ellipseGlow(ctx, tg.x, tg.y, w * 1.6, 6 * s, `rgba(${p.dark}, ${0.55 * g})`);
+        for (let i = 0; i < 3; i++) {
+            const seed = String(tg.key).length * 1.37 + i * 2.1;
+            const bx = tg.x + (i - 1) * w * 0.85;
+            const h = (20 + (i % 2) * 7) * s * g * (0.88 + 0.12 * Math.sin(time * 4 + seed));
+            drawTendril(ctx, bx, tg.y, h, (i - 1) * 0.45, time * 3 + seed, s, p);
+        }
+    }
+    ctx.restore();
+}
+
+// 촉수 한 가닥: 밑동이 굵고 끝으로 가늘어지며 흔들림 (검보라 몸통 + 보라 윤곽)
+function drawTendril(ctx, x, y, h, lean, phase, s, p) {
+    const N = 8;
+    const left = [], right = [];
+    for (let i = 0; i <= N; i++) {
+        const f = i / N;
+        const px = x + lean * h * f + Math.sin(phase + f * 4) * 5 * s * f;
+        const py = y - h * f;
+        const w = 3.6 * s * (1 - f) + 0.4 * s;
+        left.push([px - w, py]);
+        right.push([px + w, py]);
+    }
+    ctx.beginPath();
+    left.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)));
+    for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i][0], right[i][1]);
+    ctx.closePath();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = `rgba(${p.dark}, 0.92)`;
+    ctx.fill();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = `rgba(${p.color}, 0.55)`;
+    ctx.lineWidth = 1.1 * s;
+    ctx.stroke();
 }
 
 // 어둠 파동: 진행 방향을 향한 초승달 (보라 외곽 + 흰 코어), 사거리 끝으로 갈수록 옅어짐

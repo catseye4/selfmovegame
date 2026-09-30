@@ -10,20 +10,37 @@ export const DEEP = '70, 18, 115';
 const PINK = '255, 150, 255';
 
 export const HERO_VFX = {
-    // 몸통 [흑마법 저주] 틱: 오라 안의 적마다 보라 기둥이 솟음
+    // 몸통 [흑마법 저주] 틱 (디버프): 발밑 고리가 조여들고, 머리 위 ▼ 표식이 가라앉으며 기운이 빨려 나감
     curseTick: {
         sfx: 'hero_curse_tick',
         layers: [
-            { type: 'glow', at: 0, dur: 0.5, r: 30, color: VIOLET },
-            { type: 'ring', at: 0, dur: 0.35, r: 30, ground: true, color: VIOLET, width: 4 },
-            { type: 'pillar', at: 0.02, dur: 0.55, h: 115, w: 20, color: VIOLET },
-            { type: 'motes', at: 0.05, count: 7, spread: 14, rise: [70, 130], life: [0.5, 0.9], color: PINK },
-            { type: 'smoke', at: 0.2, count: 3, spread: 10, spreadY: 60, size: 14, life: [0.6, 1.0], rise: 30, color: DEEP }
+            { type: 'ring', at: 0, dur: 0.42, r: 36, ground: true, inward: true, color: VIOLET, width: 3 },
+            { type: 'glow', at: 0, dur: 0.55, r: 26, color: VIOLET },
+            { type: 'pillar', at: 0.03, dur: 0.45, h: 64, w: 12, color: VIOLET },
+            { type: 'chevrons', at: 0, count: 2, spread: 3, dy: -64, fall: 40, life: [0.65, 0.8], size: 6.5, color: PINK },
+            { type: 'smoke', at: 0.1, count: 3, spread: 12, spreadY: 34, size: 13, life: [0.6, 1.0], rise: 18, color: DEEP }
         ]
     },
 
-    // 흑마법 오라 마법진 (몸 앞 바닥에 계속 깔림, 틱마다 번쩍)
-    curseAura: { r: 115, color: VIOLET, spin: 0.7 },
+    // [몸통 스킬] 흑마법 폭발: 전방 바닥에 대형 마법진이 번쩍
+    curseNova: {
+        sfx: 'hero_curse_nova',
+        layers: [
+            { type: 'rune', at: 0, dur: 1.1, r: 170, color: VIOLET, spin: 1.8 },
+            { type: 'ring', at: 0.1, dur: 0.5, r: 190, ground: true, color: PINK, width: 6 },
+            { type: 'flash', at: 0.1, dur: 0.2, r: 60, color: VIOLET, dy: -40 },
+            { type: 'motes', at: 0.1, count: 16, spread: 150, rise: [60, 140], life: [0.7, 1.2], size: 3, color: PINK }
+        ]
+    },
+
+    // 흑마법 오라 (디버프 장판): 히어로 발밑에서 저주 범위 끝까지 검보라 웅덩이가 깔림.
+    // 기운이 계속 피어오르고, 틱마다 발밑에서 앞으로 파문이 쓸려가며, 안에 든 적은 촉수에 발목이 잡힘
+    // rx: 가로 반지름(게임 px) — 중심은 전투 엔진이 정함 / origin: 왼쪽 끝에서 근원(발밑)까지
+    curseAura: {
+        kind: 'field', rx: 160, flat: 0.2, dy: 4, origin: 32,
+        color: VIOLET, dark: '28, 4, 48', haze: '120, 45, 190', wisps: 14, pulseSec: 0.6,
+        rune: { r: 64, dx: 40, spin: 0.7 }
+    },
 
     // 스킬 시전 해방 (손끝, 세뇌 구체 발사 순간)
     castRelease: {

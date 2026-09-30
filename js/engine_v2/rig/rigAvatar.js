@@ -324,8 +324,19 @@ export class RigAvatar {
         if (instant && this.opts.onResize) this.opts.onResize();
     }
 
-    shieldOn() {
-        this.effects.setShield(() => shieldGeom(this.bounds, p => this._toCanvas(p), this.scale), SHIELD_COLOR);
+    shieldOn(color = SHIELD_COLOR) {
+        this.effects.setShield(() => shieldGeom(this.bounds, p => this._toCanvas(p), this.scale), color);
+    }
+
+    /** 시간이 다 된 실드 제거 (조각 없이 사라짐) */
+    shieldOff() {
+        this.effects.shield = null;
+    }
+
+    /** 스킬 모션: 'attack'(현재 공격 클립) | 'cast' | 'victory' — 없는 클립이면 공격 클립으로 */
+    playSkillAnim(kind) {
+        const name = kind === 'attack' ? this._clip('attack') : kind;
+        return this.playOnce(name) || this.playOnce(this._clip('attack'));
     }
 
     shieldHit() {
@@ -407,7 +418,7 @@ export class RigAvatar {
 
     _loop(now) {
         if (!this.running) return;
-        const dt = gameTime.frozen(now) ? 0 : Math.min(0.1, (now - this.last) / 1000);   // 히트스톱 중 정지
+        const dt = Math.min(0.1, (now - this.last) / 1000) * gameTime.scale(now);   // 히트스톱/일시정지 0, 배속 적용
         this.last = now;
         if (this.animator) {
             this.acc += dt;

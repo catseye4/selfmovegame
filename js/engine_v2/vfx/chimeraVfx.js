@@ -53,6 +53,19 @@ export const CHIMERA_VFX = {
         ]
     },
 
+    // [필살기] 파괴 광란(2페이즈 이후): 즉시 내려찍는 대형 충격파
+    slam: {
+        sfx: 'chimera_slam',
+        layers: [
+            { type: 'fireball', at: 0, dur: 0.4, r: 60, color: FLAME, dy: -20 },
+            { type: 'ring', at: 0, dur: 0.55, r: 230, ground: true, color: FLAME, width: 9 },
+            { type: 'ring', at: 0.06, dur: 0.5, r: 170, ground: true, color: GOLD, width: 4 },
+            { type: 'cracks', at: 0, dur: 1.2, count: 10, len: 180, color: FLAME },
+            { type: 'debris', at: 0, count: 16, speed: 340, size: 4, color: ROCK },
+            { type: 'motes', at: 0.05, count: 14, spread: 80, rise: [80, 160], life: [0.8, 1.3], size: 3, color: GOLD, dy: -30 }
+        ]
+    },
+
     // [머리] 2페이즈: 변신 클립의 거대화 순간(0.58초)에 발밑 충격파 + 균열 + 불티
     phase2Burst: {
         sfx: 'chimera_phase2',

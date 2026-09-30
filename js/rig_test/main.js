@@ -230,8 +230,10 @@ function dummyCenterY() {
 function toggleCurse() {
     skill.curse = !skill.curse;
     opts.dummies = true;
+    // 저주 장판: 발밑에서 앞으로 (게임과 같은 비율), 허수아비 발목에 촉수
     vfx.setPersistent('curse', skill.curse ? HERO_VFX.curseAura : null,
-        () => [CHAR_X + 250 * VFX_SCALE * 0.56, GROUND_Y], VFX_SCALE * 0.56 * 1.8);
+        () => [CHAR_X + 140 * VFX_SCALE, GROUND_Y], VFX_SCALE,
+        { targets: () => dummies.map((d, i) => ({ key: `dummy${i}`, x: dummyCenterX(d), y: GROUND_Y, w: 14 })) });
     syncButtons();
 }
 

@@ -24,6 +24,27 @@ export const MECH_VFX = {
         ]
     },
 
+    // [팔 스킬] 관통 레이저: 굵은 광선이 전장 끝까지
+    laserBig: {
+        sfx: 'mech_laser_big',
+        layers: [
+            { type: 'beam', at: 0, dur: 0.55, w: 16, color: BEAM },
+            { type: 'fireball', at: 0, dur: 0.35, r: 30, color: BEAM },
+            { type: 'ring', at: 0, dur: 0.3, r: 46, color: CYAN, width: 5 },
+            { type: 'sparks', at: 0, count: 14, speed: 300, angle: 0, cone: 1.2, color: BEAM }
+        ]
+    },
+
+    // 관통 레이저가 지나간 적
+    laserHit: {
+        sfx: 'mech_laser_hit',
+        layers: [
+            { type: 'flash', at: 0, dur: 0.16, r: 26, color: BEAM },
+            { type: 'sparks', at: 0, count: 8, speed: 220, color: BEAM },
+            { type: 'smoke', at: 0.05, count: 2, spread: 6, spreadY: 10, size: 12, life: [0.4, 0.7], rise: 25, color: SMOKE }
+        ]
+    },
+
     // 유도 미사일 폭발 (광역)
     missileBlast: {
         sfx: 'mech_missile_blast',

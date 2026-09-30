@@ -110,7 +110,7 @@ export class LabController {
                     </div>
                     <div class="part-stats-summary">
                         HP +${part.stats.hp} | DPS +${part.stats.dps}<br>
-                        <span style="color:#ff0055;font-weight:700;">기믹: ${part.skillDesc.substring(0, 22)}...</span>
+                        <span style="color:#ff0055;font-weight:700;">기믹: ${part.skillDesc ? `${part.skillDesc.substring(0, 22)}...` : '없음'}</span>
                     </div>
                 </div>
             `;

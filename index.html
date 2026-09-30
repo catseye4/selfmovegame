@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,700;1,700&family=Noto+Sans+KR:wght@400;700;900&family=Orbitron:wght@500;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="ui_v2.css">
 </head>
 <body>
     <div id="app">
@@ -371,39 +372,7 @@
              6. 가로형 (LANDSCAPE) v2 횡스크롤 전투 전장 화면 (격리용)
              =================================================== -->
         <section id="screen-battle-v2" class="screen-v2 landscape">
-            <div class="battle-frame">
-                <header class="battle-hud">
-                    <div class="hud-left">
-                        <button id="btn-battle-leave-v2" class="hud-btn">&lt; RETREAT</button>
-                        <div class="hud-info">
-                            <span class="hud-label">FRONT: SECTOR 7 (v2)</span>
-                            <span class="hud-wave">DIST: <strong id="battle-distance-v2">0m</strong> / 1000m</span>
-                        </div>
-                        <div class="hud-stars" style="margin-left: 12px; font-size: 18px; color: #ffcc00; text-shadow: 0 0 10px #ffcc00;">
-                            <span id="battle-stars-v2">☆☆</span>
-                        </div>
-                    </div>
-
-                    <div class="hud-center">
-                        <div class="base-hp-bar player-base">
-                            <div class="bar-label">오버로드 거점 HP</div>
-                            <div class="bar-track"><div id="hp-player-base-v2" class="bar-fill" style="width: 100%;"></div></div>
-                        </div>
-                        <div class="vs-badge">VS</div>
-                        <div class="base-hp-bar enemy-base">
-                            <div class="bar-label" id="enemy-target-label-v2">적 수비대 거점 HP</div>
-                            <div class="bar-track"><div id="hp-enemy-base-v2" class="bar-fill" style="width: 100%;"></div></div>
-                        </div>
-                    </div>
-
-                    <div class="hud-right">
-                        <div class="hud-dm">
-                            <span>DARK MATTER:</span>
-                            <strong id="battle-dm-count-v2" class="text-neon-purple">1,500</strong>
-                        </div>
-                    </div>
-                </header>
-
+            <div class="battle-frame v2-battle">
                 <div id="battle-viewport-v2" class="battle-viewport pixel-art-mode">
                     <div id="bg-sky-v2" class="bg-layer sky"></div>
                     <div id="bg-city-v2" class="bg-layer city"></div>
@@ -429,17 +398,76 @@
                     </div>
                 </div>
 
-                <footer class="battle-controls">
-                    <div class="control-status">
-                        <span class="status-indicator">MONSTER STATE: <strong id="monster-state-text-v2" class="text-neon-green">진격 중 (WALKING)</strong></span>
-                        <span class="sub-status" id="battle-action-log-v2">사정거리 내 적을 탐색하며 전진합니다.</span>
+                <!-- 전투 HUD (ui_v2.css / js/ui_v2/battleHud_v2.js). 기존 id는 전투 엔진이 그대로 사용 -->
+                <div class="v2-hud" id="battle-hud-v2">
+                    <!-- 좌상단: 유닛 카드 -->
+                    <div class="v2-unit v2-panel">
+                        <div class="v2-unit__portrait">
+                            <img id="hud-portrait-v2" alt="">
+                            <span class="v2-unit__phase" id="hud-phase-v2" hidden>2PHASE</span>
+                        </div>
+                        <div class="v2-unit__body">
+                            <div class="v2-unit__name"><span id="hud-name-v2">OVERLORD</span><small id="hud-faction-v2"></small></div>
+                            <div class="v2-bar">
+                                <div class="v2-bar__ghost" id="hud-hp-ghost-v2"></div>
+                                <div class="v2-bar__fill" id="hud-hp-v2"></div>
+                                <div class="v2-bar__shield" id="hud-shield-v2"></div>
+                                <span class="v2-bar__text" id="hud-hp-text-v2"></span>
+                            </div>
+                            <div class="v2-unit__state"><strong id="monster-state-text-v2" class="text-neon-green">진격 중 (WALKING)</strong></div>
+                        </div>
                     </div>
-                    <div class="control-skills">
-                        <button id="btn-trigger-special-v2" class="cyber-btn special">
-                            <span>⚡ 특수 스킬 강제 발동</span>
-                        </button>
+
+                    <!-- 상단 중앙: 진행도 -->
+                    <div class="v2-progress v2-panel">
+                        <div class="v2-progress__head">
+                            <span class="v2-progress__stage">SECTOR 7</span>
+                            <span class="v2-progress__dist"><strong id="battle-distance-v2">0m</strong> / 1000m</span>
+                            <span class="v2-stars" id="battle-stars-v2">☆☆</span>
+                        </div>
+                        <div class="v2-progress__track">
+                            <div class="v2-progress__fill" id="hud-progress-v2"></div>
+                            <span class="v2-progress__unit" id="hud-progress-unit-v2"></span>
+                        </div>
                     </div>
-                </footer>
+
+                    <!-- 우상단: 재화, 배속, 일시정지 -->
+                    <div class="v2-topright">
+                        <div class="v2-chip"><strong id="battle-dm-count-v2">0</strong><small>DM</small></div>
+                        <button class="v2-iconbtn" id="btn-speed-v2" title="배속"></button>
+                        <button class="v2-iconbtn" id="btn-pause-v2" title="일시정지 (P)"></button>
+                    </div>
+
+                    <!-- 거점 체력 (거점이 나타났을 때) -->
+                    <div class="v2-target" id="hud-target-v2" hidden>
+                        <div class="v2-target__label" id="enemy-target-label-v2">적 수비대 거점 HP</div>
+                        <div class="v2-bar v2-bar--boss">
+                            <div class="v2-bar__ghost" id="hud-target-ghost-v2"></div>
+                            <div class="v2-bar__fill" id="hp-enemy-base-v2"></div>
+                        </div>
+                    </div>
+
+                    <!-- 하단 좌측: 전황 로그 -->
+                    <div class="v2-log"><span id="battle-action-log-v2">사정거리 내 적을 탐색하며 전진합니다.</span></div>
+
+                    <!-- 하단 우측: 스킬 도크 (파츠 스킬로 채워짐) -->
+                    <div class="v2-skilldock" id="skill-dock-v2"></div>
+
+                    <!-- 사용하지 않는 구버전 표시 (전투 엔진 호환용) -->
+                    <div hidden><div id="hp-player-base-v2"></div></div>
+                </div>
+
+                <!-- 일시정지 -->
+                <div class="v2-pause" id="pause-overlay-v2" hidden>
+                    <div class="v2-pause__panel v2-panel">
+                        <div class="v2-hazard v2-pause__stripe"></div>
+                        <h2>PAUSED</h2>
+                        <p>작전 일시 정지</p>
+                        <button class="v2-btn" id="btn-resume-v2">계속하기</button>
+                        <button class="v2-btn v2-btn--danger" id="btn-battle-leave-v2">작전 포기 (퇴각)</button>
+                        <div class="v2-pause__keys">1 · 2 · 3/Space 스킬 &nbsp;|&nbsp; A 자동 &nbsp;|&nbsp; P/Esc 일시정지</div>
+                    </div>
+                </div>
             </div>
         </section>
     </div>
