@@ -337,6 +337,13 @@ export class MonsterController {
         if (this.useRig) this.rigBattle.resetSkills();
     }
 
+    // 패배 연출: 쓰러진 순간 그대로 멈춤 (on=false면 다시 재생)
+    freezeRig(on) {
+        if (!this.useRig || !this.rigBattle) return;
+        if (on) this.rigBattle.stop();
+        else if (!this.rigBattle.running) this.rigBattle.start();
+    }
+
     // 출격 점프 (점프 클립이 있는 캐릭터: 거대로봇)
     playIntro() {
         if (!this.useRig) return;

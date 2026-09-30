@@ -11,6 +11,7 @@ import { HERO_WAVE, HERO_ORB } from './vfx/heroVfx.js';
 import { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX, meleeHitVfx } from './vfx/vfxDefs.js';
 import { skillsForParts, hasTarget, ULT_FILL } from './skills_v2.js';
 import { BattleHud } from '../ui_v2/battleHud_v2.js';
+import { BattleDirector } from '../ui_v2/battleDirector_v2.js';
 import { icon } from '../ui_v2/icons.js';
 
 // ---- 팩션 스킬 (컨셉 시트 기준) ----
@@ -28,6 +29,8 @@ const HIT_REACT = { flashMs: 80, knockPx: 10, stopSec: 0.05 };
 // 피해 숫자: 같은 자리 연속 표시는 위로 쌓고, 지속 피해(아군 미니언 등)는 모아서 0.5초마다 표시
 const POPUP = { column: 36, stackMs: 350, stackPx: 15, dotFlushSec: 0.5 };
 const FOOT_B = 58;   // 지면 이펙트 높이 (bottom px)
+// 거점 건물 위치 (전장 1280px 기준): 하단 오른쪽 스킬 버튼에 가리지 않도록 도크 왼쪽에 둠
+const BASE_X = { mid: 790, final: 750 };
 const aimOf = e => ({ x: e.x + (e.isBuilding ? 45 : 38), b: e.isBuilding ? 130 : 90 });   // 적 몸통 중앙
 // 적 상태 외형 (우선순위: 기절 > 감속 > 저주) + 체력바 옆 상태 아이콘
 const ENEMY_TINT = {
@@ -100,6 +103,11 @@ export class BattleEngine {
         this.shieldTimer = Infinity;
         try { this.autoSkills = localStorage.getItem(SKILL_AUTO_KEY) === '1'; } catch (e) { this.autoSkills = false; }
         this.hud = new BattleHud(this);
+        this.director = new BattleDirector(this);   // 인트로/경고/컷인/거점 파괴/결과 화면 연출
+        this.onNavigate = null;                     // (화면 이름) => 화면 전환 (main_v2.js가 연결)
+        this.runId = 0;
+        this.cinematic = false;                     // 끝 연출 중: 입력/스킬 막음
+        this.stats = { kills: 0, time: 0, startDm: 0 };
         this.popupSlots = new Map();
         // 리그 애니메이션 이벤트 → 전장 이펙트 (거대로봇 출격 점프 착지)
         monsterControllerV2.onRigEvent = name => {
@@ -133,6 +141,10 @@ export class BattleEngine {
         this.timers = [];
         this.skillCd = { arm: 0, body: 0 };
         this.ultGauge = 0;
+        this.runId += 1;
+        this.cinematic = false;
+        this.ended = false;
+        this.stats = { kills: 0, time: 0, startDm: gameState.darkMatter };
         gameTime.reset();
 
         // 현재 장착 파츠 스탯 불러오기
@@ -183,8 +195,9 @@ export class BattleEngine {
         this.updateHud();
         this.hud.setup(equippedObjs);
 
-        // 출격 알림
-        this.showAnnouncement('DEPLOYED TO BATTLE // 거점 진격 개시!', 1500);
+        // 출격 인트로 (레터박스 + 작전명 → SORTIE!)
+        this.director.clear();
+        this.director.intro();
 
         this.lastTime = performance.now();
         this.loopId = requestAnimationFrame((t) => this.loop(t));
@@ -547,7 +560,7 @@ export class BattleEngine {
     /** 스킬 사용 (버튼/단축키/자동). 성공하면 true */
     useSkill(slot) {
         const sk = this.skills[slot];
-        if (!this.isActive || this.finalBaseDestroyed || !sk || gameTime.paused) return false;
+        if (!this.isActive || this.cinematic || this.finalBaseDestroyed || !sk || gameTime.paused) return false;
         const st = this.skillState(slot);
         if (!st.ready || !st.hasTarget) return false;
         if (sk.ult) this.ultGauge = 0;
@@ -635,7 +648,7 @@ export class BattleEngine {
         this.midBaseSpawned = true;
         
         const enemyId = 'building_mid_base';
-        const startX = window.innerWidth > 1000 ? 880 : 650;
+        const startX = window.innerWidth > 1000 ? BASE_X.mid : 650;
         const maxHp = 3800;
         this.currentTargetHp = maxHp;
         this.maxTargetHp = maxHp;
@@ -667,7 +680,7 @@ export class BattleEngine {
             hpBar: hpBar
         });
 
-        this.showAnnouncement('WARNING // 중간 거점 요새 출현! 배경을 멈추고 직접 돌격하라!', 2500);
+        this.director.warning('mid');
         this.updateHud();
     }
 
@@ -677,7 +690,7 @@ export class BattleEngine {
         this.finalBaseSpawned = true;
         
         const enemyId = 'building_final_base';
-        const startX = window.innerWidth > 1000 ? 850 : 620;
+        const startX = window.innerWidth > 1000 ? BASE_X.final : 620;
         const maxHp = 7000;
         this.currentTargetHp = maxHp;
         this.maxTargetHp = maxHp;
@@ -709,7 +722,7 @@ export class BattleEngine {
             hpBar: hpBar
         });
 
-        this.showAnnouncement('DANGER // 최종 핵심 기지 출현! 배경을 멈추고 진격하여 분쇄하라!', 2500);
+        this.director.warning('final');
         this.updateHud();
     }
 
@@ -774,7 +787,9 @@ export class BattleEngine {
         }
 
         if (enemy.hp <= 0) {
-            if (enemy.dom) enemy.dom.remove();
+            if (!this.enemies.includes(enemy)) return;   // 같은 프레임에 두 번 처리되지 않게
+            // 거점 건물은 파괴 연출이 무너뜨린 뒤 치움
+            if (enemy.dom && !enemy.isBuilding) enemy.dom.remove();
             this.enemies = this.enemies.filter(e => e.id !== enemy.id);
 
             if (enemy.isBuilding) {
@@ -783,28 +798,32 @@ export class BattleEngine {
                     this.stars = 2;
                     gameState.addDarkMatter(2500);
                     this.updateHud();
-                    
-                    this.enemies.forEach(e => {
-                        if (!e.isBuilding && e.dom) e.dom.remove();
-                    });
-                    this.enemies = this.enemies.filter(e => e.isBuilding);
 
+                    // 남은 적 병사는 흩어지며 사라짐
+                    this.enemies.forEach(e => {
+                        if (!e.dom) return;
+                        e.dom.classList.add('v2-rout');
+                        setTimeout(() => e.dom.remove(), 600);
+                    });
+                    this.enemies = [];
+                    this.cinematic = true;
                     monsterControllerV2.setState('victory');
 
-                    this.showAnnouncement('★★ MISSION VICTORY!! 최종 핵심 기지 완전 분쇄!', 4000);
-                    setTimeout(() => {
-                        this.stopBattle();
-                        document.getElementById('btn-battle-leave-v2')?.click();
-                    }, 4500);
+                    // 연쇄 폭발 → 대폭발 → MISSION COMPLETE → 결과 화면
+                    const run = this.runId;
+                    this.director.baseDestroyed(enemy, true).then(() => {
+                        if (this.runId === run && this.isActive) this.finishBattle(true);
+                    });
                 } else {
                     this.midBaseDestroyed = true;
                     this.stars = Math.max(1, this.stars);
                     gameState.addDarkMatter(800);
                     if (this.domTargetLabel) this.domTargetLabel.textContent = '적 수비대 거점 HP (진격 중)';
-                    this.showAnnouncement('★ 중간 거점 요새 분쇄 완료! 배경 스크롤 및 진격 재개!', 2000);
+                    this.director.baseDestroyed(enemy, false);
                     this.updateHud();
                 }
             } else {
+                this.stats.kills += 1;
                 gameState.addDarkMatter(15);
                 this.updateHud();
 
@@ -813,6 +832,22 @@ export class BattleEngine {
                 }
             }
         }
+    }
+
+    // 전투 종료 → 결과 화면 (승리: 최종 기지 파괴 연출 뒤 / 패배: 쓰러짐 연출 뒤)
+    finishBattle(victory) {
+        const result = {
+            victory,
+            stars: this.stars,
+            distance: Math.min(this.maxDistance, this.distanceTraveled),
+            kills: this.stats.kills,
+            time: this.stats.time,
+            dm: Math.max(0, gameState.darkMatter - this.stats.startDm)
+        };
+        this.stopBattle();
+        this.director.showResult(result, act => {
+            if (this.onNavigate) this.onNavigate(act === 'retry' ? 'battle' : act);
+        });
     }
 
     // 메인 게임 루프
@@ -827,6 +862,7 @@ export class BattleEngine {
         }
 
         if (!this.finalBaseDestroyed) {
+            this.stats.time += dt;
             this.spawnTimer += dt;
             if (this.spawnTimer >= this.spawnInterval && this.enemies.filter(e => !e.isBuilding).length < 6) {
                 this.spawnTimer = 0;
@@ -1058,11 +1094,12 @@ export class BattleEngine {
         });
 
         if (this.playerHp <= 0 || this.playerBaseHp <= 0) {
-            this.showAnnouncement('DEFEAT... // 몬스터가 쓰러졌습니다!', 3000);
-            setTimeout(() => {
-                this.stopBattle();
-                document.getElementById('btn-battle-leave-v2')?.click();
-            }, 2500);
+            // 쓰러짐 연출 → 결과 화면 (전투 루프는 여기서 멈춤)
+            this.cinematic = true;
+            const run = this.runId;
+            this.director.playerDown().then(() => {
+                if (this.runId === run && this.isActive) this.finishBattle(false);
+            });
             return;
         }
 

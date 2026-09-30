@@ -4,6 +4,7 @@
    - 좌상단 유닛 카드(초상화, 체력/실드), 상단 진행도(거리, 거점 표시, 별), 거점 체력 바
    - 우상단 재화/배속/일시정지, 하단 우측 스킬 도크(팔/몸통/필살기 + 자동)
    - 단축키: 1 팔 스킬, 2 몸통 스킬, 3/Space 필살기, P/Esc 일시정지, A 자동
+   - 필살기 컷인/저체력 경고 같은 화면 연출은 battleDirector_v2.js
    전투 엔진(battle_v2.js)이 setup → 매 프레임 update → teardown 순서로 부른다.
    ========================================================================== */
 
@@ -161,6 +162,8 @@ export class BattleHud {
         this.set('shield', Math.round(shieldPct * 1000), v => { this.el.shield.style.width = `${v / 10}%`; });
         this.set('shieldCyan', b.shieldTimer !== Infinity, v => this.el.shield.classList.toggle('is-cyan', v));
         this.set('phase', b.phase2, v => { this.el.phase.hidden = !v; });
+        // 체력 30% 미만: 화면 가장자리 붉은 경고 (연출 모듈)
+        this.set('lowHp', hpPct > 0 && hpPct < 0.3, v => b.director.setLowHp(v));
 
         // 진행도
         const dist = Math.min(MAX_DIST, b.distanceTraveled);
@@ -222,18 +225,7 @@ export class BattleHud {
             void slotEl.btn.offsetWidth;   // 애니메이션 재시작
             slotEl.btn.classList.add('is-fired');
         }
-        if (sk.ult) this.cutIn(sk);
-    }
-
-    /** 필살기 컷인 (간이): 사선 띠 + 초상화 + 스킬 이름 */
-    cutIn(sk) {
-        const el = document.createElement('div');
-        el.className = 'v2-cutin';
-        el.style.setProperty('--sk', sk.color);
-        el.innerHTML = `${this.portraitSrc ? `<img src="${this.portraitSrc}" alt="">` : ''}`
-            + `<div class="v2-cutin__text"><small>ULTIMATE</small><strong>${sk.name}</strong></div>`;
-        this.screen.querySelector('.v2-battle').appendChild(el);
-        setTimeout(() => el.remove(), 1000);
+        if (sk.ult) this.b.director.ultCutIn(sk, this.portraitSrc);   // 필살기 컷인 + 슬로모션
     }
 
     // ------------------------------------------------------------------
@@ -266,7 +258,7 @@ export class BattleHud {
     }
 
     onKey(e) {
-        if (!this.b.isActive || e.repeat) return;
+        if (!this.b.isActive || this.b.cinematic || e.repeat) return;
         const k = e.key.toLowerCase();
         if (k === 'p' || k === 'escape') {
             this.setPaused(!gameTime.paused);

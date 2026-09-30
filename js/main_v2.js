@@ -30,6 +30,9 @@ class GameRouterV2 {
             });
         }
 
+        // 결과 화면 버튼 (다시 출격 / 연구소 / 메인 메뉴) → 화면 전환
+        battleEngineV2.onNavigate = name => this.switchScreen(name);
+
         // 특수 스킬 강제 발동 버튼 이벤트 (v2)
         const btnSpecial = document.getElementById('btn-trigger-special-v2');
         if (btnSpecial) {
