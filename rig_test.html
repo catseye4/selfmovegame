@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAD OVERLORD // RIG TEST</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <!-- 1단계 자체 리그 테스트 화면: 게임과 같은 리그 엔진(js/engine_v2/rig/)을 전투 로직 없이 단독으로 확인 -->
+    <style>
+        :root {
+            --bg: #05050c;
+            --panel: rgba(16, 16, 30, 0.92);
+            --pink: #ff0055;
+            --cyan: #00ffcc;
+            --text: #e8e8ff;
+            --muted: #8f8fb8;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 20px 16px 40px;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Chakra Petch', 'Noto Sans KR', sans-serif;
+        }
+        header { max-width: 1320px; margin: 0 auto 16px; }
+        h1 {
+            margin: 0;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 22px;
+            color: var(--cyan);
+            text-shadow: 0 0 12px rgba(0, 255, 204, 0.5);
+        }
+        header p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+        .rig-layout {
+            display: flex;
+            gap: 20px;
+            max-width: 1320px;
+            margin: 0 auto;
+            align-items: flex-start;
+        }
+        .stage-panel {
+            position: relative;
+            flex: 1 1 auto;
+            min-width: 0;
+            border: 2px solid var(--pink);
+            border-radius: 10px;
+            box-shadow: 0 0 22px rgba(255, 0, 85, 0.35);
+            overflow: hidden;
+            background: #000;
+        }
+        #rig-canvas { display: block; width: 100%; height: auto; }
+        #rig-loading {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--cyan); background: rgba(5, 5, 12, 0.85);
+        }
+        .control-panel {
+            flex: 0 0 300px;
+            background: var(--panel);
+            border: 1px solid rgba(0, 255, 204, 0.35);
+            border-radius: 10px;
+            padding: 14px;
+        }
+        .group + .group { margin-top: 16px; }
+        .group h3 {
+            margin: 0 0 8px;
+            font-size: 13px;
+            letter-spacing: 1px;
+            color: var(--pink);
+        }
+        .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+        button {
+            flex: 1 1 auto;
+            padding: 9px 10px;
+            font: inherit;
+            font-size: 14px;
+            color: var(--text);
+            background: #151529;
+            border: 1px solid #34345a;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        button:hover { border-color: var(--cyan); }
+        button.active {
+            color: #05050c;
+            background: var(--cyan);
+            border-color: var(--cyan);
+            font-weight: 700;
+        }
+        label.opt {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 5px 0;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        label.opt small { display: block; color: var(--muted); font-size: 12px; }
+        label.opt input { margin-top: 3px; accent-color: var(--cyan); }
+        .speed-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .speed-row input { flex: 1; accent-color: var(--pink); }
+        #event-log {
+            list-style: none;
+            margin: 0;
+            padding: 8px;
+            min-height: 120px;
+            background: #020207;
+            border-radius: 6px;
+            font-family: Consolas, monospace;
+            font-size: 12px;
+            color: #9dffe9;
+        }
+        #event-log li + li { margin-top: 3px; opacity: 0.75; }
+        .notes {
+            max-width: 1320px;
+            margin: 16px auto 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .notes b { color: var(--text); }
+        @media (max-width: 900px) {
+            .rig-layout { flex-direction: column; }
+            .control-panel { flex-basis: auto; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>RIG TEST // 1단계 자체 리그</h1>
+        <p>거대로봇 · 거대괴수 · 타락 히어로 · 합성괴인 · Gemini 생성 파츠 · 게임과 같은 리그 엔진을 전투 로직 없이 확인하는 테스트 화면</p>
+    </header>
+
+    <main class="rig-layout">
+        <section class="stage-panel">
+            <canvas id="rig-canvas" width="960" height="600"></canvas>
+            <div id="rig-loading">파츠 불러오는 중...</div>
+        </section>
+
+        <aside class="control-panel">
+            <div class="group">
+                <h3>캐릭터</h3>
+                <div class="btn-row">
+                    <button data-char="mech">거대로봇</button>
+                    <button data-char="kaiju">거대괴수</button>
+                    <button data-char="hero">타락 히어로</button>
+                    <button data-char="chimera">합성괴인</button>
+                </div>
+            </div>
+
+            <div class="group">
+                <h3>상태</h3>
+                <div class="btn-row">
+                    <button data-mode="idle">대기</button>
+                    <button data-mode="walk">걷기</button>
+                    <button data-mode="attack">공격</button>
+                    <button data-mode="victory">승리</button>
+                </div>
+            </div>
+
+            <div class="group">
+                <h3>특수 동작 (스킬)</h3>
+                <div class="btn-row">
+                    <button data-special="jump">점프</button>
+                    <button data-special="phase2">2페이즈 변신</button>
+                    <button data-special="shieldBreak">실드 파괴</button>
+                </div>
+            </div>
+
+            <div class="group" id="hero-skill-group">
+                <h3>타락 히어로 스킬</h3>
+                <div class="btn-row">
+                    <button data-special="cast">시전 동작</button>
+                    <button data-special="curse">흑마법 오라</button>
+                    <button data-special="mind">세뇌 파동</button>
+                    <button data-special="wave">어둠 파동 팔</button>
+                </div>
+            </div>
+
+            <div class="group" id="arm-group">
+                <h3>무기 팔 (파츠 교체)</h3>
+                <div class="btn-row">
+                    <button data-arm="cannon">개틀링 캐논</button>
+                    <button data-arm="fist">기본 주먹</button>
+                </div>
+            </div>
+
+            <div class="group">
+                <h3>비교 옵션</h3>
+                <label class="opt"><input type="checkbox" data-opt="crossfade">
+                    <span>상태 전환 보간<small>끄면 기존처럼 동작이 뚝 바뀜</small></span></label>
+                <label class="opt"><input type="checkbox" data-opt="springs">
+                    <span>2차 모션 (스프링)<small>꼬리·캐니스터·돔 등의 관성 흔들림</small></span></label>
+                <label class="opt"><input type="checkbox" data-opt="pixel">
+                    <span>도트 모드<small>1/4 해상도로 그린 뒤 확대 (2단계 미리보기)</small></span></label>
+                <label class="opt"><input type="checkbox" data-opt="stepped">
+                    <span>12fps 끊어 재생<small>도트 게임식 프레임 타이밍</small></span></label>
+                <label class="opt"><input type="checkbox" data-opt="bones">
+                    <span>뼈대·소켓 표시<small>피벗, 부모-자식 연결, 총구/발 위치</small></span></label>
+                <label class="opt"><input type="checkbox" data-opt="dummies">
+                    <span>적 더미 표시<small>스킬 이펙트 확인용 고블린 3마리</small></span></label>
+                <label class="opt"><input type="checkbox" data-opt="scroll">
+                    <span>걷기 중 배경 스크롤</span></label>
+            </div>
+
+            <div class="group">
+                <h3>재생</h3>
+                <div class="speed-row">
+                    <input id="opt-speed" type="range" min="0.1" max="2" step="0.05" value="1">
+                    <span id="opt-speed-value">1.00x</span>
+                </div>
+                <div class="btn-row">
+                    <button id="btn-pause">❚❚ 일시정지</button>
+                    <button id="btn-step">한 프레임 ▸</button>
+                </div>
+            </div>
+
+            <div class="group">
+                <h3>이벤트 로그</h3>
+                <ul id="event-log"></ul>
+            </div>
+        </aside>
+    </main>
+
+    <section class="notes">
+        <b>확인 포인트</b> ·
+        걷기: 딛는 발은 땅에 고정, 몸통만 체중 이동 · 착지 순간 먼지와 화면 흔들림(애니메이션 이벤트) ·
+        공격: 조준 → 차징 → 연사 구간만 반복, 총구 위치는 팔 뼈의 소켓에서 계산 ·
+        팔 교체: 같은 뼈대에 파츠만 바꿔 끼움 · 동작 데이터는 <b>js/engine_v2/rig/mechRig.js</b>(게임과 공유), 파츠 분리는 <b>tools/rig/cut_mech_parts.py</b>
+    </section>
+
+    <script type="module" src="js/rig_test/main.js"></script>
+</body>
+</html>
