@@ -1610,3 +1610,105 @@ body.v2-fit .screen-v2.landscape {
 .v2-settings__reset { min-width: 150px; margin-left: auto; padding: 8px 12px; font-size: 13px; }
 .v2-settings__reset.is-armed { animation: v2-warn-blink 0.5s steps(2) infinite; }
 
+/* ---------- 10. 스테이지·적 (js/engine_v2/stages_v2.js, enemies_v2.js) ---------- */
+/* 적 이름표: 종류 이름 (C단계 이미지 전까지는 색조 + 이름으로 구분) */
+#screen-battle-v2 .enemy-entity.v2-enemy { transform-origin: 50% 100%; }
+#screen-battle-v2 .enemy-entity.v2-enemy::after { content: attr(data-name); font-family: var(--v2-font); letter-spacing: 0; }
+#screen-battle-v2 .enemy-entity.is-elite::after { color: #16120a; background: linear-gradient(90deg, #ffe38a, #ffb020); }
+#screen-battle-v2 .enemy-entity.is-boss::after { color: #fff; background: linear-gradient(90deg, #b8860b, #ffd24a, #b8860b); font-size: 8px; }
+#screen-battle-v2 .enemy-entity.is-boss .enemy-hp-track { width: 56px; height: 5px; }
+
+/* 주인공 상태 이상 (감속: 푸른 기운 / 기절: 노란 전기 떨림) */
+#player-sprite-canvas-v2.v2-st-slow { filter: drop-shadow(0 0 8px #5ad8ff) saturate(0.75) brightness(0.95); }
+#player-sprite-canvas-v2.v2-st-stun { filter: brightness(1.25) drop-shadow(0 0 10px #ffe066); animation: v2-stun-jitter 0.12s steps(2) infinite; }
+@keyframes v2-stun-jitter { 50% { translate: 2px 0; } }
+.v2-unit__status { position: absolute; top: 10px; right: 14px; display: flex; align-items: center; gap: 3px; }
+.v2-unit__status em { font-style: normal; font-family: var(--v2-font-num); font-size: 10px; color: #fff; margin-right: 4px; }
+
+/* 보스 체력 바 */
+.v2-bossbar {
+    position: absolute;
+    top: 126px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 440px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    animation: v2-drop-in 0.35s ease-out;
+}
+.v2-bossbar[hidden] { display: none; }
+.v2-bossbar__label { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; font-weight: 900; color: #ffe9a8; text-shadow: 0 1px 2px #000; }
+.v2-bossbar__label b { font-family: var(--v2-font-num); font-size: 10px; padding: 0 6px; color: #16120a; background: var(--v2-gold); }
+.v2-bossbar .v2-bar__fill { background: linear-gradient(180deg, #fff3c4, #e0a818 50%, #8a5a00); }
+
+/* 경보 (보스전 EMP 포격 예고) */
+.v2-alarm {
+    left: 50%;
+    top: 176px;
+    z-index: 265;
+    transform: translateX(-50%);
+    min-width: 460px;
+    padding: 8px 26px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    background: rgba(40, 0, 8, 0.9);
+    border: 2px solid #ff3355;
+    box-shadow: 0 0 24px rgba(255, 30, 60, 0.6);
+    animation: v2-warn-open 0.2s ease-out both;
+}
+.v2-alarm strong { font-family: var(--v2-font-num); font-size: 22px; letter-spacing: 4px; color: #ff3355; animation: v2-warn-blink 0.4s steps(2) infinite; }
+.v2-alarm span { font-size: 12px; color: #fff; }
+.v2-alarm i { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: #ff3355; transform-origin: left; animation: v2-alarm-count var(--sec, 2s) linear forwards; }
+@keyframes v2-alarm-count { to { transform: scaleX(0); } }
+
+/* 결과 화면 별 3개: 예전에 딴 별(옅은 금), 새 별(NEW) */
+.v2-result__stars { gap: 26px; }
+.v2-result__star { position: relative; }
+.v2-result__star.is-had .v2-icon { color: #8a6d2a; }
+.v2-result__star.is-had span { color: #b89a52; }
+.v2-result__star em {
+    position: absolute;
+    top: -6px;
+    right: -14px;
+    padding: 0 4px;
+    font-style: normal;
+    font-family: var(--v2-font-num);
+    font-size: 9px;
+    font-weight: 900;
+    color: #16120a;
+    background: var(--v2-green);
+    animation: v2-star-stamp 0.4s var(--d, 0.3s) both;
+}
+
+/* 메인 레이더 아래: 선택한 스테이지 정보 (두 줄) */
+.v2-radar__screen { height: 260px; }
+.v2-radar__foot { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 2px 10px; min-height: 34px; font-family: var(--v2-font); font-size: 12px; }
+.v2-radar__foot b { font-size: 14px; color: #fff; }
+.v2-radar__foot .v2-stars { font-size: 14px; }
+.v2-radar__foot small { flex-basis: 100%; text-align: center; font-size: 11px; color: var(--v2-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#menu-radar-v2 { cursor: pointer; }
+
+/* 세뇌 보병: 컨셉 시트처럼 검보라 실루엣 + 보라 눈빛, 머리 위에 도는 세뇌 표식 */
+#screen-battle-v2 .ally-minion.v2-mind {
+    filter: brightness(0.5) sepia(1) hue-rotate(225deg) saturate(2.4) drop-shadow(0 0 6px rgba(176, 80, 255, 0.9));
+}
+#screen-battle-v2 .ally-minion.v2-mind::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: -16px;
+    width: 22px;
+    height: 8px;
+    margin-left: -11px;
+    border-radius: 50%;
+    border: 2px solid rgba(220, 150, 255, 0.95);
+    box-shadow: 0 0 8px rgba(190, 95, 255, 0.9);
+    animation: v2-mind-sigil 1.4s linear infinite;
+}
+@keyframes v2-mind-sigil { to { transform: rotateY(360deg); } }
+.v2-skilldock.is-stunned .v2-skill { filter: grayscale(1) brightness(0.55); }
+.v2-skilldock.is-stunned::after { content: '기절 — 스킬 사용 불가'; position: absolute; right: 0; bottom: -2px; font-size: 11px; font-weight: 900; color: #ffe066; text-shadow: 0 1px 2px #000; }
+

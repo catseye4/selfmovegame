@@ -2,7 +2,7 @@
    PROJECT: MAD OVERLORD // 전술 레이더 (메인 화면, v2)
    홀로그램 전장 지도: 지형 등고선 + 원형 레이더(고리, 십자선, 회전 탐지선) + 진격 경로 + 목표 표시.
    탐지선이 지나간 적 신호가 밝게 빛났다가 서서히 흐려진다.
-   mode 'story': 1스테이지(SECTOR 7) 경로 / 'special': 잠김(어둡게, HTML 안내가 덮음)
+   mode 'story': 챕터 스테이지 점과 경로 (setStages) — 누르면 onSelect(id) / 'special': 잠김(어둡게, HTML 안내가 덮음)
    메인 화면이 보일 때만 그린다 (start / stop).
    ========================================================================== */
 
@@ -25,6 +25,31 @@ export class TacticalRadar {
         this.running = false;
         this.t = 0;
         this.terrain = null;
+        this.nodes = null;       // [{ id, at, state: 'cleared'|'open'|'locked', stars, boss, name }]
+        this.selected = null;
+        this.onSelect = null;
+        if (canvas) canvas.addEventListener('click', e => this._click(e));
+    }
+
+    /** 스테이지 점 설정 */
+    setStages(nodes, selectedId, onSelect) {
+        this.nodes = nodes;
+        this.selected = selectedId;
+        this.onSelect = onSelect;
+    }
+
+    _click(e) {
+        if (!this.nodes || this.mode !== 'story' || !this.onSelect) return;
+        const c = this.canvas;
+        const x = e.offsetX * (c.width / c.clientWidth), y = e.offsetY * (c.height / c.clientHeight);
+        const { cx, cy, R, s } = this.geo || {};
+        if (!R) return;
+        let best = null, bestD = 22 * s;
+        for (const n of this.nodes) {
+            const d = Math.hypot(cx + n.at[0] * R - x, cy + n.at[1] * R - y);
+            if (d < bestD) { best = n; bestD = d; }
+        }
+        if (best) this.onSelect(best.id);
     }
 
     setMode(mode) {
@@ -115,6 +140,7 @@ export class TacticalRadar {
         const cx = w * 0.5, cy = h * 0.52, R = Math.min(w * 0.46, h * 0.47);
         const P = ([x, y]) => [cx + x * R, cy + y * R];
         const s = dpr;
+        this.geo = { cx, cy, R, s };
         const sweep = this.t * 1.1;
 
         // 레이더 고리 / 십자선 / 눈금
@@ -161,6 +187,9 @@ export class TacticalRadar {
             ctx.stroke();
             ctx.restore();
 
+            if (this.nodes) {
+                this._drawNodes(ctx, P, s);
+            } else {
             // 진격 경로 (점선이 흐름)
             const pts = [PLAYER, ...TARGETS.map(t => t.at)].map(P);
             ctx.setLineDash([8 * s, 7 * s]);
@@ -230,6 +259,7 @@ export class TacticalRadar {
             ctx.shadowBlur = 0;
             ctx.fillStyle = '#ffd24a';
             ctx.fillText('OVERLORD', px - 26 * s, py + 22 * s);
+            }
         }
 
         // 좌상단 정보 문구 (홀로그램 느낌)
@@ -237,6 +267,84 @@ export class TacticalRadar {
         ctx.fillStyle = `rgba(${AMBER}, 0.55)`;
         ['SECTOR MAP - 07', 'SCALE 1:2500', `SCAN ${String(Math.floor(this.t * 7) % 1000).padStart(3, '0')}`].forEach((line, i) => {
             ctx.fillText(line, 10 * s, (16 + i * 12) * s);
+        });
+    }
+
+    // 스테이지 점: 클리어(금색 + 별), 열림(주황 맥동), 잠김(회색 자물쇠), 보스(큰 붉은 점), 선택(흰 고리 + 이름표)
+    _drawNodes(ctx, P, s) {
+        const pts = this.nodes.map(n => P(n.at));
+        ctx.lineWidth = 2 * s;
+        for (let i = 1; i < pts.length; i++) {
+            const done = this.nodes[i - 1].state === 'cleared';
+            ctx.setLineDash(done ? [] : [7 * s, 6 * s]);
+            ctx.lineDashOffset = -this.t * 25 * s;
+            ctx.strokeStyle = done ? `rgba(${AMBER}, 0.85)` : this.nodes[i].state === 'locked' ? 'rgba(140, 150, 170, 0.35)' : `rgba(${AMBER}, 0.6)`;
+            ctx.beginPath();
+            ctx.moveTo(pts[i - 1][0], pts[i - 1][1]);
+            ctx.lineTo(pts[i][0], pts[i][1]);
+            ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        ctx.font = `800 ${10 * s}px Orbitron, "Chakra Petch", sans-serif`;
+        this.nodes.forEach((n, i) => {
+            const [x, y] = pts[i];
+            const r = (n.boss ? 9 : 6.5) * s;
+            const sel = n.id === this.selected;
+            const col = n.state === 'locked' ? '120, 128, 145' : n.boss ? RED : n.state === 'cleared' ? '255, 205, 90' : ORANGE;
+            if (n.state === 'open') {
+                const pulse = (this.t * 0.9 + i * 0.3) % 1;
+                ctx.strokeStyle = `rgba(${col}, ${1 - pulse})`;
+                ctx.lineWidth = 2 * s;
+                ctx.beginPath();
+                ctx.arc(x, y, r + pulse * 14 * s, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            ctx.fillStyle = `rgba(${col}, 0.95)`;
+            ctx.shadowColor = `rgba(${col}, 0.9)`;
+            ctx.shadowBlur = n.state === 'locked' ? 0 : 10 * s;
+            ctx.beginPath();
+            if (n.boss) {   // 보스: 마름모
+                ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath();
+            } else {
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+            }
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            if (n.state === 'locked') {   // 자물쇠 표시
+                ctx.strokeStyle = 'rgba(20, 22, 30, 0.9)';
+                ctx.lineWidth = 1.6 * s;
+                ctx.strokeRect(x - 2.5 * s, y - 1 * s, 5 * s, 4 * s);
+            }
+            if (sel) {
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2 * s;
+                ctx.beginPath();
+                ctx.arc(x, y, r + 5 * s, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            // 스테이지 번호 + 별
+            ctx.fillStyle = n.state === 'locked' ? 'rgba(160, 168, 185, 0.7)' : '#fff';
+            ctx.fillText(n.id, x - ctx.measureText(n.id).width / 2, y + r + 13 * s);
+            if (n.state !== 'locked') {
+                for (let k = 0; k < 3; k++) {
+                    ctx.fillStyle = k < n.stars ? '#ffd24a' : 'rgba(255, 255, 255, 0.18)';
+                    ctx.beginPath();
+                    ctx.arc(x - 7 * s + k * 7 * s, y + r + 20 * s, 2.2 * s, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            if (sel) {   // 선택 이름표
+                const label = n.name;
+                const tw = ctx.measureText(label).width + 12 * s;
+                const lx = Math.min(this.canvas.width - tw - 4 * s, x + 14 * s), ly = y - 26 * s;
+                ctx.fillStyle = 'rgba(8, 9, 13, 0.88)';
+                ctx.fillRect(lx, ly, tw, 16 * s);
+                ctx.strokeStyle = `rgba(${col}, 0.9)`;
+                ctx.lineWidth = 1 * s;
+                ctx.strokeRect(lx, ly, tw, 16 * s);
+                ctx.fillStyle = '#fff';
+                ctx.fillText(label, lx + 6 * s, ly + 11.5 * s);
+            }
         });
     }
 }

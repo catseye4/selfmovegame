@@ -1,7 +1,7 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // 메인 화면: 전술 그리드 (v2, 가로 1280x720)
    ① 오버로드 대기실: 장착 파츠로 조립된 캐릭터(리그 idle) + 부위별 파츠·스킬 설명 + 능력치 + MUTATION LAB
-   ② 전술 레이더: 스테이지 경로와 목표 (STORY / SPECIAL 전환 — SPECIAL은 준비 중)
+   ② 전술 레이더: 챕터 스테이지 점(누르면 선택), 선택한 스테이지 정보 (STORY / SPECIAL 전환 — SPECIAL은 준비 중)
    ③ ATTACK / SORTIE 출격 버튼 + 상태 줄(보유 DM, 장착 스킬)
    ④ 우상단: 재화, 설정(톱니바퀴)
    ========================================================================== */
@@ -10,6 +10,9 @@ import { gameState } from '../engine/state.js';
 import { monsterControllerV2 } from '../engine_v2/monster_v2.js';
 import { skillsForParts, legPassiveOf } from '../engine_v2/skills_v2.js';
 import { progress } from '../engine_v2/progress_v2.js';
+import { CHAPTER1, STAGES, stageById, isUnlocked, defaultStage } from '../engine_v2/stages_v2.js';
+import { ENEMY_TYPES } from '../engine_v2/enemies_v2.js';
+import { sound } from '../engine_v2/audio/sound_v2.js';
 import { icon, fillIcons } from './icons.js';
 import { openSettings } from './settingsPanel_v2.js';
 import { TacticalRadar } from './radar_v2.js';
@@ -55,11 +58,48 @@ export class MenuController {
         this.root.querySelectorAll('.v2-maptab').forEach(t => t.classList.toggle('is-on', t.dataset.map === map));
         const story = map === 'story';
         $('menu-radar-locked-v2').hidden = story;
-        $('menu-map-name-v2').textContent = story ? 'SECTOR 7 · 적 수비대 거점 공략' : 'SPECIAL · 무한 파밍 / 엘리트 챌린지';
-        $('menu-map-foot-v2').textContent = story ? 'SECTOR MAP 07 · 목표: 중간 요새 → 최종 핵심 기지' : 'SPECIAL MAP · 준비 중';
+        $('menu-map-name-v2').textContent = story ? CHAPTER1.name : 'SPECIAL · 무한 파밍 / 엘리트 챌린지';
         const sortie = $('btn-to-battle-v2');
         sortie.disabled = !story;
-        $('menu-sortie-sub-v2').textContent = story ? 'READY FOR ENGAGEMENT' : 'SPECIAL MAP 준비 중 — STORY MAP으로 출격';
+        if (story) this.renderStages();
+        else {
+            $('menu-map-foot-v2').textContent = 'SPECIAL MAP · 준비 중';
+            $('menu-sortie-sub-v2').textContent = 'SPECIAL MAP 준비 중 — STORY MAP으로 출격';
+        }
+    }
+
+    // ---- 스테이지 선택 (레이더 점) ----
+    /** 지금 고른 스테이지 (저장된 선택이 열려 있으면 그것, 아니면 아직 못 깬 첫 스테이지) */
+    currentStage() {
+        const sel = progress.selectedStage;
+        return sel && isUnlocked(sel, progress) ? stageById(sel) : defaultStage(progress);
+    }
+
+    selectStage(id) {
+        if (!isUnlocked(id, progress)) {
+            sound.play('ui_error');
+            $('menu-map-foot-v2').innerHTML = `<b>${id}</b> 잠김 — 이전 스테이지를 먼저 클리어하세요`;
+            return;
+        }
+        sound.play('ui_tab');
+        progress.selectStage(id);
+        this.renderStages();
+    }
+
+    renderStages() {
+        const cur = this.currentStage();
+        progress.selectedStage = cur.id;
+        const nodes = STAGES.map(st => ({
+            id: st.id, at: st.map, boss: !!st.boss, name: `${st.id} ${st.name}`,
+            state: progress.stage(st.id).cleared ? 'cleared' : isUnlocked(st.id, progress) ? 'open' : 'locked',
+            stars: progress.starCount(st.id)
+        }));
+        this.radar.setStages(nodes, cur.id, id => this.selectStage(id));
+        const stars = progress.stage(cur.id).stars.map(f => (f ? '★' : '☆')).join('');
+        const enemies = Object.keys(cur.enemy.mix).map(k => ENEMY_TYPES[k].name).join(' · ');
+        $('menu-map-foot-v2').innerHTML = `<b>${cur.id} ${cur.name}</b> <span class="v2-stars">${stars}</span>`
+            + `<small>${cur.desc} · 적: ${enemies}${cur.boss ? ' · 보스' : ''}</small>`;
+        $('menu-sortie-sub-v2').textContent = `STAGE ${cur.id} ${cur.name} 출격`;
     }
 
     /** 메인 화면이 보일 때마다: 장착 상태로 캐릭터/설명/능력치/상태 줄 갱신, 레이더 시작 */
@@ -77,6 +117,10 @@ export class MenuController {
         this.renderCallouts(equipped);
         this.renderStats();
         this.renderStatusBar(equipped);
+        if (this.map === 'story') {
+            $('menu-map-name-v2').textContent = CHAPTER1.name;
+            this.renderStages();
+        }
         if (gameState.currentScreen === 'menu' || !gameState.currentScreen) this.radar.start();
     }
 

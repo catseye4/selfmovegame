@@ -17,8 +17,7 @@ import { sound } from '../engine_v2/audio/sound_v2.js';
 import { openSettings } from './settingsPanel_v2.js';
 
 const FACTION_COLOR = { mech: '#3ee6ff', kaiju: '#a0ff32', hero: '#c86eff', chimera: '#ff9628' };
-const MARKS = [{ at: 450, icon: 'fort' }, { at: 900, icon: 'hq' }];
-const MAX_DIST = 1000;
+// 진행도 표시: 스테이지 거리와 요새·최종 기지 위치 (stages_v2.js)
 const $ = id => document.getElementById(id);
 
 export class BattleHud {
@@ -52,8 +51,19 @@ export class BattleHud {
             dock: $('skill-dock-v2'),
             pause: $('pause-overlay-v2'),
             speed: $('btn-speed-v2'),
-            pauseBtn: $('btn-pause-v2')
+            pauseBtn: $('btn-pause-v2'),
+            stage: $('hud-stage-v2'),
+            distMax: $('hud-dist-max-v2'),
+            pstatus: $('hud-pstatus-v2'),
+            boss: $('hud-boss-v2'),
+            bossName: $('hud-boss-name-v2'),
+            bossHp: $('hud-boss-hp-v2')
         };
+        const st = this.b.stage;
+        this.maxDist = st.distance;
+        this.marks = [{ at: st.midAt, icon: 'fort' }, { at: st.finalAt, icon: st.boss ? 'roar' : 'hq' }];
+        if (this.el.stage) this.el.stage.textContent = `${st.id} ${st.name}`;
+        if (this.el.distMax) this.el.distMax.textContent = st.distance;
         this.last = {};
         this.buildMarks();
         this.setPortrait(equipped);
@@ -90,10 +100,10 @@ export class BattleHud {
 
     buildMarks() {
         this.el.track.querySelectorAll('.v2-progress__mark').forEach(m => m.remove());
-        this.markEls = MARKS.map(m => {
+        this.markEls = this.marks.map(m => {
             const i = document.createElement('i');
             i.className = 'v2-progress__mark';
-            i.style.left = `${(m.at / MAX_DIST) * 100}%`;
+            i.style.left = `${(m.at / this.maxDist) * 100}%`;
             i.innerHTML = icon(m.icon, 13);
             this.el.track.appendChild(i);
             return i;
@@ -178,9 +188,9 @@ export class BattleHud {
         this.set('lowHp', hpPct > 0 && hpPct < 0.3, v => b.director.setLowHp(v));
 
         // 진행도
-        const dist = Math.min(MAX_DIST, b.distanceTraveled);
+        const dist = Math.min(this.maxDist, b.distanceTraveled);
         this.set('dist', Math.round(dist), v => {
-            const pct = `${(v / MAX_DIST) * 100}%`;
+            const pct = `${(v / this.maxDist) * 100}%`;
             this.el.progress.style.width = pct;
             this.el.unitMark.style.left = pct;
         });
@@ -188,6 +198,22 @@ export class BattleHud {
             this.markEls[0].classList.toggle('is-done', b.midBaseDestroyed);
             this.markEls[1].classList.toggle('is-done', b.finalBaseDestroyed);
         });
+
+        // 주인공 상태 이상 (감속·기절) 아이콘 + 남은 시간
+        const ps = [b.pStunT > 0 && ['stun', b.pStunT], b.pSlowT > 0 && ['slow', b.pSlowT]].filter(Boolean);
+        this.set('pstatus', ps.map(([k, t]) => `${k}${Math.ceil(t * 2)}`).join(), () => {
+            this.el.pstatus.innerHTML = ps.map(([k, t]) => `<span class="v2-status__icon is-${k}">${icon(k, 11)}</span><em>${t.toFixed(1)}</em>`).join('');
+        });
+
+        this.set('stunned', b.playerStunned(), v => this.el.dock.classList.toggle('is-stunned', v));   // 기절 중 스킬 불가
+
+        // 보스 체력 바
+        const boss = b.boss && b.enemies.includes(b.boss) ? b.boss : null;
+        this.set('boss', !!boss, v => {
+            this.el.boss.hidden = !v;
+            if (v) this.el.bossName.textContent = boss.t.name;
+        });
+        if (boss) this.set('bossHp', Math.round((boss.hp / boss.maxHp) * 1000), v => { this.el.bossHp.style.width = `${v / 10}%`; });
 
         // 거점 체력 바: 거점이 전장에 있을 때만
         const hasBase = b.enemies.some(e => e.isBuilding);

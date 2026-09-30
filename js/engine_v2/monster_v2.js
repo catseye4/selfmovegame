@@ -172,6 +172,9 @@ export class MonsterController {
             const id = config.character;
             this.rigBattle.setCharacter(id, BATTLE_RIG_SCALE[id]);
             if (this.rigMenu) this.rigMenu.setCharacter(id);
+            // 파츠별 색 (같은 팩션 변형 / 다른 팩션 파츠 / 비운 슬롯)
+            this.rigBattle.setPartFilters(config.filters);
+            if (this.rigMenu) this.rigMenu.setPartFilters(config.filters);
             if (config.arm) {
                 this.rigBattle.setArm(config.arm);
                 if (this.rigMenu) this.rigMenu.setArm(config.arm);
@@ -340,6 +343,15 @@ export class MonsterController {
     // ---- 팩션 스킬 연출 (리그 캐릭터만. 페이퍼돌이면 전투 효과만 적용되고 외형 변화 없음) ----
     resetSkills() {
         if (this.useRig) this.rigBattle.resetSkills();
+    }
+
+    // 주인공 상태 이상 표시: 'slow'(푸른 기운, 동작 느리게) | 'stun'(노란 전기, 동작 멈춤) | null
+    setStatusVisual(state, animScale = 1) {
+        if (this.rigBattle) this.rigBattle.timeScale = animScale;
+        const c = this.spriteCanvas;
+        if (!c) return;
+        c.classList.toggle('v2-st-slow', state === 'slow');
+        c.classList.toggle('v2-st-stun', state === 'stun');
     }
 
     // 패배 연출: 쓰러진 순간 그대로 멈춤 (on=false면 다시 재생)

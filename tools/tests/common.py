@@ -74,8 +74,8 @@ class Game:
 
     def enter_v2(self):
         self.page.click('#btn-select-v2')
-        self.page.wait_for_selector('#screen-menu-v2.active', timeout=10000)
-        self.page.wait_for_selector('.v2-loading', state='detached', timeout=15000)
+        self.page.wait_for_selector('#screen-menu-v2.active', timeout=30000)
+        self.page.wait_for_selector('.v2-loading', state='detached', timeout=30000)
         self.wait(300)
 
     def reload_v2(self):

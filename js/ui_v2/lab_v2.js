@@ -268,6 +268,7 @@ export class LabController {
         }
         this.rig.setCharacter(config.character);
         if (config.arm) this.rig.setArm(config.arm);
+        this.rig.setPartFilters(config.filters);
         if (!this.rigOn) {
             this.rig.setMode('idle');
             this.rig.start();

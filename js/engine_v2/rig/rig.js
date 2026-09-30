@@ -278,7 +278,10 @@ export class Skeleton {
             if (!img || !part) continue;
             const m = Mat.mul(base, b.world);
             ctx.setTransform(m[0], m[1], m[2], m[3], m[4], m[5]);
+            const f = this.partFilters && this.partFilters[b.part];   // 파츠별 색 (rigAvatar.setPartFilters)
+            if (f) ctx.filter = f;
             ctx.drawImage(img, part.x - b.pivot[0], part.y - b.pivot[1]);
+            if (f) ctx.filter = 'none';
         }
     }
 

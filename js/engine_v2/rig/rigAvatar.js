@@ -179,9 +179,52 @@ export function rigConfigFor(partsObj) {
     const match = FACTION_RIG.find(([name]) => faction.includes(name));
     if (!match) return null;
     const character = match[1];
-    if (character !== 'mech') return { character };
+    const filters = partFiltersFor(partsObj, character);
+    if (character !== 'mech') return { character, filters };
     const type = partsObj.arm && partsObj.arm.attackType;
-    return { character, arm: type === 'laser' || type === 'missile' ? 'cannon' : 'fist' };
+    return { character, arm: type === 'laser' || type === 'missile' ? 'cannon' : 'fist', filters };
+}
+
+// ---- 파츠 외형 차이 (로드맵 B): 캐릭터 그림은 몸통 팩션 것을 쓰므로, 머리·팔·다리 파츠를 색으로 구분 ----
+// 슬롯 → 캐릭터별 리그 부위 그림 키
+const SLOT_PARTS = {
+    mech: { head: ['head'], body: ['body', 'canister'], arm: ['armR_cannon', 'armR_fist', 'armL'], leg: ['legR', 'legL'] },
+    kaiju: { head: ['head', 'jaw'], body: ['body', 'tail1', 'tail2', 'tail3'], arm: ['armF'], leg: ['legF', 'legN'] },
+    hero: { head: ['head'], body: ['torso', 'pauldron', 'cape1', 'cape2'], arm: ['armF', 'sword'], leg: ['thighF', 'shinF', 'thighB', 'shinB'] },
+    chimera: { head: ['head'], body: ['torso', 'wing', 'tail1', 'tail2'], arm: ['armF', 'armB'], leg: ['legF', 'legB'] }
+};
+// 같은 팩션 안의 변형 파츠 색 (기본 파츠는 원래 색)
+const PART_TINT = {
+    body_mech: 'saturate(0.55) brightness(1.18) contrast(1.05)',        // 아다만티움 장갑 코어: 은빛
+    head_mech: 'hue-rotate(-35deg) saturate(1.3)',                     // 타겟팅 레이저 바이저: 붉은 톤
+    arm_mech_laser: 'hue-rotate(40deg) saturate(1.3)',                 // 레이저 포대: 자홍
+    arm_mech_missile: 'sepia(0.45) hue-rotate(-15deg) saturate(1.6)',  // 미사일 포드: 주황
+    leg_mech_wheel: 'brightness(0.8) contrast(1.25) saturate(0.7)'     // 무한궤도: 어두운 강철
+};
+// 다른 팩션 파츠: 그 팩션 색 테두리 빛 / 비운 슬롯: 흐리게
+const FACTION_GLOW = { mech: '62, 230, 255', kaiju: '160, 255, 50', hero: '200, 110, 255', chimera: '255, 150, 40' };
+const EMPTY_SLOT = 'grayscale(1) brightness(0.45) opacity(0.55)';
+
+function factionIdOf(part) {
+    const f = String((part && part.faction) || '');
+    const m = FACTION_RIG.find(([name]) => f.includes(name));
+    return m ? m[1] : null;
+}
+
+/** 파츠 조합 → { 리그 부위키: CSS filter } */
+export function partFiltersFor(partsObj, character) {
+    const map = {};
+    const slots = SLOT_PARTS[character];
+    if (!slots || !partsObj) return map;
+    for (const slot of ['head', 'body', 'arm', 'leg']) {
+        const part = partsObj[slot];
+        let f = null;
+        if (!part || part.id === 'none') f = slot === 'body' ? null : EMPTY_SLOT;
+        else if (factionIdOf(part) && factionIdOf(part) !== character) f = `drop-shadow(0 0 4px rgba(${FACTION_GLOW[factionIdOf(part)]}, 0.95))`;
+        else if (PART_TINT[part.id]) f = PART_TINT[part.id];
+        if (f) slots[slot].forEach(key => { map[key] = f; });
+    }
+    return map;
 }
 
 export class RigAvatar {
@@ -272,6 +315,7 @@ export class RigAvatar {
         if (this.opts.fit != null) this._fitToCanvas(layout);
         else this._applyScale();
         this.skeleton = buildSkeleton(c, layout, images, this.arm);
+        this.skeleton.partFilters = this.partFilters || null;
         this.springs = c.springs.map(s => new Spring(s));
         this.effects.clear();
         this.effects.setAmbient(c.ambient, (socket, bone, ox, oy) => {
@@ -363,6 +407,12 @@ export class RigAvatar {
         return this._toCanvas(this.skeleton.socketWorld(socket, bone));
     }
 
+    /** 부위 그림별 색 필터 { 부위키: CSS filter } (파츠 외형 차이) */
+    setPartFilters(map) {
+        this.partFilters = map && Object.keys(map).length ? map : null;
+        if (this.skeleton) this.skeleton.partFilters = this.partFilters;
+    }
+
     setArm(kind) {
         const c = this.character;
         if (!c || !c.arms || !c.arms[kind] || kind === this.arm) return;
@@ -419,7 +469,8 @@ export class RigAvatar {
 
     _loop(now) {
         if (!this.running) return;
-        const dt = Math.min(0.1, (now - this.last) / 1000) * gameTime.scale(now);   // 히트스톱/일시정지 0, 배속 적용
+        // 히트스톱/일시정지 0, 배속 적용 × 이 캐릭터만의 동작 속도(감속 0.55, 기절 0)
+        const dt = Math.min(0.1, (now - this.last) / 1000) * gameTime.scale(now) * (this.timeScale ?? 1);
         this.last = now;
         if (this.animator) {
             this.acc += dt;

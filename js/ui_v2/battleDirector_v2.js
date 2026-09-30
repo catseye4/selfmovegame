@@ -19,7 +19,9 @@ import { BATTLE_VFX } from '../engine_v2/vfx/vfxDefs.js';
 import { sound } from '../engine_v2/audio/sound_v2.js';
 import { settings } from '../engine_v2/settings_v2.js';
 
-const STAGE = { code: 'OPERATION 07', name: 'SECTOR 7', title: '적 수비대 거점 공략', goal: '중간 요새 → 최종 핵심 기지 파괴' };
+import { CHAPTER1 } from '../engine_v2/stages_v2.js';
+
+const STAR_LABELS = ['중간 요새', '최종 기지', '체력 50%↑'];   // 별 3개 조건 (D-016)
 const INTRO_MS = { card: 150, sortie: 1750, reveal: 2150, end: 2700 };
 const FB = 58;   // 지면 높이 (bottom px)
 
@@ -76,16 +78,17 @@ export class BattleDirector {
 
     // ------------------------------------------------------------------
     /** 출격 인트로: 레터박스 + 작전명 → SORTIE! → HUD 등장. 클릭하면 건너뜀 */
-    async intro() {
+    async intro(stage) {
+        this.stage = stage;
         if (!this.attach()) return;
         const token = this.token;
         this.frame.classList.add('v2-intro');
         const bars = this.layer('v2-letterbox', '<i></i><i></i>');
         const card = this.layer('v2-opcard', `
             <div class="v2-opcard__inner">
-                <small>${STAGE.code}</small>
-                <h2>${STAGE.name}<span>//</span>${STAGE.title}</h2>
-                <p>${icon('hq', 14)} 목표: ${STAGE.goal}</p>
+                <small>STAGE ${stage.id} · ${CHAPTER1.name}</small>
+                <h2>${stage.id}<span>//</span>${stage.name}</h2>
+                <p>${icon(stage.boss ? 'hq' : 'fort', 14)} ${stage.desc}</p>
                 <div class="v2-hazard v2-opcard__stripe"></div>
             </div>`);
         let skipped = false;
@@ -115,8 +118,8 @@ export class BattleDirector {
     }
 
     // ------------------------------------------------------------------
-    /** 거점 출현 경고. kind: 'mid' | 'final' */
-    async warning(kind) {
+    /** 거점 출현 경고. kind: 'mid' | 'final', sub: 아래 문구(없으면 기본) */
+    async warning(kind, sub = null) {
         if (!this.attach()) return;
         const token = this.token;
         const final = kind === 'final';
@@ -125,7 +128,7 @@ export class BattleDirector {
                 <div class="v2-warning__stripe"></div>
                 <div class="v2-warning__body">
                     <strong data-text="${final ? 'DANGER' : 'WARNING'}">${final ? 'DANGER' : 'WARNING'}</strong>
-                    <span>${final ? '최종 핵심 기지 출현 — 진격하여 분쇄하라' : '중간 거점 요새 출현 — 돌격하여 분쇄하라'}</span>
+                    <span>${sub || (final ? '최종 핵심 기지 출현 — 진격하여 분쇄하라' : '중간 거점 요새 출현 — 돌격하여 분쇄하라')}</span>
                 </div>
                 <div class="v2-warning__stripe"></div>
             </div>`);
@@ -136,6 +139,20 @@ export class BattleDirector {
         this.frame.classList.remove('v2-alert');
         el.classList.add('is-out');
         await wait(300);
+        el.remove();
+    }
+
+    /** 짧은 경보 (보스전 EMP 포격 예고): 위쪽 붉은 띠 + 남은 시간 */
+    async alarm(title, sub, sec) {
+        if (!this.attach()) return;
+        const token = this.token;
+        const el = this.layer('v2-alarm', `<strong>⚠ ${title}</strong><span>${sub}</span><i></i>`);
+        el.style.setProperty('--sec', `${sec}s`);
+        this.frame.classList.add('v2-alert');
+        this.sfx('warning_danger');
+        await wait(sec * 1000);
+        if (!this.alive(token)) return;
+        this.frame.classList.remove('v2-alert');
         el.remove();
     }
 
@@ -308,36 +325,44 @@ export class BattleDirector {
 
     // ------------------------------------------------------------------
     /**
-     * 결과 화면. r: { victory, stars, distance, kills, time, dm }
-     * onAction(name): 'retry' | 'lab' | 'menu'
+     * 결과 화면. r: { victory, stage, starFlags(이번 판), bestStars(누적), newStars, bonus, next, distance, kills, time, dm }
+     * onAction(name): 'retry' | 'next' | 'lab' | 'menu'
      */
     showResult(r, onAction) {
         if (!this.attach()) return;
         const token = this.token;
         const mm = String(Math.floor(r.time / 60)).padStart(2, '0');
         const ss = String(Math.floor(r.time % 60)).padStart(2, '0');
-        const starLabels = ['중간 요새', '최종 기지'];
+        const stage = r.stage || this.stage;
+        // 별: 이번 판에 딴 별은 도장, 예전에 딴 별은 옅은 금색, 처음 딴 별은 NEW
+        const stars = STAR_LABELS.map((label, i) => ({
+            label, now: !!r.starFlags[i], had: !!(r.bestStars && r.bestStars[i]) && !r.starFlags[i],
+            isNew: !!r.starFlags[i] && !(r.prevStars && r.prevStars[i])
+        }));
+        const earned = stars.filter(st => st.now).length;
         const el = this.layer(`v2-result ${r.victory ? 'is-win' : 'is-lose'}`, `
             <div class="v2-result__panel v2-panel">
                 <div class="v2-hazard v2-result__stripe"></div>
-                <small class="v2-result__op">${STAGE.code} · ${STAGE.name}</small>
+                <small class="v2-result__op">STAGE ${stage.id} · ${stage.name}</small>
                 <h2 class="v2-result__title">${r.victory ? 'MISSION COMPLETE' : 'MISSION FAILED'}</h2>
                 <p class="v2-result__sub">${r.victory ? '적 수비대 거점을 모두 분쇄했습니다' : '기체가 대파되어 퇴각했습니다'}</p>
                 <div class="v2-result__stars">
-                    ${starLabels.map((label, i) => `
-                        <div class="v2-result__star${i < r.stars ? ' is-on' : ''}" style="--d:${0.35 + i * 0.35}s">
-                            ${icon('star', 54)}<span>${label}</span>
+                    ${stars.map((st, i) => `
+                        <div class="v2-result__star${st.now ? ' is-on' : ''}${st.had ? ' is-had' : ''}" style="--d:${0.35 + i * 0.3}s">
+                            ${icon('star', 48)}<span>${st.label}</span>${st.isNew ? '<em>NEW</em>' : ''}
                         </div>`).join('')}
                 </div>
                 <dl class="v2-result__stats">
                     <div><dt>진격 거리</dt><dd>${Math.round(r.distance)}m</dd></div>
                     <div><dt>처치</dt><dd>${r.kills}</dd></div>
                     <div><dt>전투 시간</dt><dd>${mm}:${ss}</dd></div>
+                    ${r.bonus ? `<div><dt>새 별 보너스 (${r.newStars}개)</dt><dd>+${r.bonus.toLocaleString()}</dd></div>` : ''}
                     <div class="is-reward"><dt>${icon('gem', 16)} 획득 DM</dt><dd><strong data-count="${r.dm}">+0</strong></dd></div>
                 </dl>
                 ${r.victory ? '' : '<p class="v2-result__tip">연구소에서 파츠를 바꿔 기체를 강화해 보세요.</p>'}
                 <div class="v2-result__actions">
-                    <button class="v2-btn v2-btn--primary" data-act="retry">${icon('play', 16)} ${r.victory ? '다시 출격' : '재도전'}</button>
+                    ${r.next ? `<button class="v2-btn v2-btn--primary" data-act="next">${icon('play', 16)} 다음 ${r.next.id}</button>` : ''}
+                    <button class="v2-btn ${r.next ? 'v2-btn--ghost' : 'v2-btn--primary'}" data-act="retry">${r.next ? '' : icon('play', 16)} ${r.victory ? '다시 출격' : '재도전'}</button>
                     <button class="v2-btn v2-btn--ghost" data-act="lab">${icon('gear', 16)} 연구소</button>
                     <button class="v2-btn v2-btn--ghost" data-act="menu">메인 메뉴</button>
                 </div>
@@ -348,7 +373,7 @@ export class BattleDirector {
         }));
         this.sfx(r.victory ? 'result_win' : 'result_lose');
         // 별 도장 효과음 + 보상 카운트업
-        for (let i = 0; i < r.stars; i++) setTimeout(() => this.alive(token) && this.sfx('result_star'), (350 + i * 350) + 250);
+        for (let i = 0; i < earned; i++) setTimeout(() => this.alive(token) && this.sfx('result_star'), (350 + i * 300) + 250);
         const num = el.querySelector('[data-count]');
         const total = r.dm;
         const start = performance.now() + 900;

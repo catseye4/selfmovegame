@@ -21,7 +21,7 @@ def run(ctx):
     g.wait(1800)
     destroy_base(g)
     g.wait(2500)
-    ctx.check(g.js('return b.midBaseDestroyed && b.stars >= 1;'), '요새 파괴 → 별 1')
+    ctx.check(g.js('return b.midBaseDestroyed && b.starFlags[0];'), '요새 파괴 → 별 1')
 
     # 최종 기지 → 승리 → 결과
     g.js("b.enemies.filter(e => !e.isBuilding).forEach(e => e.dom.remove()); b.enemies = b.enemies.filter(e => e.isBuilding); b.distanceTraveled = b.stage ? b.stage.finalAt - 0.5 : 899.5;")

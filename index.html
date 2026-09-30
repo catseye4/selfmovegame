@@ -295,7 +295,7 @@
                         <div class="v2-frame__head">
                             <div>
                                 <h2>TACTICAL RADAR</h2>
-                                <small id="menu-map-name-v2">SECTOR 7 · 적 수비대 거점 공략</small>
+                                <small id="menu-map-name-v2">구역 1 · 지하 비밀 연구소</small>
                             </div>
                             <span class="v2-frame__tag v2-frame__tag--live">LIVE</span>
                         </div>
@@ -456,14 +456,15 @@
                                 <span class="v2-bar__text" id="hud-hp-text-v2"></span>
                             </div>
                             <div class="v2-unit__state"><strong id="monster-state-text-v2" class="text-neon-green">진격 중 (WALKING)</strong></div>
+                            <div class="v2-unit__status" id="hud-pstatus-v2"></div>
                         </div>
                     </div>
 
                     <!-- 상단 중앙: 진행도 -->
                     <div class="v2-progress v2-panel">
                         <div class="v2-progress__head">
-                            <span class="v2-progress__stage">SECTOR 7</span>
-                            <span class="v2-progress__dist"><strong id="battle-distance-v2">0m</strong> / 1000m</span>
+                            <span class="v2-progress__stage" id="hud-stage-v2">1-1</span>
+                            <span class="v2-progress__dist"><strong id="battle-distance-v2">0m</strong> / <span id="hud-dist-max-v2">1000</span>m</span>
                             <span class="v2-stars" id="battle-stars-v2">☆☆</span>
                         </div>
                         <div class="v2-progress__track">
@@ -486,6 +487,12 @@
                             <div class="v2-bar__ghost" id="hud-target-ghost-v2"></div>
                             <div class="v2-bar__fill" id="hp-enemy-base-v2"></div>
                         </div>
+                    </div>
+
+                    <!-- 보스 체력 (보스전) -->
+                    <div class="v2-bossbar" id="hud-boss-v2" hidden>
+                        <div class="v2-bossbar__label"><b>BOSS</b><span id="hud-boss-name-v2"></span></div>
+                        <div class="v2-bar v2-bar--boss"><div class="v2-bar__fill" id="hud-boss-hp-v2"></div></div>
                     </div>
 
                     <!-- 하단 좌측: 전황 로그 -->

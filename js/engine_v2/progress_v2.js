@@ -33,6 +33,7 @@ class Progress {
         this.owned = new Set();
         this.levels = {};
         this.stages = {};
+        this.selectedStage = null;   // 메인 화면에서 고른 스테이지 (저장)
         this.loaded = false;
         this.saveTimer = null;
     }
@@ -55,6 +56,7 @@ class Progress {
             (data.owned || []).forEach(id => this.owned.add(id));
             this.levels = { ...(data.levels || {}) };
             this.stages = { ...(data.stages || {}) };
+            this.selectedStage = data.selectedStage || null;
         }
         SLOTS.forEach(slot => this.owned.add(gameState.equippedParts[slot]));   // 장착 중인 파츠는 보유
         gameState.cartParts = { ...gameState.equippedParts };
@@ -74,7 +76,8 @@ class Progress {
             equipped: { ...gameState.equippedParts },
             owned: [...this.owned],
             levels: this.levels,
-            stages: this.stages
+            stages: this.stages,
+            selectedStage: this.selectedStage
         };
         try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* 저장 불가 환경: 이번 실행에서만 유지 */ }
     }
@@ -167,6 +170,11 @@ class Progress {
     }
 
     // ---- 스테이지 기록 ----
+    selectStage(id) {
+        this.selectedStage = id;
+        this.saveSoon();
+    }
+
     stage(id) {
         return this.stages[id] || { stars: [false, false, false], cleared: false, bestTime: null };
     }

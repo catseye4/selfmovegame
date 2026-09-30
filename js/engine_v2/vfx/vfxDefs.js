@@ -57,6 +57,53 @@ export const BATTLE_VFX = {
     }
 };
 
+// 적 능력 (enemies_v2.js): 전기 충격, 방패 강타, 정의의 일격 예고·타격 / 보스전 EMP 포격
+const SHOCK = '255, 225, 80';
+const HOLY = '255, 236, 170';
+const EMP = '120, 210, 255';
+Object.assign(BATTLE_VFX, {
+    shockHit: {
+        layers: [
+            { type: 'flash', at: 0, dur: 0.14, r: 26, color: SHOCK },
+            { type: 'sparks', at: 0, count: 14, speed: 260, color: SHOCK },
+            { type: 'ring', at: 0, dur: 0.3, r: 44, color: SHOCK, width: 3 },
+            { type: 'swirl', at: 0, dur: 0.6, r: 40, arms: 3, spin: 18, color: SHOCK, layer: 'front' }
+        ]
+    },
+    shieldBash: {
+        layers: [
+            { type: 'flash', at: 0, dur: 0.16, r: 34, color: '140, 200, 255' },
+            { type: 'ring', at: 0, dur: 0.35, r: 60, color: '140, 200, 255', width: 6 },
+            { type: 'sparks', at: 0, count: 16, speed: 320, angle: Math.PI, cone: 1.4, color: '200, 230, 255' },
+            { type: 'smoke', at: 0.05, count: 4, spread: 14, spreadY: 20, size: 16, life: [0.4, 0.7], rise: 20, color: '80, 90, 110' }
+        ]
+    },
+    smiteWarn: {
+        layers: [
+            { type: 'rune', at: 0, dur: 1.25, r: 70, color: '255, 70, 60', spin: 3 },
+            { type: 'glow', at: 0, dur: 1.25, r: 80, color: '255, 70, 60' }
+        ]
+    },
+    smiteHit: {
+        layers: [
+            { type: 'pillar', at: 0, dur: 0.7, h: 320, w: 60, color: HOLY },
+            { type: 'flash', at: 0, dur: 0.25, r: 90, color: HOLY, dy: -60 },
+            { type: 'ring', at: 0.02, dur: 0.5, r: 150, ground: true, color: HOLY, width: 8 },
+            { type: 'cracks', at: 0.02, dur: 1.2, count: 7, len: 110, color: '255, 190, 80' },
+            { type: 'sparks', at: 0.02, count: 24, speed: 420, color: HOLY }
+        ]
+    },
+    emp: {
+        sfx: 'shield_break',
+        layers: [
+            { type: 'flash', at: 0, dur: 0.35, r: 160, color: EMP, dy: -120 },
+            { type: 'ring', at: 0, dur: 1.1, r: 900, ground: true, color: EMP, width: 14 },
+            { type: 'ring', at: 0.08, dur: 1.0, r: 700, color: EMP, width: 6, dy: -120 },
+            { type: 'sparks', at: 0, count: 30, speed: 600, color: '200, 240, 255' }
+        ]
+    }
+});
+
 /** 근접 타격 이펙트 (캐릭터 id, 장착 팔 id) — 합성괴인은 클로 팔이면 할퀴기 */
 export function meleeHitVfx(characterId, armId) {
     if (characterId === 'chimera' && armId === 'arm_chimera') return CHIMERA_VFX.clawHit;

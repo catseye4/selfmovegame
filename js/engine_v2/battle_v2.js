@@ -1,6 +1,8 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // BATTLE ENGINE (CONTINUOUS DISTANCE & BASE DESTRUCTION) (v2)
    Uses suffix -v2 to avoid overlapping with original vanilla battle engine.
+   스테이지(거리·적 구성·거점 체력·보상)는 stages_v2.js, 적 종류와 행동은 enemies_v2.js,
+   별 3개(요새 / 최종 기지 / 체력 50% 이상, D-016)와 기록 저장은 progress_v2.js
    ========================================================================== */
 
 import { gameState } from '../engine/state.js';
@@ -8,12 +10,14 @@ import { monsterControllerV2 } from './monster_v2.js';
 import { BattleFx, ensureSkillStyles } from './battleFx.js';
 import { gameTime } from './gameTime.js';
 import { HERO_WAVE, HERO_ORB } from './vfx/heroVfx.js';
-import { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX, meleeHitVfx } from './vfx/vfxDefs.js';
+import { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX, BATTLE_VFX, meleeHitVfx } from './vfx/vfxDefs.js';
 import { skillsForParts, hasTarget, ULT_FILL } from './skills_v2.js';
 import { BattleHud } from '../ui_v2/battleHud_v2.js';
 import { BattleDirector } from '../ui_v2/battleDirector_v2.js';
 import { sound } from './audio/sound_v2.js';
 import { progress } from './progress_v2.js';
+import { stageById, defaultStage, nextStageOf } from './stages_v2.js';
+import { spawnEnemy, updateEnemy, pickType, killReward, ENEMY_TYPES } from './enemies_v2.js';
 import { icon } from '../ui_v2/icons.js';
 
 // ---- 팩션 스킬 (컨셉 시트 기준) ----
@@ -25,11 +29,18 @@ const DRONE = { dmgMul: 0.35, splash: 70 };
 const SKILL_AUTO_KEY = 'mo_v2_auto_skill';
 // 타락 히어로: 머리 세뇌 파동(처치한 적 징집 확률 = 파츠 설명 25%), 몸통 흑마법 오라, 팔 어둠 파동(관통 + 감속)
 // curseZone: 적 왼쪽 끝 기준 저주 범위 (몸 앞 기준 px). auraDx: 저주 장판 중심 (몸 앞 기준, 장판은 발밑~범위 끝)
-const HERO = { recruitChance: 0.25, curseTick: 0.65, curseZone: [-40, 180], curseDps: 48, auraDx: 65,
-    waveRange: 340, slowSec: 2.5, slowMul: 0.5 };
+// wavePierce: 관통 파동이 두 번째 적부터 주는 피해 배율 (적을 지날 때마다 곱해짐, 밸런스 1차)
+const HERO = { recruitChance: 0.1, curseTick: 0.65, curseZone: [-40, 180], curseDps: 22, auraDx: 65,
+    waveRange: 280, slowSec: 2.5, slowMul: 0.5, wavePierce: 0.5 };
+// 팩션 패시브 수치 (밸런스 1차): 괴수 머리 재생(최대 체력 비율/초), 합성괴인 다리 지진(초당 피해), 괴수 다리 포자(초당 피해)
+const PASSIVE = { regen: 0.012, quakeDps: 30, sporeDps: 30 };
 const HIT_REACT = { flashMs: 80, knockPx: 10, stopSec: 0.05 };
 // 다리 패시브 (설명: skills_v2.js LEG_PASSIVES). 궤도 돌진: 피해(기본 1타 배수)·넉백·기절·재사용 / 반중력 부양: 피해 감소율
 const LEG = { ramDmg: 1.5, ramKnock: 3, ramStun: 0.6, ramCd: 4, hoverReduce: 0.3 };
+// 주인공 상태 이상 (적 공격): 감속 = 진격 속도·동작 속도 감소, 기절 = 공격·진격·스킬 멈춤
+const PLAYER_STATUS = { slowMove: 0.5, slowAnim: 0.55, starHp: 0.5 };
+// 근접 기본 공격 휩쓸기: 맞은 적 뒤 radius px 안의 적에게도 피해 × mul (거대 캐릭터가 무리를 쳐냄)
+const MELEE_CLEAVE = { radius: 60, mul: 0.4 };
 // 피해 숫자: 같은 자리 연속 표시는 위로 쌓고, 지속 피해(아군 미니언 등)는 모아서 0.5초마다 표시
 const POPUP = { column: 36, stackMs: 350, stackPx: 15, dotFlushSec: 0.5 };
 const FOOT_B = 58;   // 지면 이펙트 높이 (bottom px)
@@ -53,7 +64,10 @@ export class BattleEngine {
         // 전장 진행 및 목표 스탯
         this.distanceTraveled = 0;
         this.maxDistance = 1000;
-        this.stars = 0; // 0 | 1 | 2
+        this.stage = stageById('1-1');
+        this.starFlags = [false, false, false];   // 요새 / 최종 기지 / 체력 50% 이상 (D-016)
+        this.pSlowT = 0;
+        this.pStunT = 0;
 
         // 아군 몬스터 스탯 및 좌표
         this.monsterX = 150; // 캐릭터 초기 좌측 X 좌표
@@ -130,7 +144,16 @@ export class BattleEngine {
         this.stopBattle();
         this.isActive = true;
         this.distanceTraveled = 0;
-        this.stars = 0;
+        this.stage = stageById(progress.selectedStage || defaultStage(progress).id);
+        this.maxDistance = this.stage.distance;
+        this.spawnInterval = this.stage.enemy.spawn;
+        this.starFlags = [false, false, false];
+        this.pSlowT = 0;
+        this.pStunT = 0;
+        this.spawnSilence = 0;
+        this.artTimer = 0;
+        this.artWarned = false;
+        this.boss = null;
         this.monsterX = 150;
         this.playerBaseHp = 5000;
         this.currentTargetHp = 3500;
@@ -207,7 +230,7 @@ export class BattleEngine {
 
         // 출격 인트로 (레터박스 + 작전명 → SORTIE!) + 전투 배경음
         this.director.clear();
-        this.director.intro();
+        this.director.intro(this.stage);
         sound.playBgm('battle');
 
         this.lastTime = performance.now();
@@ -217,6 +240,10 @@ export class BattleEngine {
     // 전투 정지 및 퇴각
     stopBattle() {
         this.isActive = false;
+        this.pSlowT = 0;
+        this.pStunT = 0;
+        this.pStatusShown = undefined;
+        monsterControllerV2.setStatusVisual(null, 1);
         sound.stopAllLoops();
         sound.setPaused(false);
         if (this.fx) this.fx.stop();
@@ -242,9 +269,7 @@ export class BattleEngine {
     updateHud() {
         if (this.domDistText) this.domDistText.textContent = `${Math.round(this.distanceTraveled)}m`;
         if (this.domStarsText) {
-            if (this.stars === 2) this.domStarsText.textContent = '★★';
-            else if (this.stars === 1) this.domStarsText.textContent = '★☆';
-            else this.domStarsText.textContent = '☆☆';
+            this.domStarsText.textContent = this.starFlags.map(f => (f ? '★' : '☆')).join('');
         }
         if (this.domDmText) this.domDmText.textContent = gameState.darkMatter.toLocaleString();
         if (this.domPlayerBaseBar) {
@@ -313,7 +338,8 @@ export class BattleEngine {
         const allyId = `ally_${Date.now()}_${Math.random()}`;
 
         const el = document.createElement('div');
-        el.className = baby ? 'ally-minion baby-kaiju-v2' : 'ally-minion';
+        // 외형: 새끼 괴수 / 합성괴인 졸개(미니 괴인 스프라이트) / 세뇌 보병(적 보병 + 검보라 세뇌 표식)
+        el.className = `ally-minion ${baby ? 'baby-kaiju-v2' : kind === 'chimera' ? 'chimera-minion-v2' : 'v2-mind'}`;
         el.style.left = `${startX}px`;
 
         const hpBar = document.createElement('div');
@@ -322,6 +348,9 @@ export class BattleEngine {
         if (baby) {   // 새끼 괴수는 산성 초록 체력바
             hpBar.style.background = '#aaff28';
             hpBar.style.boxShadow = '0 0 6px #aaff28';
+        } else if (kind === 'chimera') {
+            hpBar.style.background = '#ff9628';
+            hpBar.style.boxShadow = '0 0 6px #ff9628';
         }
         el.appendChild(hpBar);
 
@@ -424,6 +453,7 @@ export class BattleEngine {
     // [타락 히어로 팔] 어둠 파동: 칼끝에서 초승달 파동이 앞으로 날아가며 지나가는 적 전부에게 피해 + 감속
     launchDarkWave(fromX, dmg, isCrit) {
         const hit = new Set();
+        let mul = 1;   // 관통할수록 약해짐
         this.fx.launchWave({
             x: fromX, b: 88, range: Math.max(this.playerRange, HERO.waveRange), speed: HERO_WAVE.speed,
             h: HERO_WAVE.h, color: HERO_WAVE.color,
@@ -434,7 +464,8 @@ export class BattleEngine {
                     hit.add(e);
                     this.fx.play(HERO_VFX.waveHit, cx, 88);
                     if (!e.isBuilding) this.slowEnemy(e);
-                    this.dealDamageToEnemy(e, dmg, isCrit, { knock: 0.6 });
+                    this.dealDamageToEnemy(e, dmg * mul, isCrit, { knock: 0.6 });
+                    mul *= HERO.wavePierce;
                 });
             }
         });
@@ -451,7 +482,8 @@ export class BattleEngine {
         const states = [e.stunT > 0 && 'stun', e.slowT > 0 && 'slow', e.cursed && 'curse'].filter(Boolean);
         this.updateStatusIcons(e, states);
         if (e.flashing) return;
-        e.dom.style.filter = states.length ? ENEMY_TINT[states[0]] : '';
+        // 종류 색조(enemies_v2.js baseFilter) + 상태 색
+        e.dom.style.filter = [e.baseFilter, states.length ? ENEMY_TINT[states[0]] : ''].filter(Boolean).join(' ');
     }
 
     // 체력바 옆 상태 아이콘 (저주/감속/기절) — 바뀔 때만 다시 그림
@@ -474,7 +506,7 @@ export class BattleEngine {
         e.flashing = true;
         e.dom.style.filter = 'brightness(2.4) saturate(0.2)';
         setTimeout(() => { e.flashing = false; this.updateEnemyFilter(e); }, HIT_REACT.flashMs);
-        if (!e.isBuilding && react.knock) {
+        if (!e.isBuilding && !e.knockResist && react.knock) {   // 방패병·보스는 밀리지 않음
             e.x += HIT_REACT.knockPx * react.knock;
             e.dom.style.left = `${e.x}px`;
         }
@@ -590,7 +622,7 @@ export class BattleEngine {
     /** 스킬 사용 (버튼/단축키/자동). 성공하면 true */
     useSkill(slot) {
         const sk = this.skills[slot];
-        if (!this.isActive || this.cinematic || this.finalBaseDestroyed || !sk || gameTime.paused) return false;
+        if (!this.isActive || this.cinematic || this.finalBaseDestroyed || !sk || gameTime.paused || this.playerStunned()) return false;
         const st = this.skillState(slot);
         if (!st.ready || !st.hasTarget) return false;
         if (sk.ult) this.ultGauge = 0;
@@ -635,42 +667,93 @@ export class BattleEngine {
         due.forEach(tm => tm.fn());
     }
 
-    // 적 쫄몹 연속 소환 로직
-    spawnMinion() {
-        if (!this.domEnemies) return;
-        
-        const maxHp = 350;
-        const dps = 35;
-        const enemyId = `minion_${Date.now()}_${Math.random()}`;
-        
-        const activeBuilding = this.enemies.find(e => e.isBuilding);
-        const startX = activeBuilding ? activeBuilding.x - 30 : (window.innerWidth > 1000 ? 980 : 700);
+    // 적 소환: 스테이지의 적 비중(mix)대로 종류를 고르고, 확률로 엘리트 (enemies_v2.js)
+    spawnMinion(typeId = null, opts = {}) {
+        if (!this.domEnemies) return null;
+        const building = this.enemies.find(e => e.isBuilding);
+        const x = opts.x ?? (building ? building.x - 30 : (window.innerWidth > 1000 ? 980 : 700));
+        const type = typeId || pickType(this.stage.enemy.mix);
+        const elite = opts.elite ?? Math.random() < (this.stage.elite || 0);
+        return spawnEnemy(this, type, { x, elite });
+    }
 
-        const el = document.createElement('div');
-        el.className = 'enemy-entity';
-        el.style.left = `${startX}px`;
+    // 아군 미니언이 피해를 받음 (0 이하면 사라짐)
+    damageAlly(ally, amount) {
+        ally.hp -= amount;
+        if (ally.hpBar) ally.hpBar.style.width = `${Math.max(0, (ally.hp / ally.maxHp) * 100)}%`;
+        if (ally.hp <= 0) {
+            if (ally.dom) ally.dom.remove();
+            this.allies = this.allies.filter(a => a.id !== ally.id);
+        }
+    }
 
-        const hpTrack = document.createElement('div');
-        hpTrack.className = 'enemy-hp-track';
-        const hpBar = document.createElement('div');
-        hpBar.className = 'enemy-hp';
-        hpBar.style.width = '100%';
-        hpTrack.appendChild(hpBar);
-        el.appendChild(hpTrack);
+    // ---- 주인공 상태 이상 (적 공격) ----
+    applyPlayerSlow(sec) {
+        if (this.equippedLegId === 'leg_hero_hover') {   // 다리 패시브: 감속 무시
+            this.createDamagePopup(this.monsterX + 40, 190, '감속 무효', false);
+            return;
+        }
+        if (this.pSlowT <= 0) this.createDamagePopup(this.monsterX + 40, 190, '❄ 감속!', false);
+        this.pSlowT = Math.max(this.pSlowT, sec);
+        this.updatePlayerStatus();
+    }
 
-        this.domEnemies.appendChild(el);
+    applyPlayerStun(sec, label = '기절!') {
+        if (this.pStunT <= 0) this.createDamagePopup(this.monsterX + 40, 200, `⚡ ${label}`, false);
+        this.pStunT = Math.max(this.pStunT, sec);
+        this.updatePlayerStatus();
+    }
 
-        this.enemies.push({
-            id: enemyId,
-            x: startX,
-            hp: maxHp,
-            maxHp: maxHp,
-            dps: dps,
-            speed: 75 + Math.random() * 25,
-            isBuilding: false,
-            dom: el,
-            hpBar: hpBar
-        });
+    playerStunned() {
+        return this.pStunT > 0;
+    }
+
+    /** 진격 속도 배율 (기절 0, 감속 0.5) */
+    moveMul() {
+        return this.pStunT > 0 ? 0 : this.pSlowT > 0 ? PLAYER_STATUS.slowMove : 1;
+    }
+
+    updatePlayerStatus() {
+        const state = this.pStunT > 0 ? 'stun' : this.pSlowT > 0 ? 'slow' : null;
+        if (state === this.pStatusShown) return;
+        this.pStatusShown = state;
+        monsterControllerV2.setStatusVisual(state, state === 'slow' ? PLAYER_STATUS.slowAnim : state === 'stun' ? 0 : 1);
+    }
+
+    tickPlayerStatus(dt) {
+        if (this.pSlowT > 0) this.pSlowT = Math.max(0, this.pSlowT - dt);
+        if (this.pStunT > 0) this.pStunT = Math.max(0, this.pStunT - dt);
+        this.updatePlayerStatus();
+    }
+
+    // ---- 보스전: 최종 기지 EMP 광역 포격 (기획서 2-⑥) ----
+    // 경보 → 발사: 주인공 기절, 대신 전장의 적 보병 전멸 + 잠시 소환 중단
+    tickArtillery(dt) {
+        const art = this.stage.boss && this.stage.boss.artillery;
+        const base = this.enemies.find(e => e.isBuilding && e.isFinal);
+        if (!art || !base) return;
+        this.artTimer += dt;
+        if (!this.artWarned && this.artTimer >= art.every - art.warn) {
+            this.artWarned = true;
+            this.director.alarm('EMP 경보', `${art.warn.toFixed(0)}초 뒤 광역 포격 — 적 보병도 함께 쓸려 나간다`, art.warn);
+        }
+        if (this.artTimer >= art.every) {
+            this.artTimer = 0;
+            this.artWarned = false;
+            this.fx.play(BATTLE_VFX.emp, base.x + 60, 230);
+            this.director.flash('#9fe0ff', 380, 0.75);
+            this.director.shake(12, 700);
+            this.applyPlayerStun(art.stun, 'EMP 마비!');
+            this.enemies.filter(e => !e.isBuilding && !e.boss).forEach(e => {
+                this.fx.play(BATTLE_VFX.baseBlast, e.x + 38, 90, { scale: 0.5 });
+                if (e.dom) {
+                    e.dom.classList.add('v2-rout');
+                    setTimeout(() => e.dom.remove(), 600);
+                }
+            });
+            this.enemies = this.enemies.filter(e => e.isBuilding || e.boss);
+            this.spawnSilence = art.silence;
+        }
     }
 
     // 중간 거점 요새 건물 출현
@@ -680,7 +763,7 @@ export class BattleEngine {
         
         const enemyId = 'building_mid_base';
         const startX = window.innerWidth > 1000 ? BASE_X.mid : 650;
-        const maxHp = 3800;
+        const maxHp = this.stage.base.mid;
         this.currentTargetHp = maxHp;
         this.maxTargetHp = maxHp;
 
@@ -722,7 +805,7 @@ export class BattleEngine {
         
         const enemyId = 'building_final_base';
         const startX = window.innerWidth > 1000 ? BASE_X.final : 620;
-        const maxHp = 7000;
+        const maxHp = this.stage.base.final;
         this.currentTargetHp = maxHp;
         this.maxTargetHp = maxHp;
 
@@ -753,8 +836,11 @@ export class BattleEngine {
             hpBar: hpBar
         });
 
-        this.director.warning('final');
+        const boss = this.stage.boss;
+        this.director.warning('final', boss ? `${ENEMY_TYPES[boss.unit].name} 출현 — 최종 기지를 지키고 있다` : null);
         sound.playBgm('boss', 0.8);
+        // 보스전: 기지 앞에 보스 영웅
+        if (boss) this.boss = this.spawnMinion(boss.unit, { x: startX - 70, elite: false });
         this.updateHud();
     }
 
@@ -791,7 +877,9 @@ export class BattleEngine {
             // 캐릭터별 타격 이펙트 (로봇 주먹 / 괴수 물기 / 히어로 베기 / 합성괴인 주먹·클로 / 페이퍼돌 기본 베기)
             const aim = aimOf(targetEnemy);
             this.fx.play(meleeHitVfx(monsterControllerV2.getCharacterId(), this.equippedArmId), aim.x, aim.b + 5);
+            const near = this.enemies.filter(o => o !== targetEnemy && !o.isBuilding && Math.abs(o.x - targetEnemy.x) <= MELEE_CLEAVE.radius);
             this.dealDamageToEnemy(targetEnemy, finalDmg, isCrit, { knock: 1, stop: hitScale >= 1 });
+            near.forEach(o => this.dealDamageToEnemy(o, finalDmg * MELEE_CLEAVE.mul, false, { knock: 0.6 }));
         }
     }
 
@@ -799,6 +887,7 @@ export class BattleEngine {
     // react: { knock(넉백 배율), stop(히트스톱) } — 몬스터/스킬의 직접 타격일 때만 (지속 피해는 생략)
     // react.dot: 지속 피해 — 피격 반응 없이 합산해 0.5초마다 숫자 표시
     dealDamageToEnemy(enemy, damage, isCrit, react = null) {
+        if (enemy.armor && damage > 0) damage *= 1 - enemy.armor;   // 방패병·보스: 받는 피해 감소
         enemy.hp -= damage;
         if (react && !react.dot && enemy.hp > 0) this.hitReact(enemy, react);
         if (react && react.dot) {
@@ -827,8 +916,8 @@ export class BattleEngine {
             if (enemy.isBuilding) {
                 if (enemy.isFinal) {
                     this.finalBaseDestroyed = true;
-                    this.stars = 2;
-                    gameState.addDarkMatter(2500);
+                    this.starFlags[1] = true;
+                    gameState.addDarkMatter(this.stage.reward.final);
                     this.updateHud();
 
                     // 남은 적 병사는 흩어지며 사라짐
@@ -848,8 +937,8 @@ export class BattleEngine {
                     });
                 } else {
                     this.midBaseDestroyed = true;
-                    this.stars = Math.max(1, this.stars);
-                    gameState.addDarkMatter(800);
+                    this.starFlags[0] = true;
+                    gameState.addDarkMatter(this.stage.reward.mid);
                     if (this.domTargetLabel) this.domTargetLabel.textContent = '적 수비대 거점 HP (진격 중)';
                     this.director.baseDestroyed(enemy, false);
                     this.updateHud();
@@ -857,7 +946,12 @@ export class BattleEngine {
             } else {
                 this.stats.kills += 1;
                 sound.play('enemy_die');
-                gameState.addDarkMatter(15);
+                gameState.addDarkMatter(killReward(this, enemy));
+                if (enemy.boss) {
+                    this.boss = null;
+                    this.director.stamp('BOSS DOWN', `${enemy.t.name} 격파`, 'is-gold', 1500);
+                    this.fx.play(BATTLE_VFX.baseFinale, enemy.x + 38, FOOT_B, { scale: 0.6 });
+                }
                 this.updateHud();
 
                 if (this.equippedHeadId === 'head_hero' && Math.random() < HERO.recruitChance) {
@@ -869,9 +963,20 @@ export class BattleEngine {
 
     // 전투 종료 → 결과 화면 (승리: 최종 기지 파괴 연출 뒤 / 패배: 쓰러짐 연출 뒤)
     finishBattle(victory) {
+        // 세 번째 별: 체력 50% 이상으로 클리어 (D-016)
+        if (victory && this.playerHp / this.maxPlayerHp >= PLAYER_STATUS.starHp) this.starFlags[2] = true;
+        const prevStars = [...progress.stage(this.stage.id).stars];
+        const record = progress.recordStage(this.stage.id, { stars: this.starFlags, cleared: victory, time: this.stats.time });
+        const next = victory ? nextStageOf(this.stage.id) : null;
         const result = {
             victory,
-            stars: this.stars,
+            stage: this.stage,
+            starFlags: [...this.starFlags],
+            bestStars: progress.stage(this.stage.id).stars,
+            prevStars,
+            newStars: record.newStars,
+            bonus: record.bonus,
+            next,
             distance: Math.min(this.maxDistance, this.distanceTraveled),
             kills: this.stats.kills,
             time: this.stats.time,
@@ -880,7 +985,8 @@ export class BattleEngine {
         this.stopBattle();
         setTimeout(() => { if (!this.isActive) sound.playBgm('menu', 2.5); }, 1200);
         this.director.showResult(result, act => {
-            if (this.onNavigate) this.onNavigate(act === 'retry' ? 'battle' : act);
+            if (act === 'next' && next) progress.selectStage(next.id);
+            if (this.onNavigate) this.onNavigate(act === 'retry' || act === 'next' ? 'battle' : act);
         });
     }
 
@@ -897,22 +1003,28 @@ export class BattleEngine {
 
         if (!this.finalBaseDestroyed) {
             this.stats.time += dt;
-            this.spawnTimer += dt;
-            if (this.spawnTimer >= this.spawnInterval && this.enemies.filter(e => !e.isBuilding).length < 6) {
-                this.spawnTimer = 0;
-                this.spawnMinion();
+            this.tickPlayerStatus(dt);
+            this.tickArtillery(dt);
+            if (this.spawnSilence > 0) {
+                this.spawnSilence -= dt;   // EMP 뒤 소환 중단
+            } else {
+                this.spawnTimer += dt;
+                if (this.spawnTimer >= this.spawnInterval && this.enemies.filter(e => !e.isBuilding).length < this.stage.enemy.max) {
+                    this.spawnTimer = 0;
+                    this.spawnMinion();
+                }
             }
         }
 
         if (this.equippedHeadId === 'head_mutant' && this.playerHp < this.maxPlayerHp) {
-            const regenAmount = this.maxPlayerHp * 0.02 * dt;
+            const regenAmount = this.maxPlayerHp * PASSIVE.regen * dt;
             this.playerHp = Math.min(this.maxPlayerHp, this.playerHp + regenAmount);
             monsterControllerV2.updateHpBar(this.playerHp, this.maxPlayerHp);
 
             this.regenPopupTimer = (this.regenPopupTimer || 0) + dt;
             if (this.regenPopupTimer >= 1.0) {
                 this.regenPopupTimer = 0;
-                this.createDamagePopup(this.monsterX + 40, 180, `+${Math.round(this.maxPlayerHp * 0.02)} REGEN`, false);
+                this.createDamagePopup(this.monsterX + 40, 180, `+${Math.round(this.maxPlayerHp * PASSIVE.regen)} REGEN`, false);
                 this.fx.play(KAIJU_VFX.regen, this.monsterX + 35, FOOT_B, { follow: () => [this.monsterX + 35, FOOT_B] });
             }
         }
@@ -959,13 +1071,13 @@ export class BattleEngine {
                 const dist = enemy.x - monsterFrontX;
                 if (dist >= 0 && dist <= 220) {
                     enemy.speed = Math.min(enemy.speed, 35);
-                    enemy.hp -= 35 * dt;
+                    enemy.hp -= PASSIVE.sporeDps * dt;
                     if (enemy.hpBar) {
                         enemy.hpBar.style.width = `${Math.max(0, (enemy.hp / enemy.maxHp) * 100)}%`;
                     }
                     if (tickSporePopup) {
                         this.fx.play(KAIJU_VFX.sporeTick, aimOf(enemy).x, FOOT_B);
-                        this.createDamagePopup(enemy.x, 130, `☣ -${Math.round(35 * 0.75)}`, false);
+                        this.createDamagePopup(enemy.x, 130, `☣ -${Math.round(PASSIVE.sporeDps * 0.75)}`, false);
                     }
                     if (enemy.hp <= 0) {
                         this.dealDamageToEnemy(enemy, 0, false);
@@ -982,13 +1094,13 @@ export class BattleEngine {
             [...this.enemies].forEach(enemy => {
                 const dist = enemy.x - monsterFrontX;
                 if (dist >= -20 && dist <= 200) {
-                    enemy.hp -= 40 * dt;
+                    enemy.hp -= PASSIVE.quakeDps * dt;
                     if (enemy.hpBar) {
                         enemy.hpBar.style.width = `${Math.max(0, (enemy.hp / enemy.maxHp) * 100)}%`;
                     }
                     if (tickQuakePopup) {
                         this.fx.play(CHIMERA_VFX.quakeTick, aimOf(enemy).x, FOOT_B);
-                        this.createDamagePopup(enemy.x, 130, `💥 -${Math.round(40 * 0.75)}`, false);
+                        this.createDamagePopup(enemy.x, 130, `💥 -${Math.round(PASSIVE.quakeDps * 0.75)}`, false);
                     }
                     if (enemy.hp <= 0) {
                         this.dealDamageToEnemy(enemy, 0, false);
@@ -1036,14 +1148,15 @@ export class BattleEngine {
 
             // 공격 애니메이션의 타격 시점(리그 이벤트/페이퍼돌 휘두르기 정점)에 맞춰 발사
             const hit = monsterControllerV2.consumeAttackHit();
-            if (hit > 0) this.fireAttack(closestEnemy, hit);
+            if (hit > 0 && !this.playerStunned()) this.fireAttack(closestEnemy, hit);
 
-            if (minDistance <= 70) {
+            // 거점 건물은 가까이 붙으면 직접 공격 (적 보병은 enemies_v2.js에서)
+            if (minDistance <= 70 && closestEnemy.isBuilding) {
                 this.damagePlayer(closestEnemy.dps * dt, dt);
             }
         } else if (activeBuilding) {
             monsterControllerV2.setState('walking-forward');
-            this.monsterX += this.playerSpeed * dt;
+            this.monsterX += this.playerSpeed * dt * this.moveMul();
             monsterControllerV2.setMonsterPosition(this.monsterX);
         } else {
             monsterControllerV2.setState('walking');
@@ -1054,12 +1167,12 @@ export class BattleEngine {
             }
 
             if (this.distanceTraveled < this.maxDistance) {
-                this.distanceTraveled += this.playerSpeed * dt * 0.4;
+                this.distanceTraveled += this.playerSpeed * dt * 0.4 * this.moveMul();
                 this.updateHud();
 
-                if (this.distanceTraveled >= 450 && !this.midBaseSpawned && !this.midBaseDestroyed) {
+                if (this.distanceTraveled >= this.stage.midAt && !this.midBaseSpawned && !this.midBaseDestroyed) {
                     this.spawnMidBase();
-                } else if (this.distanceTraveled >= 900 && !this.finalBaseSpawned) {
+                } else if (this.distanceTraveled >= this.stage.finalAt && !this.finalBaseSpawned) {
                     this.spawnFinalBase();
                 }
             }
@@ -1107,25 +1220,7 @@ export class BattleEngine {
                 if (enemy.stunT <= 0) this.updateEnemyFilter(enemy);
                 return;   // 기절: 이동/공격 없음
             }
-            if (!enemy.isBuilding) {
-                const targetAlly = this.allies.find(a => enemy.x - a.x <= 65 && enemy.x - a.x >= -35);
-                if (targetAlly) {
-                    targetAlly.hp -= enemy.dps * dt;
-                    if (targetAlly.hpBar) {
-                        targetAlly.hpBar.style.width = `${Math.max(0, (targetAlly.hp / targetAlly.maxHp) * 100)}%`;
-                    }
-                    if (targetAlly.hp <= 0) {
-                        if (targetAlly.dom) targetAlly.dom.remove();
-                        this.allies = this.allies.filter(a => a.id !== targetAlly.id);
-                    }
-                } else if (enemy.x > monsterFrontX + 30) {
-                    enemy.x -= enemy.speed * (enemy.slowT > 0 ? HERO.slowMul : 1) * dt;   // 어둠 파동 감속
-                    if (enemy.dom) enemy.dom.style.left = `${enemy.x}px`;
-                } else {
-                    if (this.legContact(enemy)) return;   // 다리 패시브(궤도 돌진)로 밀려남
-                    this.damagePlayer(enemy.dps * dt, dt);
-                }
-            }
+            if (!enemy.isBuilding) updateEnemy(this, enemy, dt, monsterFrontX);   // 이동·공격·종류별 능력
         });
 
         if (this.playerHp <= 0 || this.playerBaseHp <= 0) {
