@@ -97,7 +97,10 @@ export class MenuController {
         this.radar.setStages(nodes, cur.id, id => this.selectStage(id));
         const stars = progress.stage(cur.id).stars.map(f => (f ? '★' : '☆')).join('');
         const enemies = Object.keys(cur.enemy.mix).map(k => ENEMY_TYPES[k].name).join(' · ');
+        const best = progress.stage(cur.id).bestTime;
+        const clock = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
         $('menu-map-foot-v2').innerHTML = `<b>${cur.id} ${cur.name}</b> <span class="v2-stars">${stars}</span>`
+            + `<span class="v2-radar__time">⏱ 제한 ${clock(cur.timeLimit)} · ★ ${cur.starTime}초 안에${best ? ` · 최고 ${clock(best)}` : ''}</span>`
             + `<small>${cur.desc} · 적: ${enemies}${cur.boss ? ' · 보스' : ''}</small>`;
         $('menu-sortie-sub-v2').textContent = `STAGE ${cur.id} ${cur.name} 출격`;
     }

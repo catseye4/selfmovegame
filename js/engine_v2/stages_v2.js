@@ -4,6 +4,8 @@
 
    스테이지 항목
      distance / midAt / finalAt : 전체 거리, 중간 요새·최종 기지가 나오는 거리(m)
+     timeLimit : 제한 시간(초, 전투 시간). 이 안에 최종 기지를 못 부수면 패배 (D-028)
+     starTime  : 세 번째 별 목표 시간(초). 이 안에 클리어하면 별 (D-029)
      enemy : { hp, dps (적 능력치 배율), spawn (소환 간격 초), max (동시 최대 수), mix (적 종류별 비중) }
      elite : 엘리트로 나올 확률
      base  : 거점 체력 { mid, final }
@@ -18,45 +20,45 @@ export const CHAPTER1 = {
     name: '구역 1 · 지하 비밀 연구소',
     stages: [
         {
-            id: '1-1', name: '격리 구역 탈출', desc: '오버로드가 깨어난 격리실. 경비병만 막아선다.',
+            id: '1-1', timeLimit: 150, starTime: 100, name: '격리 구역 탈출', desc: '오버로드가 깨어난 격리실. 경비병만 막아선다.',
             distance: 800, midAt: 320, finalAt: 700,
             enemy: { hp: 1, dps: 1, spawn: 2.6, max: 5, mix: { guard: 1 } }, elite: 0,
             base: { mid: 2400, final: 4600 }, reward: { kill: 12, mid: 500, final: 1500 },
             map: [-0.72, 0.52]
         },
         {
-            id: '1-2', name: '보안 복도', desc: '진압 방패병이 복도를 틀어막는다.',
+            id: '1-2', timeLimit: 180, starTime: 110, name: '보안 복도', desc: '진압 방패병이 복도를 틀어막는다.',
             distance: 900, midAt: 380, finalAt: 800,
             enemy: { hp: 1.1, dps: 1.1, spawn: 2.5, max: 6, mix: { guard: 3, shield: 1 } }, elite: 0.04,
             base: { mid: 2600, final: 4800 }, reward: { kill: 14, mid: 650, final: 1900 },
             map: [-0.38, 0.3]
         },
         {
-            id: '1-3', name: '실험동 B', desc: '마취총 사수가 멀리서 진격을 늦춘다.',
+            id: '1-3', timeLimit: 180, starTime: 110, name: '실험동 B', desc: '마취총 사수가 멀리서 진격을 늦춘다.',
             distance: 950, midAt: 420, finalAt: 850,
             enemy: { hp: 1.4, dps: 1.3, spawn: 2.2, max: 7, mix: { guard: 3, shield: 1, tranq: 2 } }, elite: 0.07,
             base: { mid: 3500, final: 6400 }, reward: { kill: 16, mid: 800, final: 2300 },
             map: [-0.02, 0.08]
         },
         {
-            id: '1-4', name: '전력 제어실', desc: '전기 충격병과 의무병이 합류한다.',
+            id: '1-4', timeLimit: 200, starTime: 120, name: '전력 제어실', desc: '전기 충격병과 의무병이 합류한다.',
             distance: 1000, midAt: 450, finalAt: 900,
             enemy: { hp: 1.85, dps: 1.55, spawn: 1.9, max: 8, mix: { guard: 2, shield: 1, tranq: 1, shock: 2, medic: 1 } }, elite: 0.1,
             base: { mid: 4400, final: 8000 }, reward: { kill: 18, mid: 950, final: 2700 },
             map: [0.3, -0.16]
         },
         {
-            id: '1-5', name: '격리 게이트 전초', desc: '보안대 전 병력이 게이트 앞을 지킨다.',
+            id: '1-5', timeLimit: 230, starTime: 140, name: '격리 게이트 전초', desc: '보안대 전 병력이 게이트 앞을 지킨다.',
             distance: 1100, midAt: 500, finalAt: 1000,
             enemy: { hp: 2.1, dps: 1.7, spawn: 1.85, max: 8, mix: { guard: 2, shield: 2, tranq: 2, shock: 2, medic: 1 } }, elite: 0.14,
             base: { mid: 5000, final: 9000 }, reward: { kill: 20, mid: 1100, final: 3100 },
             map: [0.56, -0.42]
         },
         {
-            id: '1-B', name: '정의의 수호자', desc: '격리 게이트. EMP 포격과 영웅 "정의의 수호자"가 기다린다.', boss: true,
+            id: '1-B', timeLimit: 225, starTime: 150, name: '정의의 수호자', desc: '격리 게이트. EMP 포격과 영웅 "정의의 수호자"가 기다린다.', boss: true,
             distance: 1000, midAt: 450, finalAt: 900,
             enemy: { hp: 2.3, dps: 1.85, spawn: 2.0, max: 8, mix: { guard: 2, shield: 2, tranq: 2, shock: 2, medic: 1 } }, elite: 0.12,
-            base: { mid: 5600, final: 11000 }, reward: { kill: 22, mid: 1300, final: 4500 },
+            base: { mid: 5600, final: 12500 }, reward: { kill: 22, mid: 1300, final: 4500 },
             boss: { unit: 'guardian', artillery: { every: 15, warn: 2.2, stun: 2.2, silence: 5 } },
             map: [0.74, -0.74]
         }

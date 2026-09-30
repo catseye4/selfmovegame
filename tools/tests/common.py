@@ -33,7 +33,7 @@ const { gameTime } = await import('/js/engine_v2/gameTime.js');
 # 캐릭터별 풀세트 (머리, 몸통, 팔, 다리)
 BUILDS = {
     'mech': ('head_mech', 'body_red_robot', 'arm_mech_missile', 'leg_red_robot'),
-    'kaiju': ('head_mutant', 'body_mutant', 'arm_red_robot', 'leg_mutant'),
+    'kaiju': ('head_mutant', 'body_mutant', 'arm_mutant', 'leg_mutant'),
     'hero': ('head_hero', 'body_hero', 'arm_hero_wave', 'leg_hero_hover'),
     'chimera': ('head_chimera', 'body_chimera', 'arm_chimera', 'leg_chimera'),
 }

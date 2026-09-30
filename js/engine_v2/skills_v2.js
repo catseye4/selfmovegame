@@ -95,6 +95,25 @@ export const SKILLS = {
             }
         }
     },
+    acidCharge: {
+        name: '산성 돌진', slot: 'arm', cd: 9, icon: 'acid', color: '#a0ff32', target: 'enemy', range: 90,
+        desc: '거체로 들이받아 큰 피해 + 주변 적을 밀쳐내고 산성 웅덩이로 부식 (거점에 강함)',
+        use(b) {
+            monster.playSkillAnim('attack');
+            b.schedule(0.35, () => {
+                const t = b.nearestEnemy(this.range);
+                if (!t) return;
+                const a = aim(t);
+                b.fx.play(KAIJU_VFX.acidCharge, a.x, 58);
+                b.dealDamageToEnemy(t, b.unit() * (t.isBuilding ? 4.5 : 3), false, { knock: 2, stop: true });
+                b.enemiesInRange(b.playerRange + this.range + 60).forEach(e => {
+                    if (e !== t) b.dealDamageToEnemy(e, b.unit() * 1.2, false, { knock: 2.2 });
+                    b.applyAcid(e, 4);
+                });
+                if (b.enemies.includes(t)) b.applyAcid(t, 4);
+            });
+        }
+    },
 
     // ===== 몸통 =====
     reflectShield: {
@@ -187,7 +206,7 @@ export const SKILLS = {
 // 파츠 → 스킬 (파츠제거 'none'은 스킬 없음)
 export const PART_SKILL = {
     arm_red_robot: 'rush', arm_mech_laser: 'pierceLaser', arm_mech_missile: 'missileSalvo',
-    arm_chimera: 'frenzyClaw', arm_hero_wave: 'tripleWave',
+    arm_chimera: 'frenzyClaw', arm_hero_wave: 'tripleWave', arm_mutant: 'acidCharge',
     body_red_robot: 'reflectShield', body_mech: 'reflectShield', body_chimera: 'callMinions',
     body_mutant: 'layEggs', body_hero: 'curseBurst',
     head_red_robot: 'droneSwarm', head_mech: 'droneSwarm', head_mutant: 'earthRoar',

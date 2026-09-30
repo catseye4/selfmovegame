@@ -53,6 +53,7 @@ export class BattleHud {
             speed: $('btn-speed-v2'),
             pauseBtn: $('btn-pause-v2'),
             stage: $('hud-stage-v2'),
+            timer: $('hud-timer-v2'),
             distMax: $('hud-dist-max-v2'),
             pstatus: $('hud-pstatus-v2'),
             boss: $('hud-boss-v2'),
@@ -197,6 +198,15 @@ export class BattleHud {
         this.set('marks', `${b.midBaseDestroyed}${b.finalBaseDestroyed}`, () => {
             this.markEls[0].classList.toggle('is-done', b.midBaseDestroyed);
             this.markEls[1].classList.toggle('is-done', b.finalBaseDestroyed);
+        });
+
+        // 제한 시간 (D-028): 남은 시간, 별 목표 시간 안이면 금색, 30초 이하 붉게 깜빡임
+        const left = b.timeLeft();
+        this.set('timer', Math.ceil(left), v => {
+            const t = this.el.timer;
+            t.textContent = `⏱ ${String(Math.floor(v / 60)).padStart(2, '0')}:${String(v % 60).padStart(2, '0')}`;
+            t.classList.toggle('is-warn', v <= 30);
+            t.classList.toggle('is-star', v > 30 && b.stats.time <= b.stage.starTime);
         });
 
         // 주인공 상태 이상 (감속·기절) 아이콘 + 남은 시간

@@ -5,7 +5,9 @@
    - warning(kind)    : 거점 출현 경고 (붉은 테두리 + 경고 줄무늬 + WARNING / DANGER)
    - ultCutIn(...)    : 필살기 컷인 (화면 어둡게 + 집중선 + 사선 띠 초상화) + 슬로모션
    - baseDestroyed()  : 거점 파괴 (연쇄 폭발 → 대폭발, 흔들림, 섬광, 슬로모션, 별 획득)
-   - playerDown()     : 캐릭터가 쓰러짐 (슬로모션, 붉은 섬광, 흑백으로 주저앉음)
+   - overload(sec)    : 내구도 0 → 과부하 (붉은 섬광, OVERLOAD 문구, 긴급 수리 중 깜빡임)
+   - timeOver()       : 제한 시간 초과 (기체 정지, TIME OVER) → 결과 화면
+   - playerDown()     : 캐릭터가 쓰러짐 (지금은 쓰지 않음 — 주인공은 죽지 않음, D-028)
    - showResult()     : 승리/패배 결과 화면 (별 도장, 전투 기록, 보상 카운트업, 다음 행동 버튼)
    - setLowHp(on)     : 체력 30% 미만 화면 가장자리 붉은 경고
    효과음: sfx(이름) → 사운드 매니저(audio/sound_v2.js). 저체력 심장 박동은 반복 재생.
@@ -21,7 +23,9 @@ import { settings } from '../engine_v2/settings_v2.js';
 
 import { CHAPTER1 } from '../engine_v2/stages_v2.js';
 
-const STAR_LABELS = ['중간 요새', '최종 기지', '체력 50%↑'];   // 별 3개 조건 (D-016)
+// 별 3개 조건 (D-029): 요새 / 최종 기지 / 목표 시간 안에 클리어
+const starLabels = stage => ['중간 요새', '최종 기지', `${stage.starTime}초 안에`];
+const clock = sec => `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
 const INTRO_MS = { card: 150, sortie: 1750, reveal: 2150, end: 2700 };
 const FB = 58;   // 지면 높이 (bottom px)
 
@@ -294,6 +298,39 @@ export class BattleDirector {
 
     // ------------------------------------------------------------------
     /** 캐릭터가 쓰러짐: 붉은 섬광 + 슬로모션 + 흑백으로 주저앉음 → MISSION FAILED */
+    /** 과부하: 내구도 0 → sec초 멈춤 (긴급 수리) */
+    overload(sec) {
+        if (!this.attach()) return;
+        this.flash('#ff1a3c', 380, 0.5);
+        this.shake(8, 450);
+        this.stamp('OVERLOAD', `내구도 0 — 긴급 수리 중 (${sec}초 정지)`, 'is-red', 1600);
+        this.sfx('shield_break');
+        const canvas = document.getElementById('player-sprite-canvas-v2');
+        if (canvas) {
+            canvas.classList.add('v2-overload');
+            setTimeout(() => canvas.classList.remove('v2-overload'), sec * 1000);
+        }
+    }
+
+    /** 제한 시간 초과: 기체가 멈추고 TIME OVER → (끝나면) 결과 화면 */
+    async timeOver() {
+        if (!this.attach()) return;
+        const token = this.token;
+        gameTime.speed = 1;
+        gameTime.slowMo(0.35, 1.2);
+        this.flash('#ff8a1a', 420, 0.45);
+        this.frame.classList.add('v2-ending');
+        sound.stopBgm(0.8);
+        const canvas = document.getElementById('player-sprite-canvas-v2');
+        if (canvas) canvas.classList.add('v2-down');
+        this.stamp('TIME OVER', '제한 시간 초과 · 작전 실패', 'is-red is-big', 2200);
+        this.sfx('mission_failed');
+        await wait(900);
+        if (!this.alive(token)) return;
+        monsterControllerV2.freezeRig(true);
+        await wait(1600);
+    }
+
     async playerDown() {
         if (!this.attach()) return;
         const token = this.token;
@@ -335,7 +372,7 @@ export class BattleDirector {
         const ss = String(Math.floor(r.time % 60)).padStart(2, '0');
         const stage = r.stage || this.stage;
         // 별: 이번 판에 딴 별은 도장, 예전에 딴 별은 옅은 금색, 처음 딴 별은 NEW
-        const stars = STAR_LABELS.map((label, i) => ({
+        const stars = starLabels(stage).map((label, i) => ({
             label, now: !!r.starFlags[i], had: !!(r.bestStars && r.bestStars[i]) && !r.starFlags[i],
             isNew: !!r.starFlags[i] && !(r.prevStars && r.prevStars[i])
         }));
@@ -345,7 +382,7 @@ export class BattleDirector {
                 <div class="v2-hazard v2-result__stripe"></div>
                 <small class="v2-result__op">STAGE ${stage.id} · ${stage.name}</small>
                 <h2 class="v2-result__title">${r.victory ? 'MISSION COMPLETE' : 'MISSION FAILED'}</h2>
-                <p class="v2-result__sub">${r.victory ? '적 수비대 거점을 모두 분쇄했습니다' : '기체가 대파되어 퇴각했습니다'}</p>
+                <p class="v2-result__sub">${r.victory ? '적 수비대 거점을 모두 분쇄했습니다' : '제한 시간 안에 최종 기지를 부수지 못했습니다'}</p>
                 <div class="v2-result__stars">
                     ${stars.map((st, i) => `
                         <div class="v2-result__star${st.now ? ' is-on' : ''}${st.had ? ' is-had' : ''}" style="--d:${0.35 + i * 0.3}s">
@@ -355,11 +392,12 @@ export class BattleDirector {
                 <dl class="v2-result__stats">
                     <div><dt>진격 거리</dt><dd>${Math.round(r.distance)}m</dd></div>
                     <div><dt>처치</dt><dd>${r.kills}</dd></div>
-                    <div><dt>전투 시간</dt><dd>${mm}:${ss}</dd></div>
+                    <div><dt>전투 시간 / 제한</dt><dd>${mm}:${ss} / ${clock(stage.timeLimit)}</dd></div>
+                    ${r.overloads ? `<div><dt>과부하 (긴급 수리)</dt><dd>${r.overloads}회</dd></div>` : ''}
                     ${r.bonus ? `<div><dt>새 별 보너스 (${r.newStars}개)</dt><dd>+${r.bonus.toLocaleString()}</dd></div>` : ''}
                     <div class="is-reward"><dt>${icon('gem', 16)} 획득 DM</dt><dd><strong data-count="${r.dm}">+0</strong></dd></div>
                 </dl>
-                ${r.victory ? '' : '<p class="v2-result__tip">연구소에서 파츠를 바꿔 기체를 강화해 보세요.</p>'}
+                ${r.victory ? '' : '<p class="v2-result__tip">연구소에서 파츠를 사거나 강화해 더 빨리 부순 뒤 다시 도전하세요.</p>'}
                 <div class="v2-result__actions">
                     ${r.next ? `<button class="v2-btn v2-btn--primary" data-act="next">${icon('play', 16)} 다음 ${r.next.id}</button>` : ''}
                     <button class="v2-btn ${r.next ? 'v2-btn--ghost' : 'v2-btn--primary'}" data-act="retry">${r.next ? '' : icon('play', 16)} ${r.victory ? '다시 출격' : '재도전'}</button>

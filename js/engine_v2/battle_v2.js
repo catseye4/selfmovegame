@@ -2,7 +2,9 @@
    PROJECT: MAD OVERLORD // BATTLE ENGINE (CONTINUOUS DISTANCE & BASE DESTRUCTION) (v2)
    Uses suffix -v2 to avoid overlapping with original vanilla battle engine.
    스테이지(거리·적 구성·거점 체력·보상)는 stages_v2.js, 적 종류와 행동은 enemies_v2.js,
-   별 3개(요새 / 최종 기지 / 체력 50% 이상, D-016)와 기록 저장은 progress_v2.js
+   승패는 기획서 방식(D-028): 제한 시간 안에 최종 기지를 부수면 승리, 못 부수면 패배(TIME OVER).
+   주인공은 죽지 않는다 — 내구도(HP)가 0이 되면 과부하(OVERLOAD)로 잠시 멈춘 뒤 수리되어 다시 싸운다(피격 = 시간 손실).
+   별 3개(요새 / 최종 기지 / 목표 시간 안에 클리어, D-029)와 기록 저장은 progress_v2.js
    ========================================================================== */
 
 import { gameState } from '../engine/state.js';
@@ -38,7 +40,11 @@ const HIT_REACT = { flashMs: 80, knockPx: 10, stopSec: 0.05 };
 // 다리 패시브 (설명: skills_v2.js LEG_PASSIVES). 궤도 돌진: 피해(기본 1타 배수)·넉백·기절·재사용 / 반중력 부양: 피해 감소율
 const LEG = { ramDmg: 1.5, ramKnock: 3, ramStun: 0.6, ramCd: 4, hoverReduce: 0.3 };
 // 주인공 상태 이상 (적 공격): 감속 = 진격 속도·동작 속도 감소, 기절 = 공격·진격·스킬 멈춤
-const PLAYER_STATUS = { slowMove: 0.5, slowAnim: 0.55, starHp: 0.5 };
+const PLAYER_STATUS = { slowMove: 0.5, slowAnim: 0.55 };
+// 과부하: 내구도 0 → sec초 동안 멈춤(무적) → 최대 내구도 × restore로 수리 (D-028)
+const OVERLOAD = { sec: 4, restore: 0.5 };
+// 산성 발톱 팔(arm_mutant, D-030): 물린 적·거점 부식 — 초당 피해 = 주인공 DPS × dpsMul (거점 × baseMul)
+const ACID = { dpsMul: 0.14, baseMul: 2, sec: 3 };
 // 근접 기본 공격 휩쓸기: 맞은 적 뒤 radius px 안의 적에게도 피해 × mul (거대 캐릭터가 무리를 쳐냄)
 const MELEE_CLEAVE = { radius: 60, mul: 0.4 };
 // 피해 숫자: 같은 자리 연속 표시는 위로 쌓고, 지속 피해(아군 미니언 등)는 모아서 0.5초마다 표시
@@ -53,7 +59,7 @@ const ENEMY_TINT = {
     slow: 'drop-shadow(0 0 6px #b050ff) saturate(0.55) brightness(0.9)',
     curse: 'brightness(0.72) saturate(0.7) drop-shadow(0 0 4px rgba(170, 80, 255, 0.9))'
 };
-const STATUS_ICON = { curse: 'curse', slow: 'slow', stun: 'stun' };
+const STATUS_ICON = { curse: 'curse', slow: 'slow', stun: 'stun', acid: 'acid' };
 
 export class BattleEngine {
     constructor() {
@@ -151,6 +157,9 @@ export class BattleEngine {
         this.pSlowT = 0;
         this.pStunT = 0;
         this.spawnSilence = 0;
+        this.overloadT = 0;
+        this.timeUp = false;
+        this.timeWarned = false;
         this.artTimer = 0;
         this.artWarned = false;
         this.boss = null;
@@ -376,6 +385,7 @@ export class BattleEngine {
     // ---- 팩션 스킬 ----
     // 몬스터가 받는 피해: 실드가 있으면 먼저 흡수
     damagePlayer(amount, dt) {
+        if (this.overloadT > 0) return;   // 과부하(긴급 수리) 중에는 피해 없음
         if (this.equippedLegId === 'leg_hero_hover') amount *= 1 - LEG.hoverReduce;   // 다리 패시브 '반중력 부양'
         if (this.shieldHp > 0) {
             const absorbed = Math.min(this.shieldHp, amount);
@@ -479,11 +489,11 @@ export class BattleEngine {
     // 적 외형 상태: 기절 > 감속 > 저주 순으로 색 (피격 섬광 중에는 섬광 우선) + 상태 아이콘
     updateEnemyFilter(e) {
         if (!e.dom) return;
-        const states = [e.stunT > 0 && 'stun', e.slowT > 0 && 'slow', e.cursed && 'curse'].filter(Boolean);
+        const states = [e.stunT > 0 && 'stun', e.slowT > 0 && 'slow', e.cursed && 'curse', e.acidT > 0 && 'acid'].filter(Boolean);
         this.updateStatusIcons(e, states);
         if (e.flashing) return;
         // 종류 색조(enemies_v2.js baseFilter) + 상태 색
-        e.dom.style.filter = [e.baseFilter, states.length ? ENEMY_TINT[states[0]] : ''].filter(Boolean).join(' ');
+        e.dom.style.filter = [e.baseFilter, states.length ? ENEMY_TINT[states[0]] || '' : ''].filter(Boolean).join(' ');
     }
 
     // 체력바 옆 상태 아이콘 (저주/감속/기절) — 바뀔 때만 다시 그림
@@ -687,6 +697,71 @@ export class BattleEngine {
         }
     }
 
+    // ---- 산성 부식 (산성 발톱 팔) ----
+    applyAcid(e, sec = ACID.sec) {
+        if (!e || e.hp <= 0) return;
+        const fresh = !(e.acidT > 0);
+        e.acidT = Math.max(e.acidT || 0, sec);
+        if (fresh) this.updateEnemyFilter(e);
+    }
+
+    tickAcid(dt) {
+        const dps = this.playerDps * ACID.dpsMul;
+        [...this.enemies].forEach(e => {
+            if (!(e.acidT > 0)) return;
+            e.acidT -= dt;
+            e.acidFx = (e.acidFx || 0) + dt;
+            if (e.acidFx >= 0.5) {
+                e.acidFx = 0;
+                this.fx.play(KAIJU_VFX.acidTick, aimOf(e).x, aimOf(e).b + 10);
+            }
+            this.dealDamageToEnemy(e, dps * (e.isBuilding ? ACID.baseMul : 1) * dt, false, { dot: true });
+            if (e.acidT <= 0 && this.enemies.includes(e)) this.updateEnemyFilter(e);
+        });
+    }
+
+    // ---- 과부하: 내구도 0이면 멈춰서 긴급 수리 (주인공은 죽지 않음, D-028) ----
+    checkOverload(dt) {
+        if (this.overloadT > 0) {
+            this.overloadT -= dt;
+            if (this.overloadT <= 0) {
+                this.overloadT = 0;
+                this.playerHp = this.maxPlayerHp * OVERLOAD.restore;
+                monsterControllerV2.updateHpBar(this.playerHp, this.maxPlayerHp);
+                this.createDamagePopup(this.monsterX + 30, 200, '🔧 긴급 수리 완료', false);
+                sound.play('shield_on', { rate: 1.2 });
+            }
+            return;
+        }
+        if (this.playerHp > 0) return;
+        this.playerHp = 0;
+        this.overloadT = OVERLOAD.sec;
+        this.stats.overloads = (this.stats.overloads || 0) + 1;
+        this.applyPlayerStun(OVERLOAD.sec, 'OVERLOAD');
+        this.director.overload(OVERLOAD.sec);
+    }
+
+    // ---- 제한 시간 (D-028): 시간 안에 최종 기지를 못 부수면 패배 ----
+    timeLeft() {
+        return Math.max(0, this.stage.timeLimit - this.stats.time);
+    }
+
+    checkTimeLimit() {
+        const left = this.timeLeft();
+        if (!this.timeWarned && left <= 30) {
+            this.timeWarned = true;
+            this.director.alarm('TIME 30', '제한 시간 30초 — 최종 기지를 서둘러 부숴라', 2);
+        }
+        if (left > 0 || this.timeUp) return false;
+        this.timeUp = true;
+        this.cinematic = true;
+        const run = this.runId;
+        this.director.timeOver().then(() => {
+            if (this.runId === run && this.isActive) this.finishBattle(false);
+        });
+        return true;
+    }
+
     // ---- 주인공 상태 이상 (적 공격) ----
     applyPlayerSlow(sec) {
         if (this.equippedLegId === 'leg_hero_hover') {   // 다리 패시브: 감속 무시
@@ -880,6 +955,7 @@ export class BattleEngine {
             const near = this.enemies.filter(o => o !== targetEnemy && !o.isBuilding && Math.abs(o.x - targetEnemy.x) <= MELEE_CLEAVE.radius);
             this.dealDamageToEnemy(targetEnemy, finalDmg, isCrit, { knock: 1, stop: hitScale >= 1 });
             near.forEach(o => this.dealDamageToEnemy(o, finalDmg * MELEE_CLEAVE.mul, false, { knock: 0.6 }));
+            if (this.equippedArmId === 'arm_mutant') this.applyAcid(targetEnemy);   // 산성 이빨
         }
     }
 
@@ -963,8 +1039,8 @@ export class BattleEngine {
 
     // 전투 종료 → 결과 화면 (승리: 최종 기지 파괴 연출 뒤 / 패배: 쓰러짐 연출 뒤)
     finishBattle(victory) {
-        // 세 번째 별: 체력 50% 이상으로 클리어 (D-016)
-        if (victory && this.playerHp / this.maxPlayerHp >= PLAYER_STATUS.starHp) this.starFlags[2] = true;
+        // 세 번째 별: 목표 시간(stage.starTime) 안에 클리어 (D-029)
+        if (victory && this.stats.time <= this.stage.starTime) this.starFlags[2] = true;
         const prevStars = [...progress.stage(this.stage.id).stars];
         const record = progress.recordStage(this.stage.id, { stars: this.starFlags, cleared: victory, time: this.stats.time });
         const next = victory ? nextStageOf(this.stage.id) : null;
@@ -977,6 +1053,8 @@ export class BattleEngine {
             newStars: record.newStars,
             bonus: record.bonus,
             next,
+            timeUp: !victory && this.timeUp,
+            overloads: this.stats.overloads || 0,
             distance: Math.min(this.maxDistance, this.distanceTraveled),
             kills: this.stats.kills,
             time: this.stats.time,
@@ -996,13 +1074,19 @@ export class BattleEngine {
         const dt = Math.min(0.1, (timestamp - this.lastTime) / 1000) * gameTime.scale(timestamp);   // 히트스톱/일시정지 0, 배속 적용
         this.lastTime = timestamp;
 
-        if (this.finalBaseDestroyed) {
+        if (this.finalBaseDestroyed || this.timeUp) {   // 승리 연출 / 시간 초과 연출 중: 전투 정지
             this.loopId = requestAnimationFrame((t) => this.loop(t));
             return;
         }
 
         if (!this.finalBaseDestroyed) {
             this.stats.time += dt;
+            if (this.checkTimeLimit()) {
+                this.loopId = requestAnimationFrame((t) => this.loop(t));
+                return;
+            }
+            this.checkOverload(dt);
+            this.tickAcid(dt);
             this.tickPlayerStatus(dt);
             this.tickArtillery(dt);
             if (this.spawnSilence > 0) {
@@ -1222,16 +1306,6 @@ export class BattleEngine {
             }
             if (!enemy.isBuilding) updateEnemy(this, enemy, dt, monsterFrontX);   // 이동·공격·종류별 능력
         });
-
-        if (this.playerHp <= 0 || this.playerBaseHp <= 0) {
-            // 쓰러짐 연출 → 결과 화면 (전투 루프는 여기서 멈춤)
-            this.cinematic = true;
-            const run = this.runId;
-            this.director.playerDown().then(() => {
-                if (this.runId === run && this.isActive) this.finishBattle(false);
-            });
-            return;
-        }
 
         this.loopId = requestAnimationFrame((t) => this.loop(t));
     }

@@ -10,6 +10,26 @@ const SPORE = '140, 220, 50';
 const SHELL = '150, 200, 70';
 
 export const KAIJU_VFX = {
+    // [팔 스킬] 산성 돌진: 몸통 박치기 충격 + 산성 폭발 + 바닥 산성 웅덩이 (산성 발톱 팔, D-030)
+    acidCharge: {
+        sfx: 'kaiju_bite',
+        layers: [
+            { type: 'flash', at: 0, dur: 0.18, r: 44, color: ACID, dy: -40 },
+            { type: 'fireball', at: 0, dur: 0.5, r: 40, color: ACID, dy: -40 },
+            { type: 'ring', at: 0.02, dur: 0.45, r: 110, ground: true, color: ACID, width: 7 },
+            { type: 'sparks', at: 0.02, count: 20, speed: 360, angle: -0.5, cone: 2.6, color: ACID },
+            { type: 'cracks', at: 0.03, dur: 1.0, count: 6, len: 80, color: ACID },
+            { type: 'glow', at: 0.05, dur: 3.0, r: 90, color: ACID },
+            { type: 'smoke', at: 0.1, count: 8, spread: 40, spreadY: 20, size: 22, life: [0.8, 1.3], rise: 30, color: MOSS }
+        ]
+    },
+    // 산성 부식 틱 (물린 적 위에서 거품)
+    acidTick: {
+        layers: [
+            { type: 'motes', at: 0, count: 4, spread: 10, rise: [20, 50], life: [0.4, 0.7], size: 2.2, color: ACID },
+            { type: 'smoke', at: 0, count: 1, spread: 6, spreadY: 10, size: 10, life: [0.4, 0.6], rise: 15, color: MOSS }
+        ]
+    },
     // 물기 적중: 이빨 자국 + 산성 튀김 + 바닥 산성 웅덩이
     biteHit: {
         sfx: 'kaiju_bite',
