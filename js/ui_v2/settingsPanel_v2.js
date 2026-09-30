@@ -7,6 +7,7 @@
 import { icon } from './icons.js';
 import { settings } from '../engine_v2/settings_v2.js';
 import { sound } from '../engine_v2/audio/sound_v2.js';
+import { progress } from '../engine_v2/progress_v2.js';
 
 const SLIDERS = [
     { key: 'master', label: '전체 음량', preview: 'ui_click' },
@@ -42,6 +43,13 @@ export function openSettings() {
                         <span>${t.label}<small>${t.desc}</small></span>
                         <button class="v2-switch" data-toggle="${t.key}" role="switch"><i></i></button>
                     </div>`).join('')}
+            </section>
+            <section>
+                <h3>진행 데이터</h3>
+                <div class="v2-settings__row">
+                    <span>진행 초기화<small>DM·파츠·강화·스테이지 기록을 처음으로 (설정은 유지)</small></span>
+                    <button class="v2-btn v2-btn--danger v2-settings__reset" data-act="wipe">초기화</button>
+                </div>
             </section>
             <div class="v2-settings__actions">
                 <button class="v2-btn v2-btn--ghost" data-act="reset">기본값</button>
@@ -98,6 +106,18 @@ export function openSettings() {
     };
     document.addEventListener('keydown', onKey, true);
     el.querySelector('[data-act="close"]').addEventListener('click', close);
+    // 진행 초기화: 두 번 눌러야 실행 (실수 방지)
+    const wipe = el.querySelector('[data-act="wipe"]');
+    wipe.addEventListener('click', () => {
+        if (!wipe.classList.contains('is-armed')) {
+            wipe.classList.add('is-armed');
+            wipe.textContent = '한 번 더 누르면 초기화';
+            sound.play('ui_error');
+            setTimeout(() => { wipe.classList.remove('is-armed'); wipe.textContent = '초기화'; }, 3000);
+            return;
+        }
+        progress.resetAll();
+    });
     el.querySelector('[data-act="reset"]').addEventListener('click', () => {
         settings.reset();
         sound.play('ui_toggle');

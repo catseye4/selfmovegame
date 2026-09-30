@@ -8,7 +8,8 @@
 
 import { gameState } from '../engine/state.js';
 import { monsterControllerV2 } from '../engine_v2/monster_v2.js';
-import { skillsForParts } from '../engine_v2/skills_v2.js';
+import { skillsForParts, legPassiveOf } from '../engine_v2/skills_v2.js';
+import { progress } from '../engine_v2/progress_v2.js';
 import { icon, fillIcons } from './icons.js';
 import { openSettings } from './settingsPanel_v2.js';
 import { TacticalRadar } from './radar_v2.js';
@@ -20,14 +21,6 @@ const SLOTS = [
     { slot: 'body', label: 'BODY', role: '2' },
     { slot: 'leg', label: 'LEG', role: 'P' }
 ];
-
-/** 다리 파츠 패시브: 설명이 "이름: 효과"면 나눠 쓰고, 아니면 파츠 이름 + 설명 전체 */
-export function legPassive(part) {
-    if (!part || !part.skillDesc) return null;
-    const i = part.skillDesc.indexOf(':');
-    if (i < 0) return { name: part.name, desc: part.skillDesc.trim() };
-    return { name: part.skillDesc.slice(0, i).trim(), desc: part.skillDesc.slice(i + 1).trim() };
-}
 
 export class MenuController {
     constructor(switchScreenFn) {
@@ -93,16 +86,17 @@ export class MenuController {
             const part = equipped[slot];
             const has = part && part.id !== 'none';
             const sk = skills[slot];
-            const leg = slot === 'leg' ? legPassive(part) : null;
+            const leg = slot === 'leg' ? legPassiveOf(part) : null;
+            const lv = has ? progress.levelOf(part.id) : 1;
             const skillLine = sk ? `<span style="--sk:${sk.color}">${icon(sk.icon, 12)}<i>${role === 'ULT' ? '필살기' : `스킬 ${role}`} · ${sk.name}</i></span>`
-                : leg ? `<span><i>패시브 · ${leg.desc}</i></span>` : '<span><i>—</i></span>';
+                : leg ? `<span><i>패시브 · ${leg.name}</i></span>` : '<span><i>—</i></span>';
             return `<li data-slot="${slot}" class="${i >= 2 ? 'is-right' : ''}">
-                <b>${label}</b><strong>${has ? part.name : '비어 있음'}</strong>${skillLine}</li>`;
+                <b>${label}${lv > 1 ? ` · Lv${lv}` : ''}</b><strong>${has ? part.name : '비어 있음'}</strong>${skillLine}</li>`;
         }).join('');
     }
 
     renderStats() {
-        const st = gameState.getEquippedStats();
+        const st = progress.equippedStats();   // 강화 레벨 반영
         const rows = [['ARMOR', st.hp], ['POWER', st.dps], ['RANGE', st.range], ['SPEED', st.speed]];
         $('menu-stats-v2').innerHTML = rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${Number(v).toLocaleString()}</dd></div>`).join('');
     }

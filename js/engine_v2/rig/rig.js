@@ -226,7 +226,8 @@ export class Skeleton {
     }
 
     setPart(boneName, partKey) {
-        this.byName[boneName].part = partKey;
+        const bone = this.byName[boneName];
+        if (bone) bone.part = partKey;
     }
 
     /** 자세(pose)와 스프링 오프셋을 받아 모델 공간 월드 행렬 계산 (bones는 부모가 먼저 오도록 정의) */

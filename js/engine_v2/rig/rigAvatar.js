@@ -367,7 +367,8 @@ export class RigAvatar {
         const c = this.character;
         if (!c || !c.arms || !c.arms[kind] || kind === this.arm) return;
         this.arm = kind;
-        if (!this.skeleton) return;
+        // 캐릭터를 바꾸는 중(새 에셋 로딩 중)이면 이전 캐릭터 뼈대에 끼우지 않음 — 뼈대를 만들 때 this.arm으로 적용됨
+        if (!this._built) return;
         this.skeleton.setPart(c.weaponBone, c.arms[kind].part);
         if (this.mode === 'attack') {
             this.pendingHit = 0;

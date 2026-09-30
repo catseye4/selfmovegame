@@ -13,6 +13,7 @@ import { skillsForParts, hasTarget, ULT_FILL } from './skills_v2.js';
 import { BattleHud } from '../ui_v2/battleHud_v2.js';
 import { BattleDirector } from '../ui_v2/battleDirector_v2.js';
 import { sound } from './audio/sound_v2.js';
+import { progress } from './progress_v2.js';
 import { icon } from '../ui_v2/icons.js';
 
 // ---- 팩션 스킬 (컨셉 시트 기준) ----
@@ -27,6 +28,8 @@ const SKILL_AUTO_KEY = 'mo_v2_auto_skill';
 const HERO = { recruitChance: 0.25, curseTick: 0.65, curseZone: [-40, 180], curseDps: 48, auraDx: 65,
     waveRange: 340, slowSec: 2.5, slowMul: 0.5 };
 const HIT_REACT = { flashMs: 80, knockPx: 10, stopSec: 0.05 };
+// 다리 패시브 (설명: skills_v2.js LEG_PASSIVES). 궤도 돌진: 피해(기본 1타 배수)·넉백·기절·재사용 / 반중력 부양: 피해 감소율
+const LEG = { ramDmg: 1.5, ramKnock: 3, ramStun: 0.6, ramCd: 4, hoverReduce: 0.3 };
 // 피해 숫자: 같은 자리 연속 표시는 위로 쌓고, 지속 피해(아군 미니언 등)는 모아서 0.5초마다 표시
 const POPUP = { column: 36, stackMs: 350, stackPx: 15, dotFlushSec: 0.5 };
 const FOOT_B = 58;   // 지면 이펙트 높이 (bottom px)
@@ -155,7 +158,7 @@ export class BattleEngine {
         gameTime.reset();
 
         // 현재 장착 파츠 스탯 불러오기
-        const stats = gameState.getEquippedStats();
+        const stats = progress.statsFor(gameState.getEquippedObjects());   // 강화 레벨 반영 (D-015)
         const equippedObjs = gameState.getEquippedObjects();
         this.equippedHeadId = equippedObjs.head ? equippedObjs.head.id : null;
         this.equippedBodyId = equippedObjs.body ? equippedObjs.body.id : null;
@@ -344,6 +347,7 @@ export class BattleEngine {
     // ---- 팩션 스킬 ----
     // 몬스터가 받는 피해: 실드가 있으면 먼저 흡수
     damagePlayer(amount, dt) {
+        if (this.equippedLegId === 'leg_hero_hover') amount *= 1 - LEG.hoverReduce;   // 다리 패시브 '반중력 부양'
         if (this.shieldHp > 0) {
             const absorbed = Math.min(this.shieldHp, amount);
             this.shieldHp -= absorbed;
@@ -364,6 +368,18 @@ export class BattleEngine {
         this.playerHp -= amount;
         if (amount > 0) sound.play('player_hit');   // 0.4초에 한 번까지 (sound_v2 SFX 표)
         monsterControllerV2.updateHpBar(this.playerHp, this.maxPlayerHp);
+    }
+
+    // [다리 패시브 '궤도 돌진'] 처음 맞닿은 적에게 돌진 피해 + 밀쳐냄 + 잠깐 기절 (적마다 LEG.ramCd초에 한 번)
+    legContact(enemy) {
+        if (this.equippedLegId !== 'leg_mech_wheel' || enemy.isBuilding) return false;
+        if (enemy.rammedAt != null && this.stats.time - enemy.rammedAt < LEG.ramCd) return false;
+        enemy.rammedAt = this.stats.time;
+        const a = aimOf(enemy);
+        this.fx.play(MECH_VFX.fistHit, a.x - 10, a.b - 20);
+        this.dealDamageToEnemy(enemy, this.unit() * LEG.ramDmg, false, { knock: LEG.ramKnock, stop: true });
+        if (this.enemies.includes(enemy)) this.stunEnemy(enemy, LEG.ramStun);
+        return true;
     }
 
     // [합성괴인 머리] 체력 50% 이하 시 자동 거대화 및 실드 전개 (전투당 1회)
@@ -1106,6 +1122,7 @@ export class BattleEngine {
                     enemy.x -= enemy.speed * (enemy.slowT > 0 ? HERO.slowMul : 1) * dt;   // 어둠 파동 감속
                     if (enemy.dom) enemy.dom.style.left = `${enemy.x}px`;
                 } else {
+                    if (this.legContact(enemy)) return;   // 다리 패시브(궤도 돌진)로 밀려남
                     this.damagePlayer(enemy.dps * dt, dt);
                 }
             }

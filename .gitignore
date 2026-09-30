@@ -4,3 +4,7 @@
 # 리그 파츠 분리 도구의 검증용 출력, 파이썬 캐시
 tools/rig/_*.png
 __pycache__/
+
+# 자동 검사 스크린샷
+tools/tests/_out/
+tools/tests/__pycache__/

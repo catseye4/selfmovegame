@@ -255,8 +255,9 @@ export class BattleDirector {
         const fr = this.frame.getBoundingClientRect();
         const vr = this.viewport.getBoundingClientRect();
         const tr = target.getBoundingClientRect();
-        const sx = vr.left - fr.left + x, sy = vr.bottom - fr.top - b;
-        const tx = tr.left - fr.left + tr.width / 2, ty = tr.top - fr.top + tr.height / 2;
+        const k = fr.width / (this.frame.offsetWidth || fr.width);   // 화면 크기 맞춤 배율 (화면 좌표 → 게임 px)
+        const sx = (vr.left - fr.left) / k + x, sy = (vr.bottom - fr.top) / k - b;
+        const tx = (tr.left - fr.left + tr.width / 2) / k, ty = (tr.top - fr.top + tr.height / 2) / k;
         const el = this.layer('v2-flystar', icon('star', 44));
         el.style.left = `${sx}px`;
         el.style.top = `${sy}px`;

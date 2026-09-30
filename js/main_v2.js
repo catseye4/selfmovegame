@@ -7,10 +7,14 @@ import { battleEngineV2 } from './engine_v2/battle_v2.js';
 import { MenuController } from './ui_v2/menu_v2.js';
 import { LabController } from './ui_v2/lab_v2.js';
 import { sound } from './engine_v2/audio/sound_v2.js';
+import { progress } from './engine_v2/progress_v2.js';
+import { runLoading } from './ui_v2/loading_v2.js';
 
 class GameRouterV2 {
     constructor() {
         this.currentScreen = 'menu';
+        // 저장된 진행(DM, 장착, 보유 파츠, 강화, 스테이지)을 불러와 게임 상태에 적용
+        progress.init();
         
         // 라우터 바인딩된 화면 전환 함수 (v2)
         const switchFn = (name) => this.switchScreen(name);
@@ -116,6 +120,23 @@ class GameRouterV2 {
     }
 }
 
+// 화면 크기 맞춤: 1280x720 화면(테두리 포함 1288x728)을 창 크기에 맞게 비율 유지 확대·축소, 가운데 정렬 (ui_v2.css 'v2-fit')
+const FRAME = { w: 1288, h: 728, min: 0.5, max: 2 };
+function fitScreens() {
+    const app = document.getElementById('app');
+    if (!app) return;
+    const aw = app.clientWidth, ah = app.clientHeight;
+    const k = Math.max(FRAME.min, Math.min(FRAME.max, aw / FRAME.w, ah / FRAME.h));
+    const st = document.documentElement.style;
+    st.setProperty('--v2-scale', k.toFixed(4));
+    st.setProperty('--v2-x', `${Math.round((aw - FRAME.w * k) / 2)}px`);
+    st.setProperty('--v2-y', `${Math.round((ah - FRAME.h * k) / 2)}px`);
+}
+
 export function initGameRouterV2() {
+    document.body.classList.add('v2-fit');
+    fitScreens();
+    window.addEventListener('resize', fitScreens);
+    runLoading();   // 캐릭터·사운드 미리 받기 (메인 화면은 뒤에서 바로 준비)
     window.madOverlordGameV2 = new GameRouterV2();
 }

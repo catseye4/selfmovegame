@@ -1,0 +1,165 @@
+"""
+브라우저 자동 검사 공용 도구 (v2)
+
+- 검사용 HTTP 서버를 임의 포트로 직접 띄운다 (serve.py를 켜 둘 필요 없음)
+- 헤드리스 Chrome(설치된 Chrome 사용)으로 게임을 열고 v2 모드로 들어간다
+- 페이지 오류/콘솔 오류를 모아 검사 실패로 보고한다
+- 스크린샷은 tools/tests/_out/ (git 제외)
+
+사용: 각 test_*.py 가 run(ctx) -> None 을 정의하고 ctx.check(조건, 설명) 로 판정한다.
+"""
+import functools
+import http.server
+import os
+import threading
+import time
+
+from playwright.sync_api import sync_playwright
+
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '_out')
+
+# 페이지에서 쓰는 모듈 (검사 JS 앞에 붙임)
+IMPORTS = """
+const { gameState } = await import('/js/engine/state.js');
+const { battleEngineV2: b } = await import('/js/engine_v2/battle_v2.js');
+const { progress } = await import('/js/engine_v2/progress_v2.js');
+const { sound, SFX } = await import('/js/engine_v2/audio/sound_v2.js');
+const { settings } = await import('/js/engine_v2/settings_v2.js');
+const { monsterControllerV2: m } = await import('/js/engine_v2/monster_v2.js');
+const { gameTime } = await import('/js/engine_v2/gameTime.js');
+"""
+
+# 캐릭터별 풀세트 (머리, 몸통, 팔, 다리)
+BUILDS = {
+    'mech': ('head_mech', 'body_red_robot', 'arm_mech_missile', 'leg_red_robot'),
+    'kaiju': ('head_mutant', 'body_mutant', 'arm_red_robot', 'leg_mutant'),
+    'hero': ('head_hero', 'body_hero', 'arm_hero_wave', 'leg_hero_hover'),
+    'chimera': ('head_chimera', 'body_chimera', 'arm_chimera', 'leg_chimera'),
+}
+
+
+class _Handler(http.server.SimpleHTTPRequestHandler):
+    # Windows에서 .js가 text/plain으로 나가 ES 모듈이 막히는 문제 방지
+    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, '.js': 'text/javascript'}
+
+    def log_message(self, *args):
+        pass
+
+
+def start_server():
+    httpd = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(_Handler, directory=ROOT))
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    return httpd, f'http://127.0.0.1:{httpd.server_address[1]}'
+
+
+class Game:
+    """게임 페이지 하나. fresh=True면 저장 데이터를 지우고 시작"""
+
+    def __init__(self, pw, base, fresh=True, viewport=(1300, 740)):
+        self.base = base
+        self.errors = []
+        self.browser = pw.chromium.launch(channel='chrome', args=['--autoplay-policy=no-user-gesture-required'])
+        self.page = self.browser.new_page(viewport={'width': viewport[0], 'height': viewport[1]})
+        self.page.on('pageerror', lambda e: self.errors.append('pageerror: ' + (e.stack or str(e))[:400]))
+        self.page.on('console', self._console)
+        self.page.goto(f'{base}/index.html?t={time.time()}')
+        if fresh:
+            self.page.evaluate('() => localStorage.clear()')
+            self.page.reload()
+
+    def _console(self, msg):
+        if msg.type == 'error' and 'favicon' not in msg.text and 'status of 404' not in msg.text:
+            self.errors.append('console: ' + msg.text[:300])
+
+    def enter_v2(self):
+        self.page.click('#btn-select-v2')
+        self.page.wait_for_selector('#screen-menu-v2.active', timeout=10000)
+        self.page.wait_for_selector('.v2-loading', state='detached', timeout=15000)
+        self.wait(300)
+
+    def reload_v2(self):
+        self.page.reload()
+        self.enter_v2()
+
+    def js(self, code):
+        return self.page.evaluate(f'async () => {{ {IMPORTS} {code} }}')
+
+    def equip(self, build):
+        head, body, arm, leg = BUILDS[build] if isinstance(build, str) else build
+        self.js(f"gameState.equippedParts = {{ head: '{head}', body: '{body}', arm: '{arm}', leg: '{leg}' }};")
+
+    def battle(self, build=None, wait_ms=2800):
+        if build:
+            self.equip(build)
+        self.js("window.madOverlordGameV2.switchScreen('battle');")
+        self.wait(wait_ms)
+
+    def place_enemies(self, n=3, gap=60, first=170, hp=4000, speed=35, dps=20):
+        self.js(f"""b.spawnInterval = 999;
+            for (let i = 0; i < {n}; i++) b.spawnMinion();
+            b.enemies.filter(e => !e.isBuilding).forEach((e, i) => {{
+                e.x = b.monsterX + {first} + i * {gap}; e.speed = {speed}; e.hp = e.maxHp = {hp}; e.dps = {dps};
+                e.dom.style.left = e.x + 'px'; }});""")
+
+    def wait(self, ms):
+        self.page.wait_for_timeout(ms)
+
+    def key(self, k):
+        self.page.keyboard.press(k)
+
+    def shot(self, name, selector=None):
+        os.makedirs(OUT, exist_ok=True)
+        path = os.path.join(OUT, f'{name}.png')
+        (self.page.locator(selector) if selector else self.page).screenshot(path=path)
+        return path
+
+    def close(self):
+        self.browser.close()
+
+
+class Context:
+    """검사 하나의 판정 모음"""
+
+    def __init__(self, name, base, pw):
+        self.name = name
+        self.base = base
+        self.pw = pw
+        self.results = []
+        self.games = []
+
+    def game(self, fresh=True, **kw):
+        g = Game(self.pw, self.base, fresh=fresh, **kw)
+        self.games.append(g)
+        return g
+
+    def check(self, ok, desc, detail=''):
+        self.results.append((bool(ok), desc, detail))
+        return ok
+
+    def finish(self):
+        for g in self.games:
+            self.check(not g.errors, '페이지 오류 없음', '; '.join(g.errors[:3]))
+            g.close()
+
+
+def run_tests(modules):
+    """모듈 목록 실행 → (통과 수, 실패 수, 줄 목록)"""
+    httpd, base = start_server()
+    lines, npass, nfail = [], 0, 0
+    with sync_playwright() as pw:
+        for mod in modules:
+            ctx = Context(mod.__name__, base, pw)
+            t0 = time.time()
+            try:
+                mod.run(ctx)
+            except Exception as e:   # 검사 코드 자체 실패도 실패로
+                ctx.check(False, '검사 실행', f'{type(e).__name__}: {str(e)[:300]}')
+            ctx.finish()
+            lines.append(f'\n[{mod.__name__}] ({time.time() - t0:.1f}s)')
+            for ok, desc, detail in ctx.results:
+                npass += ok
+                nfail += not ok
+                lines.append(f"  {'PASS' if ok else 'FAIL'}  {desc}{'' if ok or not detail else '  → ' + detail}")
+    httpd.shutdown()
+    return npass, nfail, lines

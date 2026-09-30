@@ -194,6 +194,20 @@ export const PART_SKILL = {
     head_hero: 'massMind', head_chimera: 'rampage'
 };
 
+// 다리 패시브 (v2 기준 설명 — parts.js 설명은 구버전과 공용이라 여기서 덮어씀). 효과는 battle_v2.js
+export const LEG_PASSIVES = {
+    leg_red_robot: { name: '유압 서스펜션', desc: '진격 속도 증가 (능력치)' },
+    leg_chimera: { name: '지진 분쇄', desc: '전방 적에게 계속 지진 피해 (초당 40)' },
+    leg_mutant: { name: '독성 점액', desc: '전방 적을 감속시키고 계속 독 피해 (초당 35)' },
+    leg_mech_wheel: { name: '궤도 돌진', desc: '처음 부딪힌 적에게 돌진 피해를 주고 밀쳐내며 잠깐 기절 (적마다 4초에 한 번)' },
+    leg_hero_hover: { name: '반중력 부양', desc: '근접 피해 30% 감소, 감속에 걸리지 않음' }
+};
+
+/** 다리 파츠 패시브 { name, desc } (없으면 null) */
+export function legPassiveOf(part) {
+    return part ? LEG_PASSIVES[part.id] || null : null;
+}
+
 /** 장착 파츠로 슬롯별 스킬 목록 { arm, body, head } (없으면 null) */
 export function skillsForParts(equipped) {
     const pick = slot => {
