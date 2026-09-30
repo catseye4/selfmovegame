@@ -257,8 +257,14 @@ export class RigAvatar {
         this._setStage(this.opts.width / 2 - ((minX + maxX) / 2) * scale, scale);
     }
 
+    // 현재 뼈대/애니메이터가 지금 캐릭터로 만들어졌는지 (캐릭터 교체 후 에셋 로드 중에는 이전 캐릭터가 계속 재생됨)
+    get _built() {
+        return !!this.skeleton && this.builtFor === this.character;
+    }
+
     _build(layout, images) {
         const c = this.character;
+        this.builtFor = c;
         this.layout = layout;
         this.bounds = restBounds(layout);
         this.onceClip = null;
@@ -342,7 +348,7 @@ export class RigAvatar {
 
     /** 리그 소켓의 캔버스 좌표 [x, y] */
     socketPoint(socket, bone) {
-        if (!this.skeleton) return null;
+        if (!this._built) return null;
         return this._toCanvas(this.skeleton.socketWorld(socket, bone));
     }
 
@@ -378,7 +384,7 @@ export class RigAvatar {
 
     /** 공격 소켓(총구/입)의 캔버스 좌표 [x, y] */
     muzzlePoint() {
-        if (!this.skeleton) return null;
+        if (!this._built) return null;
         const [socket, bone] = hitSocketOf(this.character, this.arm);
         return this._toCanvas(this.skeleton.socketWorld(socket, bone));
     }
@@ -440,6 +446,7 @@ export class RigAvatar {
     }
 
     _handleEvent(name, data) {
+        if (!this._built) return;   // 교체 대기 중인 이전 캐릭터의 이벤트는 무시
         applyRigEvent(name, data, {
             effects: this.effects, skeleton: this.skeleton, character: this.character, arm: this.arm,
             toScreen: p => this._toCanvas(p), groundY: this.opts.rootY,

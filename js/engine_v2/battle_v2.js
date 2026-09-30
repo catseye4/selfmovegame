@@ -7,7 +7,8 @@ import { gameState } from '../engine/state.js';
 import { monsterControllerV2 } from './monster_v2.js';
 import { BattleFx, ensureSkillStyles } from './battleFx.js';
 import { gameTime } from './gameTime.js';
-import { HERO_VFX, HERO_WAVE, HERO_ORB } from './vfx/heroVfx.js';
+import { HERO_WAVE, HERO_ORB } from './vfx/heroVfx.js';
+import { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX, meleeHitVfx } from './vfx/vfxDefs.js';
 
 // ---- 팩션 스킬 (컨셉 시트 기준) ----
 const PHASE2 = { hpRatio: 0.5, shieldRatio: 0.3, dpsMul: 1.3 };            // 합성괴인 머리: 2페이즈 거대화 + 실드
@@ -17,9 +18,11 @@ const DRONE = { interval: 6, count: 3, range: 800, dmgMul: 0.35, splash: 70 };  
 // 타락 히어로: 머리 세뇌 파동(처치한 적 징집 확률 = 파츠 설명 25%), 몸통 흑마법 오라, 팔 어둠 파동(관통 + 감속)
 const HERO = { recruitChance: 0.25, curseTick: 0.65, curseZone: [-40, 180], curseDps: 48,
     waveRange: 340, slowSec: 2.5, slowMul: 0.5 };
-// 캐릭터별 근접 타격 이펙트 (다른 캐릭터는 이펙트 재정비 단계에서 추가)
-const HIT_VFX = { hero: HERO_VFX.slashHit };
 const HIT_REACT = { flashMs: 80, knockPx: 10, stopSec: 0.05 };
+// 피해 숫자: 같은 자리 연속 표시는 위로 쌓고, 지속 피해(아군 미니언 등)는 모아서 0.5초마다 표시
+const POPUP = { column: 36, stackMs: 350, stackPx: 15, dotFlushSec: 0.5 };
+const FOOT_B = 58;   // 지면 이펙트 높이 (bottom px)
+const aimOf = e => ({ x: e.x + (e.isBuilding ? 45 : 38), b: e.isBuilding ? 130 : 90 });   // 적 몸통 중앙
 
 export class BattleEngine {
     constructor() {
@@ -77,6 +80,11 @@ export class BattleEngine {
         this.domAnnouncementText = document.getElementById('announcement-text-v2');
         this.fx = new BattleFx('entity-layer-v2');
         ensureSkillStyles();
+        this.popupSlots = new Map();
+        // 리그 애니메이션 이벤트 → 전장 이펙트 (거대로봇 출격 점프 착지)
+        monsterControllerV2.onRigEvent = name => {
+            if (name === 'land' && this.isActive) this.fx.play(MECH_VFX.landing, this.monsterX + 35, FOOT_B);
+        };
     }
 
     // 전투 시작
@@ -112,6 +120,8 @@ export class BattleEngine {
         this.equippedLegId = equippedObjs.leg ? equippedObjs.leg.id : null;
         this.curseTickTimer = 0;
         this.legSkillTimer = 0;
+        this.dotTimer = 0;
+        this.equippedArmId = equippedObjs.arm ? equippedObjs.arm.id : null;
         this.maxPlayerHp = stats.hp;
         this.playerHp = stats.hp;
         this.playerDps = stats.dps;
@@ -121,8 +131,8 @@ export class BattleEngine {
 
         if (this.equippedBodyId === 'body_chimera') {
             setTimeout(() => {
-                this.spawnAllyMinion(this.monsterX + 60);
-                this.spawnAllyMinion(this.monsterX + 110);
+                this.spawnAllyMinion(this.monsterX + 60, 'chimera');
+                this.spawnAllyMinion(this.monsterX + 110, 'chimera');
             }, 600);
         }
 
@@ -195,27 +205,38 @@ export class BattleEngine {
     }
 
     // 데미지 팝업 텍스트 생성
-    createDamagePopup(x, y, damage, isCrit = false) {
+    // kind 'dot': 지속 피해 합계 (작고 흐리게)
+    createDamagePopup(x, y, damage, isCrit = false, kind = null) {
         if (!this.domDamage) return;
         const el = document.createElement('div');
         el.className = 'damage-popup';
         el.style.left = `${x}px`;
-        el.style.bottom = `${y}px`;
+        // 같은 자리(가로 36px 칸)에 0.35초 안에 연달아 뜨면 위로 쌓아 겹치지 않게
+        const col = Math.round(x / POPUP.column);
+        const now = performance.now();
+        const slot = this.popupSlots.get(col);
+        const n = slot && now - slot.t < POPUP.stackMs ? Math.min(slot.n + 1, 4) : 0;
+        this.popupSlots.set(col, { t: now, n });
+        el.style.bottom = `${y + n * POPUP.stackPx}px`;
         if (typeof damage === 'string') {
             el.textContent = damage;
-            if (damage.includes('저주') || damage.includes('흑마법')) {
+            if (damage.includes('☠') || damage.includes('저주') || damage.includes('흑마법')) {
                 el.style.color = '#cc33ff';
                 el.style.textShadow = '0 0 8px #9900ff';
             } else if (damage.includes('REGEN') || damage.includes('회복')) {
                 el.style.color = '#00ff66';
                 el.style.textShadow = '0 0 8px #00ff66';
-            } else if (damage.includes('포자') || damage.includes('점액')) {
+            } else if (damage.includes('☣') || damage.includes('포자') || damage.includes('점액')) {
                 el.style.color = '#aaff00';
                 el.style.textShadow = '0 0 8px #66aa00';
-            } else if (damage.includes('지진') || damage.includes('분쇄')) {
+            } else if (damage.includes('💥') || damage.includes('지진') || damage.includes('분쇄')) {
                 el.style.color = '#ff9900';
                 el.style.textShadow = '0 0 8px #cc6600';
             }
+        } else if (kind === 'dot') {
+            el.textContent = Math.round(damage);
+            el.style.fontSize = '13px';
+            el.style.opacity = '0.8';
         } else {
             el.textContent = Math.round(damage);
             if (isCrit) {
@@ -230,6 +251,7 @@ export class BattleEngine {
 
     // [세뇌 스마트 구속구]: 적 보병 소멸 시 아군 미니언 징집 소환
     // kind 'baby_kaiju': 거대괴수 산란으로 부화한 새끼 괴수 (리그에서 구운 스프라이트)
+    //      'chimera': 합성괴인 몸통의 졸개 소환 (소환진 이펙트)
     spawnAllyMinion(startX, kind = 'mind') {
         if (!this.domEnemies) return;
         const baby = kind === 'baby_kaiju';
@@ -264,7 +286,9 @@ export class BattleEngine {
             hpBar: hpBar
         });
 
-        this.createDamagePopup(startX, 180, baby ? '🥚 새끼 괴수 부화!' : '★ 세뇌 징집! (MIND CONTROL)', false);
+        if (kind === 'chimera') this.fx.play(CHIMERA_VFX.summon, startX + 38, FOOT_B);
+        const label = { baby_kaiju: '🥚 새끼 괴수 부화!', chimera: '👹 졸개 소환!' }[kind] || '★ 세뇌 징집! (MIND CONTROL)';
+        this.createDamagePopup(startX, 180, label, false);
     }
 
     // ---- 팩션 스킬 ----
@@ -294,6 +318,7 @@ export class BattleEngine {
         this.shieldHp = this.maxPlayerHp * PHASE2.shieldRatio;
         this.playerDps *= PHASE2.dpsMul;
         monsterControllerV2.enterPhase2();
+        this.fx.play(CHIMERA_VFX.phase2Burst, this.monsterX + 35, FOOT_B);   // 변신 클립의 거대화 순간에 맞춘 충격파
         this.showAnnouncement('2PHASE // 자동 거대화 및 실드 전개!', 2000);
         this.createDamagePopup(this.monsterX + 40, 210, '⬢ 실드 전개 (최대 체력 30%)', false);
     }
@@ -304,6 +329,7 @@ export class BattleEngine {
         monsterControllerV2.playCast(() => {
             if (!this.isActive) return;
             const from = monsterControllerV2.getSocketPoint('hand', 'armF') || { x: this.monsterX + 90, bottom: 130 };
+            this.fx.play(HERO_VFX.castRelease, from.x, from.bottom);
             this.fx.launchOrb(from, () => ({ x: tx, b: 90 }), HERO_ORB.color, HERO_ORB.dur, () => {
                 this.fx.play(HERO_VFX.mindConvert, tx, 58);
                 setTimeout(() => {
@@ -539,32 +565,10 @@ export class BattleEngine {
         const finalDmg = isCrit ? dmg * 1.5 : dmg;
 
         if (this.attackType === 'laser') {
-            const beam = document.createElement('div');
-            beam.style.position = 'absolute';
-            if (muzzle) {
-                // 총구에서 적 몸통 중앙을 향해 비스듬히 (적 76x76 @bottom 52, 거점 90x150 @bottom 60)
-                const aimX = targetX + (targetEnemy.isBuilding ? 45 : 38);
-                const aimBottom = targetEnemy.isBuilding ? 135 : 90;
-                const dx = Math.max(10, aimX - muzzle.x);
-                const dy = muzzle.bottom - aimBottom;
-                beam.style.bottom = `${muzzle.bottom - 3}px`;
-                beam.style.left = `${muzzle.x}px`;
-                beam.style.width = `${Math.hypot(dx, dy)}px`;
-                beam.style.transformOrigin = '0 50%';
-                beam.style.transform = `rotate(${Math.atan2(dy, dx) * 180 / Math.PI}deg)`;
-            } else {
-                beam.style.bottom = '120px';
-                beam.style.left = `${monsterFireX}px`;
-                beam.style.width = `${Math.max(10, targetX - monsterFireX)}px`;
-            }
-            beam.style.height = '6px';
-            // 컨셉 시트의 거대로봇 '초장거리 포격' 색 (보라 광선)
-            beam.style.background = 'linear-gradient(90deg, #c45cff, #ffffff)';
-            beam.style.boxShadow = '0 0 15px #c45cff';
-            beam.style.zIndex = '40';
-            this.domProjectiles.appendChild(beam);
-            setTimeout(() => beam.remove(), 150);
-
+            // 초장거리 포격: 총구 → 적 몸통 중앙 보라 광선
+            const from = muzzle || { x: monsterFireX, bottom: 120 };
+            const aim = aimOf(targetEnemy);
+            this.fx.play(MECH_VFX.laser, from.x, from.bottom, { to: [aim.x, aim.b] });
             this.dealDamageToEnemy(targetEnemy, finalDmg, isCrit, { knock: 0.3 });
         }
         else if (this.attackType === 'wave') {
@@ -572,52 +576,45 @@ export class BattleEngine {
             this.launchDarkWave(monsterFireX, finalDmg, isCrit);
         }
         else if (this.attackType === 'missile') {
-            const m = document.createElement('div');
-            m.className = 'projectile';
-            m.style.left = `${monsterFireX}px`;
-            m.style.bottom = muzzle ? `${muzzle.bottom - 5}px` : '130px';
-            m.style.background = '#ffcc00';
-            m.style.boxShadow = '0 0 12px #ffcc00';
-            this.domProjectiles.appendChild(m);
-
-            setTimeout(() => {
-                m.remove();
-                this.dealDamageToEnemy(targetEnemy, finalDmg * 1.2, isCrit);
-                this.enemies.forEach(other => {
+            // 유도 미사일: 포물선으로 날아가 폭발 (목표가 먼저 쓰러지면 마지막 위치에 떨어짐)
+            const from = muzzle || { x: monsterFireX, bottom: 130 };
+            let aim = aimOf(targetEnemy);
+            this.fx.launchMissile(from, () => {
+                if (this.enemies.includes(targetEnemy)) aim = aimOf(targetEnemy);
+                return aim;
+            }, () => {
+                this.fx.play(MECH_VFX.missileBlast, aim.x, aim.b);
+                if (!this.isActive) return;
+                if (this.enemies.includes(targetEnemy)) {
+                    this.dealDamageToEnemy(targetEnemy, finalDmg * 1.2, isCrit, { knock: 0.8 });
+                }
+                [...this.enemies].forEach(other => {
                     if (other !== targetEnemy && Math.abs(other.x - targetEnemy.x) < 90) {
-                        this.dealDamageToEnemy(other, finalDmg * 0.5, false);
+                        this.dealDamageToEnemy(other, finalDmg * 0.5, false, { knock: 0.5 });
                     }
                 });
-            }, 250);
+            }, { dur: 0.5, apex: 55 });
         }
         else {
-            const slash = document.createElement('div');
-            slash.style.position = 'absolute';
-            slash.style.left = `${targetX - 20}px`;
-            slash.style.bottom = '80px';
-            slash.style.width = '40px';
-            slash.style.height = '60px';
-            const hitColor = monsterControllerV2.getHitColor() || '#ff0055';  // 리그 캐릭터별 타격 색
-            slash.style.borderRight = `6px solid ${hitColor}`;
-            slash.style.borderRadius = '50%';
-            slash.style.transform = 'rotate(20deg)';
-            slash.style.boxShadow = `0 0 15px ${hitColor}`;
-            this.domProjectiles.appendChild(slash);
-            setTimeout(() => slash.remove(), 200);
-
-            const hitVfx = HIT_VFX[monsterControllerV2.getCharacterId()];
-            if (hitVfx) this.fx.play(hitVfx, targetX + (targetEnemy.isBuilding ? 45 : 38), targetEnemy.isBuilding ? 130 : 95);
+            // 캐릭터별 타격 이펙트 (로봇 주먹 / 괴수 물기 / 히어로 베기 / 합성괴인 주먹·클로 / 페이퍼돌 기본 베기)
+            const aim = aimOf(targetEnemy);
+            this.fx.play(meleeHitVfx(monsterControllerV2.getCharacterId(), this.equippedArmId), aim.x, aim.b + 5);
             this.dealDamageToEnemy(targetEnemy, finalDmg, isCrit, { knock: 1, stop: hitScale >= 1 });
         }
     }
 
     // 적 또는 거점 건물에 데미지 적용 및 소멸 처리
     // react: { knock(넉백 배율), stop(히트스톱) } — 몬스터/스킬의 직접 타격일 때만 (지속 피해는 생략)
+    // react.dot: 지속 피해 — 피격 반응 없이 합산해 0.5초마다 숫자 표시
     dealDamageToEnemy(enemy, damage, isCrit, react = null) {
         enemy.hp -= damage;
-        if (react && enemy.hp > 0) this.hitReact(enemy, react);
-        const popupY = enemy.isBuilding ? 160 + Math.random() * 40 : 110 + Math.random() * 30;
-        this.createDamagePopup(enemy.x, popupY, damage, isCrit);
+        if (react && !react.dot && enemy.hp > 0) this.hitReact(enemy, react);
+        if (react && react.dot) {
+            enemy.dotAcc = (enemy.dotAcc || 0) + damage;
+        } else if (damage > 0) {
+            const popupY = enemy.isBuilding ? 160 + Math.random() * 40 : 110 + Math.random() * 30;
+            this.createDamagePopup(enemy.x, popupY, damage, isCrit);
+        }
 
         if (enemy.hpBar) {
             const pct = Math.max(0, (enemy.hp / enemy.maxHp) * 100);
@@ -699,6 +696,7 @@ export class BattleEngine {
             if (this.regenPopupTimer >= 1.0) {
                 this.regenPopupTimer = 0;
                 this.createDamagePopup(this.monsterX + 40, 180, `+${Math.round(this.maxPlayerHp * 0.02)} REGEN`, false);
+                this.fx.play(KAIJU_VFX.regen, this.monsterX + 35, FOOT_B, { follow: () => [this.monsterX + 35, FOOT_B] });
             }
         }
 
@@ -744,7 +742,8 @@ export class BattleEngine {
                         enemy.hpBar.style.width = `${Math.max(0, (enemy.hp / enemy.maxHp) * 100)}%`;
                     }
                     if (tickSporePopup) {
-                        this.createDamagePopup(enemy.x, 130, '☣ 전방 포자 살포', false);
+                        this.fx.play(KAIJU_VFX.sporeTick, aimOf(enemy).x, FOOT_B);
+                        this.createDamagePopup(enemy.x, 130, `☣ -${Math.round(35 * 0.75)}`, false);
                     }
                     if (enemy.hp <= 0) {
                         this.dealDamageToEnemy(enemy, 0, false);
@@ -766,12 +765,23 @@ export class BattleEngine {
                         enemy.hpBar.style.width = `${Math.max(0, (enemy.hp / enemy.maxHp) * 100)}%`;
                     }
                     if (tickQuakePopup) {
-                        this.createDamagePopup(enemy.x, 130, '💥 지진 분쇄 -28', false);
+                        this.fx.play(CHIMERA_VFX.quakeTick, aimOf(enemy).x, FOOT_B);
+                        this.createDamagePopup(enemy.x, 130, `💥 -${Math.round(40 * 0.75)}`, false);
                     }
                     if (enemy.hp <= 0) {
                         this.dealDamageToEnemy(enemy, 0, false);
                     }
                 }
+            });
+        }
+
+        // 지속 피해 숫자 모아서 표시
+        this.dotTimer += dt;
+        if (this.dotTimer >= POPUP.dotFlushSec) {
+            this.dotTimer = 0;
+            this.enemies.forEach(e => {
+                if (e.dotAcc >= 1) this.createDamagePopup(e.x + 20, 105, e.dotAcc, false, 'dot');
+                e.dotAcc = 0;
             });
         }
 
@@ -848,7 +858,7 @@ export class BattleEngine {
 
             const hitRange = (closestEnemyToAlly && closestEnemyToAlly.isBuilding) ? 110 : 65;
             if (closestEnemyToAlly && minAllyDist <= hitRange) {
-                this.dealDamageToEnemy(closestEnemyToAlly, ally.dps * dt, false);
+                this.dealDamageToEnemy(closestEnemyToAlly, ally.dps * dt, false, { dot: true });
 
                 if (closestEnemyToAlly.isBuilding) {
                     ally.hp -= 25 * dt;

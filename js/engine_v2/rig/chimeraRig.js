@@ -160,7 +160,6 @@ export const CHIMERA = {
     arms: null,
     attack: 'attack_punch',
     hitSocket: ['fist', 'armF'],
-    hitColor: '#ff9628',                 // 전투 엔진 근접 타격 이펙트 색 (주황)
     debugSockets: CHIMERA_DEBUG_SOCKETS,
     shadow: { rx: 360, ry: 36 }
 };

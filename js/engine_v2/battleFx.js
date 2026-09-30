@@ -4,20 +4,23 @@
    - 거대괴수 산란: addEgg(x, 부화 시간, onHatch) — 알이 떨어져 맥동하다 흔들리며 깨지고 onHatch 호출
    - 거대로봇 스웜 드론: launchDrone({from, index, getTarget, onHit}) — 발사구에서 솟아 공중 대기 후
      목표에 돌진해 폭발, onHit(폭발 위치) 호출
-   - 스킬 이펙트(VfxPlayer): play(정의, x, b) · setAura/pulseAura(계속 깔리는 마법진) · launchWave · launchOrb
-     바닥 이펙트(마법진 등)는 적/캐릭터 아래 캔버스, 나머지는 위 캔버스에 그림
+   - 스킬 이펙트(VfxPlayer): play(정의, x, b, {to: [x, b]}) · setAura/pulseAura(계속 깔리는 마법진)
+     · launchWave · launchOrb · launchMissile — 알 부화/드론 폭발도 이펙트 정의(vfx/*.js)로 재생
+     바닥 이펙트(마법진, 균열 등)는 적/캐릭터 아래 캔버스, 나머지는 위 캔버스에 그림
    좌표: entity-layer 기준 x(left px), b(bottom px). 캔버스 y = 높이 - b
    ========================================================================== */
 
 import { VfxPlayer } from './vfx/vfxPlayer.js';
 import { gameTime } from './gameTime.js';
+import { MECH_VFX } from './vfx/mechVfx.js';
+import { KAIJU_VFX } from './vfx/kaijuVfx.js';
 
 // 새끼 괴수 걷기 스프라이트 (tools/rig/bake_sprite.py 결과 assets/sprites/rig/kaiju/baby_walk.json 과 맞춤)
 export const BABY_KAIJU = { src: 'assets/sprites/rig/kaiju/baby_walk.png', frameWidth: 80, frameHeight: 64, frames: 12, duration: 1.2 };
 
 const TOXIC = '170, 255, 40';
 const DRONE_CORE = '200, 90, 255';
-const BOOM = '255, 150, 60';
+const EGG_B = 60;   // 알이 놓이는 지면 높이 (bottom px)
 
 let stylesInjected = false;
 
@@ -62,7 +65,8 @@ export class BattleFx {
     // ---- 스킬 이펙트 (VfxPlayer) ----
     play(def, x, b, opts = {}) {
         const follow = opts.follow ? () => { const [fx, fb] = opts.follow(); return [fx, this.H - fb]; } : null;
-        this.vfx.play(def, x, this.H - b, { ...opts, follow });
+        const to = opts.to ? [opts.to[0], this.H - opts.to[1]] : null;
+        this.vfx.play(def, x, this.H - b, { ...opts, follow, to });
     }
 
     setAura(key, layer, follow) {
@@ -86,13 +90,18 @@ export class BattleFx {
         });
     }
 
+    /** from {x, bottom}, to() → {x, b}, onArrive() */
+    launchMissile(from, to, onArrive, opts = {}) {
+        this.vfx.launchMissile({
+            from: [from.x, this.H - from.bottom], to: () => { const t = to(); return [t.x, this.H - t.b]; },
+            onArrive, ...opts
+        });
+    }
+
     reset() {
         if (this.vfx) this.vfx.clear();
         this.eggs = [];
         this.drones = [];
-        this.sparks = [];
-        this.rings = [];
-        this.shards = [];
     }
 
     start() {
@@ -136,6 +145,7 @@ export class BattleFx {
     // ---- 산란 ----
     addEgg(x, hatchSec, onHatch) {
         this.eggs.push({ x, t: 0, hatchSec, onHatch, seed: Math.random() * 10 });
+        this.play(KAIJU_VFX.eggLay, x, EGG_B);
     }
 
     // ---- 스웜 드론 ----
@@ -172,14 +182,6 @@ export class BattleFx {
         }
     }
 
-    _burst(x, b, color, n, speed) {
-        for (let i = 0; i < n; i++) {
-            const a = Math.random() * Math.PI * 2;
-            const v = speed * (0.5 + Math.random() * 0.8);
-            this.sparks.push({ x, b, vx: Math.cos(a) * v, vb: Math.sin(a) * v, t: 0, dur: 0.3 + Math.random() * 0.25, color });
-        }
-    }
-
     _update(dt) {
         this.vfx.update(dt);
         // 알: 등장(0.25s) → 맥동 → 마지막 0.6초 흔들림 → 부화
@@ -187,14 +189,7 @@ export class BattleFx {
             e.t += dt;
             if (!e.hatched && e.t >= e.hatchSec) {
                 e.hatched = true;
-                this._burst(e.x, 60 + 14, TOXIC, 16, 160);
-                this.rings.push({ x: e.x, b: 62, t: 0, dur: 0.4, r: 40, color: TOXIC });
-                for (let i = 0; i < 8; i++) {
-                    const a = -Math.PI * (0.15 + 0.7 * Math.random());
-                    const v = 90 + Math.random() * 120;
-                    this.shards.push({ x: e.x, b: 70, vx: Math.cos(a) * v * (Math.random() < 0.5 ? -1 : 1),
-                        vb: -Math.sin(a) * v, rot: Math.random() * 6, t: 0, dur: 0.7 });
-                }
+                this.play(KAIJU_VFX.eggHatch, e.x, EGG_B);
                 if (e.onHatch) e.onHatch();
             }
         }
@@ -235,33 +230,11 @@ export class BattleFx {
             if (d.trail.length > 8) d.trail.shift();
         }
         this.drones = this.drones.filter(d => !d.done);
-
-        for (const s of this.sparks) {
-            s.t += dt;
-            s.x += s.vx * dt;
-            s.b += s.vb * dt;
-            s.vx *= 1 - 3 * dt;
-            s.vb *= 1 - 3 * dt;
-        }
-        this.sparks = this.sparks.filter(s => s.t < s.dur);
-        for (const r of this.rings) r.t += dt;
-        this.rings = this.rings.filter(r => r.t < r.dur);
-        for (const s of this.shards) {
-            s.t += dt;
-            s.x += s.vx * dt;
-            s.b += s.vb * dt;
-            s.vb -= 500 * dt;
-            s.rot += dt * 8;
-        }
-        this.shards = this.shards.filter(s => s.t < s.dur && s.b > 50);
     }
 
     _explode(d) {
         d.done = true;
-        this._burst(d.x, d.b, BOOM, 14, 260);
-        this._burst(d.x, d.b, DRONE_CORE, 8, 180);
-        this.rings.push({ x: d.x, b: d.b, t: 0, dur: 0.35, r: 55, color: DRONE_CORE });
-        this.rings.push({ x: d.x, b: d.b, t: 0, dur: 0.25, r: 30, color: BOOM, fill: true });
+        this.play(MECH_VFX.droneBlast, d.x, d.b);
         if (d.onHit) d.onHit({ x: d.x, b: d.b });
     }
 
@@ -275,15 +248,6 @@ export class BattleFx {
 
         for (const e of this.eggs) drawEgg(ctx, e, Y);
 
-        for (const s of this.shards) {
-            ctx.save();
-            ctx.translate(s.x, Y(s.b));
-            ctx.rotate(s.rot);
-            ctx.fillStyle = `rgba(150, 230, 60, ${1 - s.t / s.dur})`;
-            ctx.fillRect(-4, -3, 8, 6);
-            ctx.restore();
-        }
-
         for (const d of this.drones) {
             if (d.t < 0) continue;
             ctx.globalCompositeOperation = 'lighter';
@@ -292,30 +256,6 @@ export class BattleFx {
             drawDrone(ctx, d.x, Y(d.b), d.spin);
         }
 
-        ctx.globalCompositeOperation = 'lighter';
-        for (const r of this.rings) {
-            const t = r.t / r.dur;
-            if (r.fill) {
-                glow(ctx, r.x, Y(r.b), r.r * (0.5 + t), `rgba(${r.color}, ${0.9 * (1 - t)})`);
-            } else {
-                ctx.strokeStyle = `rgba(${r.color}, ${1 - t})`;
-                ctx.lineWidth = 4 * (1 - t) + 1;
-                ctx.beginPath();
-                ctx.arc(r.x, Y(r.b), r.r * t, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-        }
-        ctx.lineCap = 'round';
-        for (const s of this.sparks) {
-            const a = 1 - s.t / s.dur;
-            ctx.strokeStyle = `rgba(${s.color}, ${a})`;
-            ctx.lineWidth = 2.5 * a + 0.5;
-            ctx.beginPath();
-            ctx.moveTo(s.x - s.vx * 0.03, Y(s.b - s.vb * 0.03));
-            ctx.lineTo(s.x, Y(s.b));
-            ctx.stroke();
-        }
-        ctx.globalCompositeOperation = 'source-over';
         this.vfx.draw(ctx, 'front');
     }
 }
@@ -338,7 +278,7 @@ function drawEgg(ctx, e, Y) {
     const shake = left < 0.6 ? Math.sin(e.t * 45) * 0.18 * (1 - left / 0.6) : 0;
     const pulse = 0.6 + 0.4 * Math.sin(e.t * 6 + e.seed);
     const w = 12, h = 16;
-    const y = Y(60 + (1 - appear) * 30);
+    const y = Y(EGG_B + (1 - appear) * 30);
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     glow(ctx, e.x, y - h * 0.6, 26, `rgba(${TOXIC}, ${0.35 * pulse})`);

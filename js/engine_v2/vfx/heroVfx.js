@@ -25,13 +25,15 @@ export const HERO_VFX = {
     // 흑마법 오라 마법진 (몸 앞 바닥에 계속 깔림, 틱마다 번쩍)
     curseAura: { r: 115, color: VIOLET, spin: 0.7 },
 
-    // 스킬 시전 해방 (손끝)
+    // 스킬 시전 해방 (손끝, 세뇌 구체 발사 순간)
     castRelease: {
         sfx: 'hero_cast',
         layers: [
-            { type: 'flash', at: 0, dur: 0.16, r: 22, color: VIOLET },
-            { type: 'ring', at: 0, dur: 0.3, r: 34, color: VIOLET, width: 4 },
-            { type: 'sparks', at: 0, count: 10, speed: 220, color: VIOLET }
+            { type: 'fireball', at: 0, dur: 0.3, r: 20, color: VIOLET },
+            { type: 'ring', at: 0, dur: 0.32, r: 38, color: VIOLET, width: 4 },
+            { type: 'ring', at: 0.05, dur: 0.35, r: 52, color: PINK, width: 2 },
+            { type: 'sparks', at: 0, count: 12, speed: 240, color: PINK },
+            { type: 'smoke', at: 0.04, count: 3, spread: 8, spreadY: 8, size: 12, life: [0.4, 0.7], rise: 20, color: DEEP }
         ]
     },
 
@@ -48,22 +50,29 @@ export const HERO_VFX = {
         ]
     },
 
-    // [어둠 파동] 적중: 파동이 지나간 적에게
+    // [어둠 파동] 적중: 파동이 적을 세로로 가르고 지나감 + 감속 표시로 발밑에 보라 잔광
     waveHit: {
         sfx: 'hero_wave_hit',
         layers: [
-            { type: 'flash', at: 0, dur: 0.12, r: 20, color: VIOLET },
-            { type: 'sparks', at: 0, count: 8, speed: 200, angle: 0, cone: 1.6, color: VIOLET },
-            { type: 'smoke', at: 0.05, count: 3, spread: 8, spreadY: 30, size: 12, life: [0.4, 0.7], rise: 15, color: DEEP }
+            { type: 'claw', at: 0, dur: 0.35, count: 1, len: 78, angle: Math.PI / 2, width: 9, bend: 14, color: VIOLET },
+            { type: 'flash', at: 0, dur: 0.14, r: 24, color: VIOLET },
+            { type: 'sparks', at: 0, count: 10, speed: 230, angle: 0, cone: 1.4, color: PINK },
+            { type: 'pillar', at: 0.02, dur: 0.4, h: 70, w: 14, color: VIOLET, dy: 32 },
+            { type: 'glow', at: 0.02, dur: 2.2, r: 26, color: VIOLET, dy: 32 },
+            { type: 'smoke', at: 0.05, count: 4, spread: 10, spreadY: 30, size: 14, life: [0.5, 0.9], rise: 15, color: DEEP }
         ]
     },
 
-    // 기본 베기 적중 (전투 엔진 근접 공격 위치)
+    // 기본 베기 적중: 내려벤 방향(왼쪽 위 → 오른쪽 아래)으로 보라 칼 자국 + 섬광 + 연기 여운
     slashHit: {
         sfx: 'hero_slash_hit',
         layers: [
-            { type: 'flash', at: 0, dur: 0.12, r: 24, color: VIOLET },
-            { type: 'sparks', at: 0, count: 10, speed: 260, angle: -0.3, cone: 2.2, color: PINK }
+            { type: 'claw', at: 0, dur: 0.38, count: 1, len: 100, angle: 0.85, width: 12, bend: 16, color: VIOLET },
+            { type: 'claw', at: 0.03, dur: 0.3, count: 1, len: 70, angle: 0.85, width: 5, bend: 10, color: PINK },
+            { type: 'flash', at: 0.02, dur: 0.14, r: 28, color: VIOLET },
+            { type: 'ring', at: 0.02, dur: 0.3, r: 40, color: VIOLET, width: 4 },
+            { type: 'sparks', at: 0.02, count: 12, speed: 280, angle: 0.6, cone: 1.8, color: PINK },
+            { type: 'smoke', at: 0.08, count: 3, spread: 10, spreadY: 14, size: 14, life: [0.5, 0.8], rise: 20, color: DEEP }
         ]
     }
 };

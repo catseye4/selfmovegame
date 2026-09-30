@@ -9,7 +9,8 @@ import { loadRigAssets, applyRigEvent, buildSkeleton, restBounds, shieldGeom, Sc
     from '../engine_v2/rig/rigAvatar.js';
 import { RigEffects } from '../engine_v2/rig/rigEffects.js';
 import { VfxPlayer } from '../engine_v2/vfx/vfxPlayer.js';
-import { HERO_VFX, HERO_WAVE, HERO_ORB } from '../engine_v2/vfx/heroVfx.js';
+import { HERO_WAVE, HERO_ORB } from '../engine_v2/vfx/heroVfx.js';
+import { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX } from '../engine_v2/vfx/vfxDefs.js';
 
 const STAGE_W = 960;
 const STAGE_H = 600;
@@ -90,6 +91,10 @@ async function setCharacter(id) {
     }, GROUND_Y);
     animator = new Animator(character.clips, onEvent);
     animator.play(clipFor(state.mode), 0);
+    vfx.clear();
+    skill.curse = false;
+    skill.wave = false;
+    buildPreviewButtons();
     tick(0);
     syncButtons();
     dirty = true;
@@ -236,6 +241,7 @@ function mindWave() {
         const w = skeleton.socketWorld(character.sockets && character.sockets.hand ? 'hand' : hitSocket()[0],
             character.sockets && character.sockets.hand ? 'armF' : hitSocket()[1]);
         const d = dummies[1];
+        vfx.play(HERO_VFX.castRelease, toStage(w)[0], toStage(w)[1], { scale: VFX_SCALE });
         vfx.launchOrb({
             from: toStage(w), to: () => [dummyCenterX(d), dummyCenterY()], color: HERO_ORB.color, dur: HERO_ORB.dur,
             scale: VFX_SCALE, onArrive: () => vfx.play(HERO_VFX.mindConvert, dummyCenterX(d), GROUND_Y, { scale: VFX_SCALE })
@@ -266,6 +272,97 @@ function launchWave() {
             d.slow = 2.5;
             vfx.play(HERO_VFX.waveHit, d.x, dummyCenterY(), { scale: VFX_SCALE });
         })
+    });
+}
+
+// ---- 이펙트 미리보기 (게임과 같은 정의를 더미/캐릭터 위치에서 재생) ----
+function vfxAtDummy(def, i = 0, ground = false) {
+    const d = dummies[i];
+    vfx.play(def, d.x, ground ? GROUND_Y : dummyCenterY(), { scale: VFX_SCALE });
+    d.flash = 0.08;
+}
+
+function vfxAtEachDummy(def, ground = true) {
+    dummies.forEach((d, i) => vfxAtDummy(def, i, ground));
+}
+
+function vfxAtSelf(def) {
+    vfx.play(def, CHAR_X, GROUND_Y, { scale: VFX_SCALE });
+}
+
+/** 두 정의를 이어 붙임 (b는 delay초 뒤) */
+function seq(a, b, delay) {
+    return { layers: [...a.layers, ...b.layers.map(l => ({ ...l, at: (l.at || 0) + delay }))] };
+}
+
+function muzzlePoint() {
+    const [socket, bone] = hitSocket();
+    return toStage(skeleton.socketWorld(socket, bone));
+}
+
+function previewLaser() {
+    const m = muzzlePoint();
+    const d = dummies[0];
+    vfx.play(MECH_VFX.laser, m[0], m[1], { scale: VFX_SCALE, to: [d.x, dummyCenterY()] });
+    d.flash = 0.08;
+}
+
+function previewMissiles() {
+    const m = muzzlePoint();
+    dummies.forEach((d, i) => vfx.launchMissile({
+        from: m, to: () => [d.x, dummyCenterY()], dur: 0.5 + i * 0.08, apex: 55, scale: VFX_SCALE,
+        onArrive: (x, y) => { vfx.play(MECH_VFX.missileBlast, x, y, { scale: VFX_SCALE }); d.flash = 0.08; }
+    }));
+}
+
+const PREVIEWS = {
+    mech: [
+        ['레이저 포격', previewLaser],
+        ['미사일 3연발', previewMissiles],
+        ['드론 폭발', () => vfxAtDummy(MECH_VFX.droneBlast, 1)],
+        ['주먹 적중', () => vfxAtDummy(MECH_VFX.fistHit, 0)],
+        ['착지 균열', () => vfxAtSelf(MECH_VFX.landing)]
+    ],
+    kaiju: [
+        ['물기 적중', () => vfxAtDummy(KAIJU_VFX.biteHit, 0)],
+        ['포자 살포', () => vfxAtEachDummy(KAIJU_VFX.sporeTick)],
+        ['알 낳기 → 부화', () => vfxAtDummy(seq(KAIJU_VFX.eggLay, KAIJU_VFX.eggHatch, 1.2), 1, true)],
+        ['재생', () => vfxAtSelf(KAIJU_VFX.regen)]
+    ],
+    hero: [
+        ['베기 적중', () => vfxAtDummy(HERO_VFX.slashHit, 0)],
+        ['파동 적중', () => vfxAtDummy(HERO_VFX.waveHit, 0)],
+        ['시전 해방', () => vfx.play(HERO_VFX.castRelease, ...toStage(skeleton.socketWorld('hand', 'armF')), { scale: VFX_SCALE })],
+        ['흑마법 기둥', () => vfxAtEachDummy(HERO_VFX.curseTick)],
+        ['세뇌 변환', () => vfxAtDummy(HERO_VFX.mindConvert, 1, true)]
+    ],
+    chimera: [
+        ['주먹 적중', () => vfxAtDummy(CHIMERA_VFX.punchHit, 0)],
+        ['클로 할퀴기', () => vfxAtDummy(CHIMERA_VFX.clawHit, 0)],
+        ['졸개 소환', () => vfxAtDummy(CHIMERA_VFX.summon, 1, true)],
+        ['지진 분쇄', () => vfxAtEachDummy(CHIMERA_VFX.quakeTick)],
+        ['2페이즈 충격파', () => vfxAtSelf(CHIMERA_VFX.phase2Burst)]
+    ]
+};
+
+function previewVfx(i) {
+    const list = PREVIEWS[character.id] || [];
+    if (!list[i]) return;
+    opts.dummies = true;
+    list[i][1]();
+    syncButtons();
+    dirty = true;
+}
+
+function buildPreviewButtons() {
+    const row = document.getElementById('vfx-preview-row');
+    if (!row) return;
+    row.innerHTML = '';
+    (PREVIEWS[character.id] || []).forEach(([label], i) => {
+        const btn = document.createElement('button');
+        btn.textContent = label;
+        btn.addEventListener('click', () => previewVfx(i));
+        row.appendChild(btn);
     });
 }
 
@@ -503,6 +600,8 @@ window.rigTest = {
     toggleCurse,
     mindWave,
     toggleWave,
+    previewVfx,
+    previews: () => (PREVIEWS[character.id] || []).map(([label]) => label),
     phase2,
     breakShield,
     pause() { state.paused = true; syncButtons(); },

@@ -155,7 +155,8 @@ export const MECH_CLIPS = {
             [0.25, 'thrust', { sockets: [['footR', 'legR'], ['footL', 'legL']], dur: 0.55, color: '150, 110, 255' }],
             [0.92, 'thrust', { sockets: [['footR', 'legR'], ['footL', 'legL']], dur: 0.18, color: '150, 110, 255' }],
             [1.1, 'stomp', { foot: 'footR', bone: 'legR' }],
-            [1.1, 'stomp', { foot: 'footL', bone: 'legL' }]
+            [1.1, 'stomp', { foot: 'footL', bone: 'legL' }],
+            [1.1, 'land']   // 전투 엔진: 착지 균열 이펙트
         ]
     },
 
@@ -188,7 +189,6 @@ export const MECH = {
     weaponBone: 'armR',          // 무기 팔 교체 대상 뼈
     arms: ARM_OPTIONS,           // 교체 가능한 무기 팔 (attack 클립, 총구 소켓 포함)
     defaultArm: 'cannon',
-    hitColor: '#d75aff',         // 전투 엔진 근접(주먹) 타격 이펙트 색 (보라)
     sockets: { droneBay: [693, 70] },   // 스웜 드론 발사구 (캐니스터 윗부분, 원본 px)
     debugSockets: DEBUG_SOCKETS,
     shadow: { rx: 417, ry: 38 }  // 발밑 그림자 (원본 픽셀)

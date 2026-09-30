@@ -131,7 +131,6 @@ export const KAIJU = {
     arms: null,                          // 무기 팔 교체 없음
     attack: 'attack_bite',
     hitSocket: ['mouth', 'head'],        // 물기 타격/포효 이펙트 위치
-    hitColor: '#aaff28',                 // 전투 엔진 근접 타격 이펙트 색 (산성 초록)
     // 이펙트용 소켓 (원본 3배 좌표): 아래턱 끝, 가슴
     sockets: { jawDrip: [960, 430], chest: [880, 470] },
     // 컨셉의 산성 점액: 턱/가슴/발톱에서 방울이 떨어져 지면에 퍼짐

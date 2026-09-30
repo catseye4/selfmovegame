@@ -176,7 +176,6 @@ export const HERO = {
     arms: null,
     attack: 'attack_slash',
     hitSocket: ['tip', 'sword'],
-    hitColor: '#c86eff',                 // 전투 엔진 근접 타격 이펙트 색 (보라)
     sockets: { hand: [660, 666] },       // 칼 쥔 주먹 (스킬 시전 에너지/세뇌 구체 발사 위치)
     autoGround: [['footF', 'shinF'], ['footB', 'shinB']],   // 다리가 몸통에 매달려 있어 발로 접지
     // 컨셉의 보라 오라: 몸 뒤에서 연기가 피어올라 흩어지고, 앞쪽으로 불티가 떠오름

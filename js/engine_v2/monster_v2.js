@@ -64,12 +64,13 @@ export class MonsterController {
             ? new RigAvatar(spriteCanvas, {
                 ...BATTLE_RIG, shakeTarget: this.domViewport,
                 onResize: () => { if (this.useRig) this._placeHpBar(); },  // 2페이즈 거대화 후 체력바 위치
-                onEvent: name => {                                          // 스킬 시전 해방 순간
-                    if (name === 'cast' && this._castCb) {
+                onEvent: (name, data) => {
+                    if (name === 'cast' && this._castCb) {                  // 스킬 시전 해방 순간
                         const cb = this._castCb;
                         this._castCb = null;
                         cb();
                     }
+                    if (this.onRigEvent) this.onRigEvent(name, data);       // 전투 엔진 연결 (착지 이펙트 등)
                 }
             })
             : null;
@@ -367,11 +368,6 @@ export class MonsterController {
 
     breakShield() {
         if (this.useRig) this.rigBattle.breakShield();
-    }
-
-    // 리그 캐릭터의 근접 타격 이펙트 색. 리그가 아니면 null → 전투 엔진 기본색
-    getHitColor() {
-        return this.useRig && this.rigBattle.character ? this.rigBattle.character.hitColor || null : null;
     }
 
     // 리그 캔버스 좌표 → entity-layer 기준 {x: left px, bottom: px}

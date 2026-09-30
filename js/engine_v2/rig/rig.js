@@ -265,6 +265,8 @@ export class Skeleton {
     socketWorld(socketName, boneName) {
         const s = this.layout.sockets[socketName];
         const b = this.byName[boneName];
+        if (!b) return [0, 0];                       // 없는 뼈: 루트 위치 (이펙트만 어긋나고 멈추지 않게)
+        if (!s) return [b.world[4], b.world[5]];     // 없는 소켓: 뼈 피벗 위치
         return Mat.apply(b.world, s[0] - b.pivot[0], s[1] - b.pivot[1]);
     }
 
