@@ -3,6 +3,7 @@
    Delegates DOM styling and clear/render tasks to the Renderer module.
    ========================================================================== */
 
+import { settings } from './settings_v2.js';
 import { SpriteAnimator } from './spriteAnimator_v2.js';
 import { renderer } from './renderer.js';
 import { RigAvatar, rigConfigFor } from './rig/rigAvatar.js';
@@ -20,9 +21,9 @@ const BATTLE_RIG = {
 // 캐릭터별 전투 배율 (히어로는 사람 크기라 조금 작게)
 const BATTLE_RIG_SCALE = { mech: 0.235, kaiju: 0.235, hero: 0.215, chimera: 0.235 };
 const HP_BAR = { width: 80, gap: 16 };  // 머리 위 체력바 (index.css .monster-hp-container 폭)
-// 메뉴: 캐릭터마다 캔버스 안에 들어오도록 배율/위치 자동 맞춤 (최대 0.24)
-// (캔버스 330px 중 메뉴 원형 영역에 보이는 폭은 약 280px → 가로 여백을 넉넉히)
-const MENU_RIG = { width: 330, height: 248, rootX: 165, rootY: 240, scale: 0.24, fit: { x: 40, y: 10 }, shadow: false };
+// 메뉴(메인 화면 대기실): 캐릭터마다 캔버스 안에 들어오도록 배율/위치 자동 맞춤 (최대 0.34)
+// (좌우에 부위 설명이 붙으므로 가로 여백을 넉넉히)
+const MENU_RIG = { width: 440, height: 300, rootX: 220, rootY: 288, scale: 0.34, fit: { x: 58, y: 12 }, shadow: false };
 const PAPERDOLL_CANVAS = { width: 330, height: 248 };
 
 // 몬스터 상태 → 애니메이션
@@ -75,6 +76,10 @@ export class MonsterController {
             })
             : null;
         this.rigMenu = menuCanvas ? new RigAvatar(menuCanvas, MENU_RIG) : null;
+        // 화면 흔들림 설정 (끄면 착지/사격 흔들림도 없음)
+        const applyShake = () => { if (this.rigBattle) this.rigBattle.shakeScale = settings.get('shake') ? 1 : 0; };
+        applyShake();
+        settings.subscribe(key => { if (key === 'shake') applyShake(); });
         this.useRig = false;
         this.monsterX = 150;
         this.attackStartedAt = 0;

@@ -5,6 +5,7 @@
    - 우상단 재화/배속/일시정지, 하단 우측 스킬 도크(팔/몸통/필살기 + 자동)
    - 단축키: 1 팔 스킬, 2 몸통 스킬, 3/Space 필살기, P/Esc 일시정지, A 자동
    - 필살기 컷인/저체력 경고 같은 화면 연출은 battleDirector_v2.js
+   - 효과음: 버튼/토글, 스킬 준비 완료, 사용할 수 없는 스킬 입력 (audio/sound_v2.js)
    전투 엔진(battle_v2.js)이 setup → 매 프레임 update → teardown 순서로 부른다.
    ========================================================================== */
 
@@ -12,6 +13,8 @@ import { icon } from './icons.js';
 import { gameTime } from '../engine_v2/gameTime.js';
 import { monsterControllerV2 } from '../engine_v2/monster_v2.js';
 import { SLOT_KEYS } from '../engine_v2/skills_v2.js';
+import { sound } from '../engine_v2/audio/sound_v2.js';
+import { openSettings } from './settingsPanel_v2.js';
 
 const FACTION_COLOR = { mech: '#3ee6ff', kaiju: '#a0ff32', hero: '#c86eff', chimera: '#ff9628' };
 const MARKS = [{ at: 450, icon: 'fort' }, { at: 900, icon: 'hq' }];
@@ -71,9 +74,17 @@ export class BattleHud {
         if (this.bound) return;
         this.bound = true;
         this.el.pauseBtn.innerHTML = icon('pause', 20);
-        this.el.pauseBtn.addEventListener('click', () => this.setPaused(!gameTime.paused));
-        this.el.speed.addEventListener('click', () => this.toggleSpeed());
-        $('btn-resume-v2').addEventListener('click', () => this.setPaused(false));
+        this.el.pauseBtn.addEventListener('click', () => this.togglePause());
+        this.el.speed.addEventListener('click', () => {
+            sound.play('ui_click');
+            this.toggleSpeed();
+        });
+        $('btn-resume-v2').addEventListener('click', () => this.togglePause());
+        const btnSettings = $('btn-settings-v2');
+        if (btnSettings) btnSettings.addEventListener('click', () => {
+            sound.play('ui_click');
+            openSettings();
+        });
         document.querySelector('#battle-hud-v2 .v2-chip').insertAdjacentHTML('afterbegin', icon('gem', 18));
     }
 
@@ -131,7 +142,7 @@ export class BattleHud {
             btn.innerHTML = `<span class="v2-skill__icon">${icon(sk.icon, sk.ult ? 50 : 40)}</span>`
                 + `${sk.ult ? '' : '<span class="v2-skill__cd"></span>'}<span class="v2-skill__num"></span>`
                 + `<kbd>${SLOT_KEYS[slot]}</kbd>`;
-            btn.addEventListener('click', () => this.b.useSkill(slot));
+            btn.addEventListener('click', () => this.trySkill(slot));
             const name = document.createElement('span');
             name.className = 'v2-skill-name';
             name.textContent = sk.name;
@@ -141,6 +152,7 @@ export class BattleHud {
         }
         dock.appendChild(row);
         dock.hidden = !row.children.length;
+        this.readyPrev = {};
         this.renderAuto();
     }
 
@@ -204,6 +216,9 @@ export class BattleHud {
             }
             const cls = `${st.ready}${st.hasTarget}`;
             this.set(`st_${slot}`, cls, () => {
+                // 쿨다운/게이지가 막 찼을 때 알림음 (전투 시작 시점의 상태는 제외)
+                if (this.readyPrev[slot] === false && st.ready) sound.play(sk.ult ? 'ult_ready' : 'skill_ready');
+                this.readyPrev[slot] = st.ready;
                 btn.classList.toggle('is-ready', st.ready && st.hasTarget);
                 btn.classList.toggle('is-blocked', st.ready && !st.hasTarget);
                 btn.classList.toggle('is-cooling', !st.ready);
@@ -228,9 +243,20 @@ export class BattleHud {
         if (sk.ult) this.b.director.ultCutIn(sk, this.portraitSrc);   // 필살기 컷인 + 슬로모션
     }
 
+    /** 스킬 입력: 쓸 수 없으면(쿨다운/대상 없음) 짧은 경고음 */
+    trySkill(slot) {
+        if (!this.b.useSkill(slot) && this.b.skills[slot] && !this.b.cinematic) sound.play('ui_error', { vol: 0.5 });
+    }
+
+    togglePause() {
+        sound.play('ui_pause');
+        this.setPaused(!gameTime.paused);
+    }
+
     // ------------------------------------------------------------------
     setPaused(on) {
         gameTime.paused = on;
+        sound.setPaused(on);
         if (!this.screen) return;
         this.screen.classList.toggle('v2-paused', on);
         this.el.pause.hidden = !on;
@@ -249,6 +275,7 @@ export class BattleHud {
     }
 
     toggleAuto() {
+        sound.play('ui_toggle');
         this.b.setAutoSkills(!this.b.autoSkills);
         this.renderAuto();
     }
@@ -260,17 +287,18 @@ export class BattleHud {
     onKey(e) {
         if (!this.b.isActive || this.b.cinematic || e.repeat) return;
         const k = e.key.toLowerCase();
+        if (document.querySelector('.v2-settings')) return;   // 설정 창이 열려 있으면 그쪽이 키 입력 처리
         if (k === 'p' || k === 'escape') {
-            this.setPaused(!gameTime.paused);
+            this.togglePause();
         } else if (gameTime.paused) {
             return;
         } else if (k === '1') {
-            this.b.useSkill('arm');
+            this.trySkill('arm');
         } else if (k === '2') {
-            this.b.useSkill('body');
+            this.trySkill('body');
         } else if (k === '3' || k === ' ') {
             e.preventDefault();
-            this.b.useSkill('head');
+            this.trySkill('head');
         } else if (k === 'a') {
             this.toggleAuto();
         } else {

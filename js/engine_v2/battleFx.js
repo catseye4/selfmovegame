@@ -8,12 +8,14 @@
      · launchWave · launchOrb · launchMissile — 알 부화/드론 폭발도 이펙트 정의(vfx/*.js)로 재생
      바닥 이펙트(마법진, 균열 등)는 적/캐릭터 아래 캔버스, 나머지는 위 캔버스에 그림
    좌표: entity-layer 기준 x(left px), b(bottom px). 캔버스 y = 높이 - b
+   효과음: 이펙트 정의의 sfx 이름과 투사체 발사음을 사운드 매니저(audio/sound_v2.js)로 재생
    ========================================================================== */
 
 import { VfxPlayer } from './vfx/vfxPlayer.js';
 import { gameTime } from './gameTime.js';
 import { MECH_VFX } from './vfx/mechVfx.js';
 import { KAIJU_VFX } from './vfx/kaijuVfx.js';
+import { sound } from './audio/sound_v2.js';
 
 // 새끼 괴수 걷기 스프라이트 (tools/rig/bake_sprite.py 결과 assets/sprites/rig/kaiju/baby_walk.json 과 맞춤)
 export const BABY_KAIJU = { src: 'assets/sprites/rig/kaiju/baby_walk.png', frameWidth: 80, frameHeight: 64, frames: 12, duration: 1.2 };
@@ -55,6 +57,7 @@ export class BattleFx {
         this.running = false;
         this.rafId = null;
         this.vfx = new VfxPlayer();
+        this.vfx.onSfx = name => sound.play(name);
         this.reset();
     }
 
@@ -82,11 +85,13 @@ export class BattleFx {
 
     /** o: { x, b, range, color, speed, h, onPass(x0, x1) } */
     launchWave(o) {
+        sound.play('hero_wave');
         this.vfx.launchWave({ ...o, y: this.H - o.b, onMove: o.onPass });
     }
 
     /** from {x, bottom}, to() → {x, b}, onArrive() */
     launchOrb(from, to, color, dur, onArrive) {
+        sound.play('hero_orb');
         this.vfx.launchOrb({
             from: [from.x, this.H - from.bottom], to: () => { const t = to(); return [t.x, this.H - t.b]; },
             color, dur, onArrive
@@ -95,6 +100,7 @@ export class BattleFx {
 
     /** from {x, bottom}, to() → {x, b}, onArrive() */
     launchMissile(from, to, onArrive, opts = {}) {
+        sound.play('mech_missile_launch');
         this.vfx.launchMissile({
             from: [from.x, this.H - from.bottom], to: () => { const t = to(); return [t.x, this.H - t.b]; },
             onArrive, ...opts
@@ -156,6 +162,7 @@ export class BattleFx {
      * @param {Object} o { from: {x, b}, index(0~2 좌우 퍼짐), delay?(초), getTarget: () => {x, b} | null, onHit: (pos) => void }
      */
     launchDrone(o) {
+        sound.play('mech_drone_launch');
         const side = o.index - 1;   // -1, 0, 1 → 좌우로 퍼짐
         this.drones.push({
             x: o.from.x, b: o.from.b, state: 'launch', t: -(o.index * 0.08 + (o.delay || 0)),

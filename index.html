@@ -247,122 +247,155 @@
         </section>
 
         <!-- ===================================================
-             4. 세로형 (PORTRAIT) v2 메인 메뉴 화면 (격리용)
+             4. 가로형 (LANDSCAPE) v2 메인 화면: 전술 그리드 (MD/화면UI.MD)
+                좌: 오버로드 대기실(캐릭터 + MUTATION LAB) / 우: 전술 레이더 / 하단: ATTACK·SORTIE / 우상단: 재화·설정
+                (ui_v2.css 8장, js/ui_v2/menu_v2.js, js/ui_v2/radar_v2.js)
              =================================================== -->
-        <section id="screen-menu-v2" class="screen-v2 portrait">
-            <div class="menu-frame">
-                <header class="menu-header">
-                    <div class="badge">REVERSE OFFENSE RPG (v2)</div>
-                    <h1 class="glitch-title" data-text="MAD OVERLORD">MAD OVERLORD</h1>
-                    <p class="subtitle">프로젝트: 매드 오버로드 // 디커플드 엔진 v2</p>
+        <section id="screen-menu-v2" class="screen-v2 landscape">
+            <div class="v2-menu v2-hangar">
+                <header class="v2-topbar">
+                    <div class="v2-brand">
+                        <span class="v2-brand__emblem" data-icon="overlord" data-icon-size="30"></span>
+                        <div>
+                            <small>SECTOR 07 // OPERATION: OVERLORD</small>
+                            <h1>MAD OVERLORD</h1>
+                            <span>TACTICAL COMMAND v2</span>
+                        </div>
+                    </div>
+                    <div class="v2-topbar__right">
+                        <div class="v2-chip v2-chip--dm"><strong id="menu-dm-count-v2">0</strong><small>DM</small></div>
+                        <button class="v2-iconbtn v2-iconbtn--lg" id="btn-menu-settings-v2" title="설정" data-icon="gear"></button>
+                    </div>
                 </header>
 
-                <div class="menu-avatar-display">
-                    <div id="menu-live2d-avatar-v2" class="live2d-avatar-container">
-                        <div class="live2d-glow"></div>
-                        <div class="sprite-preview-stage">
-                            <canvas id="menu-sprite-canvas-v2" width="330" height="248"></canvas>
+                <main class="v2-menu__grid">
+                    <!-- ① 오버로드 대기실 -->
+                    <section class="v2-showroom v2-frame">
+                        <div class="v2-frame__head">
+                            <div>
+                                <h2 id="menu-unit-name-v2">OVERLORD</h2>
+                                <small id="menu-faction-name-v2"></small>
+                            </div>
+                            <span class="v2-frame__tag">UNIT READY</span>
                         </div>
-                        <div class="avatar-tag">FACTION: <span id="menu-faction-name-v2">합성괴인 (키메라)</span></div>
-                    </div>
-                </div>
+                        <div class="v2-showroom__stage">
+                            <div class="v2-showroom__floor"></div>
+                            <canvas id="menu-sprite-canvas-v2" width="440" height="300"></canvas>
+                            <ul class="v2-callouts" id="menu-callouts-v2"></ul>
+                        </div>
+                        <dl class="v2-showroom__stats" id="menu-stats-v2"></dl>
+                        <button id="btn-to-lab-v2" class="v2-hazard-btn">
+                            <strong>MUTATION LAB</strong>
+                            <small>연구소 · 파츠 개조</small>
+                        </button>
+                    </section>
 
-                <div class="menu-actions">
-                    <button id="btn-to-lab-v2" class="cyber-btn primary">
-                        <span class="btn-icon">⚙️</span>
-                        <div class="btn-text">
-                            <span class="main-text">연구소 키오스크</span>
-                            <span class="sub-text">PARTS LAB // MVVM KIOSK</span>
+                    <!-- ② 전술 레이더 -->
+                    <section class="v2-radar v2-frame">
+                        <div class="v2-frame__head">
+                            <div>
+                                <h2>TACTICAL RADAR</h2>
+                                <small id="menu-map-name-v2">SECTOR 7 · 적 수비대 거점 공략</small>
+                            </div>
+                            <span class="v2-frame__tag v2-frame__tag--live">LIVE</span>
                         </div>
+                        <div class="v2-radar__screen">
+                            <canvas id="menu-radar-v2" width="560" height="300"></canvas>
+                            <div class="v2-radar__locked" id="menu-radar-locked-v2" hidden>
+                                <span data-icon="lock" data-icon-size="34"></span>
+                                <strong>SPECIAL MAP</strong>
+                                <small>무한 파밍 · 엘리트 챌린지 — 준비 중</small>
+                            </div>
+                        </div>
+                        <div class="v2-radar__foot" id="menu-map-foot-v2">SECTOR MAP 07 · 목표: 중간 요새 → 최종 핵심 기지</div>
+                        <div class="v2-radar__tabs">
+                            <button class="v2-maptab is-on" data-map="story">STORY MAP</button>
+                            <button class="v2-maptab" data-map="special">SPECIAL MAP</button>
+                        </div>
+                    </section>
+                </main>
+
+                <!-- ③ 출격 -->
+                <footer class="v2-menu__foot">
+                    <button id="btn-to-battle-v2" class="v2-sortie">
+                        <strong>ATTACK / SORTIE</strong>
+                        <small id="menu-sortie-sub-v2">READY FOR ENGAGEMENT</small>
                     </button>
-
-                    <button id="btn-to-battle-v2" class="cyber-btn danger">
-                        <span class="btn-icon">🔥</span>
-                        <div class="btn-text">
-                            <span class="main-text">전투 출격</span>
-                            <span class="sub-text">DEPLOY TO BATTLE // 횡스크롤 전장</span>
-                        </div>
-                    </button>
-                </div>
-
-                <footer class="menu-footer">
-                    <span>SYSTEM STATUS: <strong class="text-neon-green">ONLINE (v2)</strong></span>
-                    <span>DARK MATTER: <strong id="menu-dm-count-v2" class="text-neon-purple">1,500</strong> DM</span>
+                    <div class="v2-statusbar" id="menu-statusbar-v2"></div>
                 </footer>
             </div>
         </section>
 
         <!-- ===================================================
-             5. 세로형 (PORTRAIT) v2 연구소 키오스크 화면 (격리용)
+             5. 가로형 (LANDSCAPE) v2 연구소: 파츠 개조
+                좌: 개조 미리보기(리그 캐릭터) / 가운데: 능력치 비교 + 스킬 구성 / 우: 부위 탭 + 파츠 카드 / 하단: 비용·확정
+                (ui_v2.css 9장, js/ui_v2/lab_v2.js)
              =================================================== -->
-        <section id="screen-lab-v2" class="screen-v2 portrait">
-            <div class="lab-frame-v2 lab-frame">
-                <header class="lab-header">
-                    <button id="btn-lab-back-v2" class="icon-btn">&lt; MAIN MENU</button>
-                    <div class="header-title">
-                        <h2>RESEARCH LAB KIOSK (v2)</h2>
-                        <span>디커플드 렌더러 연동 개조 시스템</span>
+        <section id="screen-lab-v2" class="screen-v2 landscape">
+            <div class="v2-lab lab-frame-v2 v2-hangar">
+                <header class="v2-topbar">
+                    <div class="v2-brand">
+                        <button id="btn-lab-back-v2" class="v2-iconbtn v2-iconbtn--lg v2-backbtn" title="메인 화면">‹</button>
+                        <div>
+                            <small>MUTATION LAB // PARTS ASSEMBLY</small>
+                            <h1>연구소</h1>
+                            <span>파츠를 골라 개조한 뒤 확정하면 바로 장착됩니다</span>
+                        </div>
                     </div>
-                    <div class="lab-currency">
-                        <span class="dm-label">DARK MATTER</span>
-                        <span id="lab-dm-count-v2" class="dm-value">1,500</span>
+                    <div class="v2-topbar__right">
+                        <div class="v2-chip v2-chip--dm"><strong id="lab-dm-count-v2">0</strong><small>DM</small></div>
+                        <button class="v2-iconbtn v2-iconbtn--lg" id="btn-lab-settings-v2" title="설정" data-icon="gear"></button>
                     </div>
                 </header>
 
-                <div class="lab-body">
-                    <div class="lab-preview-section">
-                        <div class="live2d-kiosk-display">
-                            <div id="lab-live2d-model-v2" class="live2d-model-preview">
-                                <div class="live2d-head" id="lab-prev-head-v2"></div>
-                                <div class="live2d-body" id="lab-prev-body-v2"></div>
-                                <div class="live2d-arm" id="lab-prev-arm-v2"></div>
-                                <div class="live2d-leg" id="lab-prev-leg-v2"></div>
+                <main class="v2-lab__grid">
+                    <section class="v2-lab__preview v2-frame">
+                        <div class="v2-frame__head">
+                            <div>
+                                <h2 id="lab-unit-name-v2">-</h2>
+                                <small id="lab-faction-v2"></small>
+                            </div>
+                            <span class="v2-frame__tag" id="lab-preview-tag-v2">PREVIEW</span>
+                        </div>
+                        <div class="v2-lab__stage">
+                            <div class="v2-showroom__floor"></div>
+                            <canvas id="lab-rig-canvas-v2" width="380" height="330"></canvas>
+                            <div class="v2-lab__empty" id="lab-empty-v2" hidden>
+                                <span data-icon="shield" data-icon-size="60"></span>
+                                <strong>몸통 파츠 없음</strong>
+                                <small>몸통 파츠가 캐릭터를 정합니다</small>
                             </div>
                         </div>
+                    </section>
 
-                        <div class="mvvm-stats-panel">
-                            <h3>REAL-TIME STAT PREVIEW</h3>
-                            <div class="stat-row">
-                                <span>최대 체력 (HP)</span>
-                                <strong id="stat-hp-val-v2">3,000</strong>
-                            </div>
-                            <div class="stat-row">
-                                <span>초당 데미지 (DPS)</span>
-                                <strong id="stat-dps-val-v2">450</strong>
-                            </div>
-                            <div class="stat-row">
-                                <span>공격 사거리 (RANGE)</span>
-                                <strong id="stat-range-val-v2">250px</strong>
-                            </div>
-                            <div class="stat-row">
-                                <span>진격 속도 (SPEED)</span>
-                                <strong id="stat-speed-val-v2">120</strong>
-                            </div>
-                            <div class="skill-preview-box">
-                                <span class="skill-label">무장 스킬 기믹:</span>
-                                <p id="stat-skill-desc-v2" class="skill-desc">레이저 포대: 단일 보스급 대상 방어력 관통 지속 딜링</p>
-                            </div>
+                    <section class="v2-lab__info v2-frame">
+                        <h3 class="v2-lab__title">능력치 <small>현재 → 개조 후</small></h3>
+                        <dl class="v2-compare" id="lab-compare-v2"></dl>
+                        <h3 class="v2-lab__title">스킬 구성 <small>파츠가 스킬을 정함</small></h3>
+                        <ul class="v2-loadout" id="lab-loadout-v2"></ul>
+                    </section>
+
+                    <section class="v2-lab__parts v2-frame">
+                        <div class="v2-slottabs">
+                            <button class="tab-btn-v2 v2-slottab active" data-slot="head"><b>머리</b><small>필살기</small></button>
+                            <button class="tab-btn-v2 v2-slottab" data-slot="body"><b>몸통</b><small>캐릭터 · 스킬 2</small></button>
+                            <button class="tab-btn-v2 v2-slottab" data-slot="arm"><b>팔</b><small>스킬 1</small></button>
+                            <button class="tab-btn-v2 v2-slottab" data-slot="leg"><b>다리</b><small>패시브</small></button>
                         </div>
-                    </div>
+                        <div id="parts-grid-v2" class="v2-partgrid"></div>
+                    </section>
+                </main>
 
-                    <div class="lab-parts-section">
-                        <div class="parts-tabs">
-                            <button class="tab-btn-v2 tab-btn active" data-slot="head">머리 (HEAD)</button>
-                            <button class="tab-btn-v2 tab-btn" data-slot="body">가슴/몸통 (BODY)</button>
-                            <button class="tab-btn-v2 tab-btn" data-slot="arm">팔/어깨 (ARM)</button>
-                            <button class="tab-btn-v2 tab-btn" data-slot="leg">다리/기동 (LEG)</button>
-                        </div>
-
-                        <div id="parts-grid-v2" class="parts-grid"></div>
+                <footer class="v2-lab__foot">
+                    <div class="v2-lab__cart">
+                        <span>변경 <strong id="cart-count-v2">0</strong>개</span>
+                        <span>개조 비용 <strong id="cart-cost-v2">0</strong> DM</span>
+                        <span>개조 후 잔액 <strong id="cart-remain-v2">0</strong> DM</span>
                     </div>
-                </div>
-
-                <footer class="lab-footer">
-                    <div class="cart-summary">
-                        <span>선택된 개조 비용: <strong id="cart-cost-v2">0</strong> DM</span>
-                    </div>
-                    <button id="btn-equip-confirm-v2" class="cyber-btn success">
-                        <span>파츠 확정 및 즉시 장착</span>
+                    <button id="btn-cart-reset-v2" class="v2-btn v2-btn--ghost">되돌리기</button>
+                    <button id="btn-equip-confirm-v2" class="v2-hazard-btn v2-hazard-btn--confirm">
+                        <strong>개조 확정</strong>
+                        <small>파츠 장착</small>
                     </button>
                 </footer>
             </div>
@@ -464,6 +497,7 @@
                         <h2>PAUSED</h2>
                         <p>작전 일시 정지</p>
                         <button class="v2-btn" id="btn-resume-v2">계속하기</button>
+                        <button class="v2-btn v2-btn--ghost" id="btn-settings-v2">설정</button>
                         <button class="v2-btn v2-btn--danger" id="btn-battle-leave-v2">작전 포기 (퇴각)</button>
                         <div class="v2-pause__keys">1 · 2 · 3/Space 스킬 &nbsp;|&nbsp; A 자동 &nbsp;|&nbsp; P/Esc 일시정지</div>
                     </div>

@@ -482,7 +482,8 @@ export class RigAvatar {
     render() {
         if (!this.skeleton) return;
         const ctx = this.ctx;
-        const [sx, sy] = this.effects.shakeOffset();
+        const k = this.shakeScale ?? 1;   // 설정에서 화면 흔들림을 끄면 0
+        const [sx, sy] = this.effects.shakeOffset().map(v => v * k);
         this._applyShake(sx, sy);
         const view = this.opts.shakeTarget ? [1, 0, 0, 1, 0, 0] : [1, 0, 0, 1, sx, sy];
 

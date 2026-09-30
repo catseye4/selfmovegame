@@ -12,6 +12,7 @@ import { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX, meleeHitVfx } from './vfx/v
 import { skillsForParts, hasTarget, ULT_FILL } from './skills_v2.js';
 import { BattleHud } from '../ui_v2/battleHud_v2.js';
 import { BattleDirector } from '../ui_v2/battleDirector_v2.js';
+import { sound } from './audio/sound_v2.js';
 import { icon } from '../ui_v2/icons.js';
 
 // ---- 팩션 스킬 (컨셉 시트 기준) ----
@@ -111,7 +112,13 @@ export class BattleEngine {
         this.popupSlots = new Map();
         // 리그 애니메이션 이벤트 → 전장 이펙트 (거대로봇 출격 점프 착지)
         monsterControllerV2.onRigEvent = name => {
-            if (name === 'land' && this.isActive) this.fx.play(MECH_VFX.landing, this.monsterX + 35, FOOT_B);
+            if (!this.isActive) return;
+            if (name === 'land') this.fx.play(MECH_VFX.landing, this.monsterX + 35, FOOT_B);
+            // 동작 효과음: 발걸음(거대 캐릭터 걷기 = stomp, 사람 크기 히어로 = step 가볍게), 점프 분사, 기 모으기
+            if (name === 'stomp') sound.play('giant_step');
+            else if (name === 'step') sound.play('giant_step', { vol: 0.45, rate: 1.5 });
+            else if (name === 'thrust') sound.play('mech_thrust');
+            else if (name === 'charge') sound.play('charge_up');
         };
     }
 
@@ -195,9 +202,10 @@ export class BattleEngine {
         this.updateHud();
         this.hud.setup(equippedObjs);
 
-        // 출격 인트로 (레터박스 + 작전명 → SORTIE!)
+        // 출격 인트로 (레터박스 + 작전명 → SORTIE!) + 전투 배경음
         this.director.clear();
         this.director.intro();
+        sound.playBgm('battle');
 
         this.lastTime = performance.now();
         this.loopId = requestAnimationFrame((t) => this.loop(t));
@@ -206,6 +214,8 @@ export class BattleEngine {
     // 전투 정지 및 퇴각
     stopBattle() {
         this.isActive = false;
+        sound.stopAllLoops();
+        sound.setPaused(false);
         if (this.fx) this.fx.stop();
         if (this.hud) this.hud.teardown();
         gameTime.reset();
@@ -341,15 +351,18 @@ export class BattleEngine {
             this.shieldHitCd -= dt;
             if (this.shieldHitCd <= 0) {
                 monsterControllerV2.shieldHit();
+                sound.play('shield_hit');
                 this.shieldHitCd = 0.3;
             }
             if (this.shieldHp <= 0) {
                 this.shieldTimer = Infinity;
                 monsterControllerV2.breakShield();
+                sound.play('shield_break');
                 this.createDamagePopup(this.monsterX + 40, 200, '⬢ 실드 파괴!', false);
             }
         }
         this.playerHp -= amount;
+        if (amount > 0) sound.play('player_hit');   // 0.4초에 한 번까지 (sound_v2 SFX 표)
         monsterControllerV2.updateHpBar(this.playerHp, this.maxPlayerHp);
     }
 
@@ -494,6 +507,7 @@ export class BattleEngine {
         this.shieldHp = Math.max(this.shieldHp, this.maxPlayerHp * ratio);
         this.shieldTimer = sec;
         monsterControllerV2.shieldOn(color);
+        sound.play('shield_on');
         this.createDamagePopup(this.monsterX + 40, 210, '⬢ 실드 전개', false);
     }
 
@@ -566,6 +580,7 @@ export class BattleEngine {
         if (sk.ult) this.ultGauge = 0;
         else this.skillCd[slot] = sk.cd;
         sk.use(this);
+        if (!sk.ult) sound.play('skill_use');
         this.hud.onSkillUsed(slot, sk);
         return true;
     }
@@ -723,6 +738,7 @@ export class BattleEngine {
         });
 
         this.director.warning('final');
+        sound.playBgm('boss', 0.8);
         this.updateHud();
     }
 
@@ -824,6 +840,7 @@ export class BattleEngine {
                 }
             } else {
                 this.stats.kills += 1;
+                sound.play('enemy_die');
                 gameState.addDarkMatter(15);
                 this.updateHud();
 
@@ -845,6 +862,7 @@ export class BattleEngine {
             dm: Math.max(0, gameState.darkMatter - this.stats.startDm)
         };
         this.stopBattle();
+        setTimeout(() => { if (!this.isActive) sound.playBgm('menu', 2.5); }, 1200);
         this.director.showResult(result, act => {
             if (this.onNavigate) this.onNavigate(act === 'retry' ? 'battle' : act);
         });

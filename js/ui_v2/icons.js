@@ -15,6 +15,9 @@ const P = {
     fort: '<path d="M4 20V9l2-1.5V5h2v1.5L10 5h4l2 1.5V5h2v2.5L20 9v11h-6v-5h-4v5z"/>',
     hq: '<path d="M12 2l3 4h-2v3h5l2 3v9H4v-9l2-3h5V6H9z"/>',
     gem: '<path d="M6 3h12l4 6-10 12L2 9z" /><path d="M2 9h20M9 3l3 6 3-6M12 21l-3-12M12 21l3-12" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="1"/>',
+    // 오버로드 문장: 뿔 달린 투구 + 빛나는 눈
+    overlord: '<path d="M3 3l4 5 2-3 3 3 3-3 2 3 4-5-1 9c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10z"/><path d="M8 12.5l3 1.2v1.3l-3-.8zM16 12.5l-3 1.2v1.3l3-.8z" fill="rgba(0,0,0,.7)"/><path d="M10 18h4" stroke="rgba(0,0,0,.7)" stroke-width="1.4"/>',
+    lock: '<rect x="4.5" y="10.5" width="15" height="11" rx="1.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="15.5" r="1.8" fill="rgba(0,0,0,.6)"/>',
     gear: '<path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.3 2.3l-1.9-.4a6.6 6.6 0 0 0-.8-1.9l1.1-1.6-1.8-1.8-1.6 1.1a6.6 6.6 0 0 0-1.9-.8l-.4-1.9h-2.6l-.4 1.9a6.6 6.6 0 0 0-1.9.8L6.5 5.2 4.7 7l1.1 1.6a6.6 6.6 0 0 0-.8 1.9l-1.9.4v2.6l1.9.4c.2.7.4 1.3.8 1.9l-1.1 1.6 1.8 1.8 1.6-1.1c.6.4 1.2.6 1.9.8l.4 1.9h2.6l.4-1.9c.7-.2 1.3-.4 1.9-.8l1.6 1.1 1.8-1.8-1.1-1.6c.4-.6.6-1.2.8-1.9l1.9-.4z"/>',
 
     // ---- 스킬 ----
@@ -39,4 +42,13 @@ const P = {
 export function icon(name, size = 24) {
     const body = P[name] || P.star;
     return `<svg class="v2-icon" viewBox="0 0 24 24" width="${size}" height="${size}" fill="currentColor" aria-hidden="true">${body}</svg>`;
+}
+
+/** root 안의 [data-icon="이름"] 요소 앞에 아이콘을 채움 (data-icon-size로 크기, 한 번만) */
+export function fillIcons(root, size = 22) {
+    if (!root) return;
+    root.querySelectorAll('[data-icon]').forEach(el => {
+        if (el.querySelector(':scope > .v2-icon')) return;
+        el.insertAdjacentHTML('afterbegin', icon(el.dataset.icon, Number(el.dataset.iconSize) || size));
+    });
 }

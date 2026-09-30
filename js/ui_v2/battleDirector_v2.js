@@ -8,13 +8,16 @@
    - playerDown()     : 캐릭터가 쓰러짐 (슬로모션, 붉은 섬광, 흑백으로 주저앉음)
    - showResult()     : 승리/패배 결과 화면 (별 도장, 전투 기록, 보상 카운트업, 다음 행동 버튼)
    - setLowHp(on)     : 체력 30% 미만 화면 가장자리 붉은 경고
-   효과음은 sfx(이름)으로 연결 지점만 둔다 (4단계 사운드 작업에서 사운드 매니저를 연결).
+   효과음: sfx(이름) → 사운드 매니저(audio/sound_v2.js). 저체력 심장 박동은 반복 재생.
+   화면 흔들림은 설정(settings_v2.js의 shake)을 따른다.
    ========================================================================== */
 
 import { icon } from './icons.js';
 import { gameTime } from '../engine_v2/gameTime.js';
 import { monsterControllerV2 } from '../engine_v2/monster_v2.js';
 import { BATTLE_VFX } from '../engine_v2/vfx/vfxDefs.js';
+import { sound } from '../engine_v2/audio/sound_v2.js';
+import { settings } from '../engine_v2/settings_v2.js';
 
 const STAGE = { code: 'OPERATION 07', name: 'SECTOR 7', title: '적 수비대 거점 공략', goal: '중간 요새 → 최종 핵심 기지 파괴' };
 const INTRO_MS = { card: 150, sortie: 1750, reveal: 2150, end: 2700 };
@@ -26,7 +29,7 @@ export class BattleDirector {
     constructor(engine) {
         this.b = engine;
         this.frame = null;
-        this.onSfx = null;      // (이름) => 효과음 재생 — 사운드 작업 때 연결
+        this.onSfx = name => sound.play(name);
         this.token = 0;         // 전투가 다시 시작되면 진행 중인 연출(대기 중 타이머)을 무효화
     }
 
@@ -53,6 +56,7 @@ export class BattleDirector {
         this.frame.querySelectorAll('.v2-fx-layer').forEach(n => n.remove());
         this.frame.classList.remove('v2-intro', 'v2-lowhp', 'v2-alert', 'v2-ending');
         this.lowHp = false;
+        sound.stopLoop('low_hp', 0.1);
         const canvas = document.getElementById('player-sprite-canvas-v2');
         if (canvas) canvas.classList.remove('v2-down');
         monsterControllerV2.freezeRig(false);
@@ -159,7 +163,7 @@ export class BattleDirector {
     // ------------------------------------------------------------------
     /** 화면 흔들림 (전장만). px: 세기, ms: 길이 — 리그 흔들림과 따로 Web Animations로 */
     shake(px = 8, ms = 400) {
-        if (!this.viewport || !this.viewport.animate) return;
+        if (!this.viewport || !this.viewport.animate || !settings.get('shake')) return;
         const frames = [];
         const n = Math.max(4, Math.round(ms / 40));
         for (let i = 0; i <= n; i++) {
@@ -217,6 +221,7 @@ export class BattleDirector {
 
         // 대폭발
         fx.play(BATTLE_VFX.baseFinale, cx, FB, { scale: isFinal ? 1.4 : 0.85 });
+        if (isFinal) sound.stopBgm(1.2);
         this.flash(isFinal ? '#fff3d0' : '#fff', isFinal ? 420 : 260, isFinal ? 0.95 : 0.7);
         this.shake(isFinal ? 16 : 10, isFinal ? 900 : 600);
         gameTime.slowMo(isFinal ? 0.3 : 0.45, isFinal ? 1.7 : 1.0);
@@ -282,6 +287,7 @@ export class BattleDirector {
         const canvas = document.getElementById('player-sprite-canvas-v2');
         if (canvas) canvas.classList.add('v2-down');
         this.sfx('player_down');
+        sound.stopBgm(0.8);
         await wait(900);
         if (!this.alive(token)) return;
         monsterControllerV2.freezeRig(true);
@@ -295,7 +301,8 @@ export class BattleDirector {
         if (!this.attach() || on === this.lowHp) return;
         this.lowHp = on;
         this.frame.classList.toggle('v2-lowhp', on);
-        if (on) this.sfx('low_hp');
+        if (on) sound.loop('low_hp');
+        else sound.stopLoop('low_hp');
     }
 
     // ------------------------------------------------------------------
@@ -345,15 +352,20 @@ export class BattleDirector {
         const total = r.dm;
         const start = performance.now() + 900;
         const dur = Math.min(1600, 500 + total * 0.4);
+        let lastV = 0;
         const step = now => {
             if (!this.alive(token) || !num.isConnected) return;
             const u = Math.max(0, Math.min(1, (now - start) / dur));
             const v = Math.round(total * (1 - Math.pow(1 - u, 3)));
             num.textContent = `+${v.toLocaleString()}`;
+            if (v !== lastV) this.sfx('ui_tick');     // 0.05초에 한 번까지
+            lastV = v;
             if (u < 1) requestAnimationFrame(step);
-            else num.classList.add('is-done');
+            else {
+                num.classList.add('is-done');
+                if (total > 0) this.sfx('reward_done');
+            }
         };
         requestAnimationFrame(step);
-        if (total > 0) setTimeout(() => this.alive(token) && this.sfx('ui_countup'), 900);
     }
 }
