@@ -5,6 +5,30 @@
 
 import { SpriteAnimator } from './spriteAnimator_v2.js';
 import { renderer } from './renderer.js';
+import { RigAvatar, rigConfigFor } from './rig/rigAvatar.js';
+
+// ---- 리그 캐릭터 배치 (거대로봇/거대괴수/타락 히어로/합성괴인) ----
+// 전투: 캐릭터 박스(.monster-entity 140x160, 박스 하단 = 지면, index.css) 기준으로 캔버스를 배치
+const MONSTER_BOX_BOTTOM = 60;   // index.css .monster-entity { bottom: 60px }
+const MONSTER_BOX_HEIGHT = 160;  // index.css .monster-entity { height: 160px }
+const BATTLE_RIG = {
+    width: 420, height: 340,     // 캔버스 크기 (하단 40px은 지면 아래: 그림자/먼지 영역)
+    left: -140, bottom: -40,     // 박스 기준 캔버스 위치
+    rootX: 175, rootY: 300,      // 캔버스 안 발 중앙 위치 → 박스 x 35 (앞쪽이 적 정지선과 맞닿음)
+    scale: 0.235                 // 원본 약 940px → 약 220px
+};
+// 캐릭터별 전투 배율 (히어로는 사람 크기라 조금 작게)
+const BATTLE_RIG_SCALE = { mech: 0.235, kaiju: 0.235, hero: 0.215, chimera: 0.235 };
+const HP_BAR = { width: 80, gap: 16 };  // 머리 위 체력바 (index.css .monster-hp-container 폭)
+// 메뉴: 캐릭터마다 캔버스 안에 들어오도록 배율/위치 자동 맞춤 (최대 0.24)
+// (캔버스 330px 중 메뉴 원형 영역에 보이는 폭은 약 280px → 가로 여백을 넉넉히)
+const MENU_RIG = { width: 330, height: 248, rootX: 165, rootY: 240, scale: 0.24, fit: { x: 40, y: 10 }, shadow: false };
+const PAPERDOLL_CANVAS = { width: 330, height: 248 };
+
+// 몬스터 상태 → 애니메이션
+const RIG_ANIM = { 'walking': 'walk', 'walking-forward': 'walk', 'attacking': 'attack', 'victory': 'victory' };
+const PAPERDOLL_ANIM = { 'walking': 'walk', 'walking-forward': 'idle', 'attacking': 'attack', 'victory': 'idle' };
+const PAPERDOLL_SWING_SEC = (Math.PI * 2) / 6; // renderer.drawPaperDoll 공격 팔 휘두르기 주기
 
 export class MonsterController {
     constructor(suffix = '-v2') {
@@ -32,6 +56,28 @@ export class MonsterController {
         if (this.menuAnimator) {
             this.menuAnimator.play('idle');
         }
+
+        // 리그 캐릭터 몸통 장착 시 페이퍼돌 대신 사용하는 뼈대 리그 (같은 캔버스를 번갈아 사용)
+        this.spriteCanvas = spriteCanvas;
+        this.menuCanvas = menuCanvas;
+        this.rigBattle = spriteCanvas
+            ? new RigAvatar(spriteCanvas, {
+                ...BATTLE_RIG, shakeTarget: this.domViewport,
+                onResize: () => { if (this.useRig) this._placeHpBar(); },  // 2페이즈 거대화 후 체력바 위치
+                onEvent: name => {                                          // 스킬 시전 해방 순간
+                    if (name === 'cast' && this._castCb) {
+                        const cb = this._castCb;
+                        this._castCb = null;
+                        cb();
+                    }
+                }
+            })
+            : null;
+        this.rigMenu = menuCanvas ? new RigAvatar(menuCanvas, MENU_RIG) : null;
+        this.useRig = false;
+        this.monsterX = 150;
+        this.attackStartedAt = 0;
+        this.paperdollHits = 0;
 
         this.pixelParts = {
             head: document.getElementById(`pixel-head${s}`),
@@ -61,6 +107,7 @@ export class MonsterController {
 
     // 캐릭터 DOM 좌표 직접 제어 (거점 출현 시 앞으로 전진)
     setMonsterPosition(x) {
+        this.monsterX = x;
         if (this.domMonster) {
             this.domMonster.style.left = `${x}px`;
         }
@@ -106,6 +153,85 @@ export class MonsterController {
                 renderer.changePart(slot, src, animType);
             }
         }
+
+        // 5. 몸통 팩션이 리그 캐릭터면 뼈대 리그로 전환, 아니면(파츠 해제 등) 기존 페이퍼돌 유지
+        this.applyRigMode(rigConfigFor(partsObj));
+    }
+
+    // 메뉴/전투 캔버스를 리그 ↔ 페이퍼돌로 전환
+    // config: { character: 'mech'|'kaiju'|'hero'|'chimera', arm?: 'cannon'|'fist' } | null
+    applyRigMode(config) {
+        const use = !!(config && this.rigBattle);
+        if (use) {
+            const id = config.character;
+            this.rigBattle.setCharacter(id, BATTLE_RIG_SCALE[id]);
+            if (this.rigMenu) this.rigMenu.setCharacter(id);
+            if (config.arm) {
+                this.rigBattle.setArm(config.arm);
+                if (this.rigMenu) this.rigMenu.setArm(config.arm);
+            }
+            this.rigBattle.ready.then(() => {
+                if (this.useRig) this._placeHpBar();
+            });
+        }
+        if (use === this.useRig) return;
+        this.useRig = use;
+
+        const hpBar = this.domMonster ? this.domMonster.querySelector('.monster-hp-container') : null;
+        if (use) {
+            if (this.spriteAnimator) this.spriteAnimator.pause();
+            if (this.menuAnimator) this.menuAnimator.pause();
+            renderer.applyStyle(this.spriteCanvas, {
+                position: 'absolute', left: `${BATTLE_RIG.left}px`, bottom: `${BATTLE_RIG.bottom}px`,
+                width: `${BATTLE_RIG.width}px`, height: `${BATTLE_RIG.height}px`
+            });
+            this._placeHpBar();
+            this.rigBattle.setMode(RIG_ANIM[this.currentState] || 'walk');
+            this.rigBattle.start();
+            if (this.rigMenu) {
+                this.rigMenu.setMode('idle');
+                this.rigMenu.start();
+            }
+        } else {
+            this.rigBattle.stop();
+            if (this.rigMenu) this.rigMenu.stop();
+            renderer.applyStyle(this.spriteCanvas, { position: '', left: '', bottom: '', width: '', height: '' });
+            if (hpBar) renderer.applyStyle(hpBar, { top: '', left: '' });
+            for (const canvas of [this.spriteCanvas, this.menuCanvas]) {
+                if (!canvas) continue;
+                canvas.width = PAPERDOLL_CANVAS.width;
+                canvas.height = PAPERDOLL_CANVAS.height;
+            }
+            if (this.spriteAnimator) {
+                this.spriteAnimator.play(PAPERDOLL_ANIM[this.currentState] || 'walk');
+                this.spriteAnimator.resume();
+            }
+            if (this.menuAnimator) this.menuAnimator.resume();
+        }
+    }
+
+    // 체력바를 리그 캐릭터 머리 위로 (캐릭터마다 키가 달라 리그 레이아웃에서 계산)
+    _placeHpBar() {
+        const hpBar = this.domMonster ? this.domMonster.querySelector('.monster-hp-container') : null;
+        const top = this.rigBattle && this.rigBattle.headTop();
+        if (!hpBar || !top) return;
+        const canvasTop = MONSTER_BOX_HEIGHT - BATTLE_RIG.bottom - BATTLE_RIG.height; // 박스 기준 캔버스 윗변
+        renderer.applyStyle(hpBar, {
+            top: `${Math.round(canvasTop + top.y - HP_BAR.gap)}px`,
+            left: `${Math.round(BATTLE_RIG.left + top.x - HP_BAR.width / 2)}px`
+        });
+    }
+
+    _playAnim(state) {
+        if (state === 'attacking') {
+            this.attackStartedAt = performance.now();
+            this.paperdollHits = 0;
+        }
+        if (this.useRig) {
+            this.rigBattle.setMode(RIG_ANIM[state]);
+        } else if (this.spriteAnimator) {
+            this.spriteAnimator.play(PAPERDOLL_ANIM[state]);
+        }
     }
 
     // 몬스터 애니메이션 및 배경 패럴랙스 상태 제어
@@ -118,7 +244,7 @@ export class MonsterController {
         const actionLog = document.getElementById(`battle-action-log${s}`);
 
         if (newState === 'walking') {
-            if (this.spriteAnimator) this.spriteAnimator.play('walk');
+            this._playAnim(newState);
             if (this.domMonster) {
                 this.domMonster.classList.remove('attacking', 'victory');
                 this.domMonster.classList.add('walking');
@@ -135,7 +261,7 @@ export class MonsterController {
                 actionLog.textContent = '사정거리 내 적을 탐색하며 배경을 가로질러 전진합니다.';
             }
         } else if (newState === 'walking-forward') {
-            if (this.spriteAnimator) this.spriteAnimator.play('idle');
+            this._playAnim(newState);
             if (this.domMonster) {
                 this.domMonster.classList.remove('attacking', 'victory');
                 this.domMonster.classList.add('walking');
@@ -152,7 +278,7 @@ export class MonsterController {
                 actionLog.textContent = '적 거점이 포착되었습니다! 배경을 멈추고 사거리까지 캐릭터가 직접 돌격합니다.';
             }
         } else if (newState === 'attacking') {
-            if (this.spriteAnimator) this.spriteAnimator.play('attack');
+            this._playAnim(newState);
             if (this.domMonster) {
                 this.domMonster.classList.remove('walking', 'victory');
                 this.domMonster.classList.add('attacking');
@@ -169,7 +295,7 @@ export class MonsterController {
                 actionLog.textContent = '전진 및 배경 이동을 멈추고 화력을 집중하여 적을 공격합니다!';
             }
         } else if (newState === 'victory') {
-            if (this.spriteAnimator) this.spriteAnimator.play('idle');
+            this._playAnim(newState);
             if (this.domMonster) {
                 this.domMonster.classList.remove('walking', 'attacking');
                 this.domMonster.classList.add('victory');
@@ -188,11 +314,85 @@ export class MonsterController {
         }
     }
 
-    isAttackImpactFrame() {
-        if (!this.spriteAnimator) return false;
-        return this.spriteAnimator.currentName === 'attack'
-            && this.spriteAnimator.frameIndex >= 20
-            && this.spriteAnimator.frameIndex <= 23;
+    /**
+     * 마지막 호출 이후 기본 공격이 적중한 양 (1 = 전투 엔진 기본 1타, 0 = 적중 없음)
+     * - 리그: 공격 클립의 fire/impact 이벤트 (캐논은 발당 0.2)
+     * - 페이퍼돌: 팔 휘두르기 정점마다 1타 (페이퍼돌 모드는 프레임 번호가 증가하지 않아 시간으로 계산)
+     */
+    consumeAttackHit() {
+        if (this.currentState !== 'attacking') return 0;
+        if (this.useRig) return this.rigBattle.consumeHit();
+        const t = (performance.now() - this.attackStartedAt) / 1000;
+        const swings = Math.floor(t / PAPERDOLL_SWING_SEC + 0.5);
+        if (swings > this.paperdollHits) {
+            this.paperdollHits = swings;
+            return 1;
+        }
+        return 0;
+    }
+
+    // ---- 팩션 스킬 연출 (리그 캐릭터만. 페이퍼돌이면 전투 효과만 적용되고 외형 변화 없음) ----
+    resetSkills() {
+        if (this.useRig) this.rigBattle.resetSkills();
+    }
+
+    // 출격 점프 (점프 클립이 있는 캐릭터: 거대로봇)
+    playIntro() {
+        if (!this.useRig) return;
+        this.rigBattle.ready.then(() => {
+            if (this.useRig) this.rigBattle.playOnce('jump');
+        });
+    }
+
+    enterPhase2() {
+        if (this.useRig) this.rigBattle.enterPhase2();
+    }
+
+    /** 스킬 시전 동작(cast 클립)을 재생하고 해방 순간 onRelease 호출. 시전 동작이 없거나 시전 중이면 즉시 호출 */
+    playCast(onRelease) {
+        if (this.useRig && !this._castCb && this.rigBattle.playOnce('cast')) {
+            this._castCb = onRelease;
+        } else {
+            onRelease();
+        }
+    }
+
+    getCharacterId() {
+        return this.useRig && this.rigBattle.character ? this.rigBattle.character.id : null;
+    }
+
+    shieldHit() {
+        if (this.useRig) this.rigBattle.shieldHit();
+    }
+
+    breakShield() {
+        if (this.useRig) this.rigBattle.breakShield();
+    }
+
+    // 리그 캐릭터의 근접 타격 이펙트 색. 리그가 아니면 null → 전투 엔진 기본색
+    getHitColor() {
+        return this.useRig && this.rigBattle.character ? this.rigBattle.character.hitColor || null : null;
+    }
+
+    // 리그 캔버스 좌표 → entity-layer 기준 {x: left px, bottom: px}
+    _toEntity(p) {
+        if (!p) return null;
+        return {
+            x: this.monsterX + BATTLE_RIG.left + p[0],
+            bottom: MONSTER_BOX_BOTTOM + BATTLE_RIG.bottom + (BATTLE_RIG.height - p[1])
+        };
+    }
+
+    // 리그 총구 위치. 리그가 아니면 null → 전투 엔진 기본 위치 사용
+    getMuzzlePoint() {
+        return this.useRig ? this._toEntity(this.rigBattle.muzzlePoint()) : null;
+    }
+
+    // 리그 소켓 위치 (드론 발사구 등). 리그가 아니거나 해당 소켓이 없으면 null
+    getSocketPoint(socket, bone) {
+        if (!this.useRig || !this.rigBattle.skeleton || !this.rigBattle.skeleton.byName[bone]) return null;
+        if (!this.rigBattle.skeleton.layout.sockets[socket]) return null;
+        return this._toEntity(this.rigBattle.socketPoint(socket, bone));
     }
 
     // 체력바 업데이트

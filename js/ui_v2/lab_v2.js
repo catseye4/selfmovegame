@@ -147,7 +147,10 @@ export class LabController {
         }
 
         // 키오스크 화면의 Live2D 모델 프리뷰 실시간 동기화
-        const cartObjs = gameState.getCartObjects();
-        monsterControllerV2.renderVisuals(cartObjs);
+        // (연구소 화면일 때만: 전투 중 재화 변동으로 호출될 때 장착 안 한 장바구니 파츠로 전투 캐릭터가 바뀌지 않도록)
+        if (gameState.currentScreen === 'lab') {
+            const cartObjs = gameState.getCartObjects();
+            monsterControllerV2.renderVisuals(cartObjs);
+        }
     }
 }

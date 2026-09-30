@@ -40,8 +40,10 @@ export class MenuController {
         const equippedObjs = gameState.getEquippedObjects();
         monsterControllerV2.renderVisuals(equippedObjs);
 
-        if (this.domFactionName && equippedObjs.head) {
-            this.domFactionName.textContent = equippedObjs.head.faction || '합성괴인';
+        // 캐릭터 외형(리그)은 몸통 팩션으로 정해지므로 표시도 몸통 기준 (몸통 해제 시 머리 기준)
+        const factionPart = equippedObjs.body && equippedObjs.body.id !== 'none' ? equippedObjs.body : equippedObjs.head;
+        if (this.domFactionName && factionPart) {
+            this.domFactionName.textContent = factionPart.faction || '합성괴인';
         }
     }
 }
