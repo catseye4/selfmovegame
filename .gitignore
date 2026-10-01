@@ -5,6 +5,9 @@
 tools/rig/_*.png
 __pycache__/
 
+# 이미지 확인 도구 미리보기
+tools/images/_out/
+
 # 자동 검사 스크린샷
 tools/tests/_out/
 tools/tests/__pycache__/

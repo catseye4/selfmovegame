@@ -47,8 +47,13 @@ class _Handler(http.server.SimpleHTTPRequestHandler):
         pass
 
 
+class _Server(http.server.ThreadingHTTPServer):
+    # 로딩 화면이 그림·효과음을 한꺼번에 받을 때 연결이 거부되지 않게 대기열을 늘림 (serve.py와 같음)
+    request_queue_size = 64
+
+
 def start_server():
-    httpd = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(_Handler, directory=ROOT))
+    httpd = _Server(('127.0.0.1', 0), functools.partial(_Handler, directory=ROOT))
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     return httpd, f'http://127.0.0.1:{httpd.server_address[1]}'
 

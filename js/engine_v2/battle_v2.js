@@ -21,6 +21,7 @@ import { progress } from './progress_v2.js';
 import { stageById, defaultStage, nextStageOf } from './stages_v2.js';
 import { spawnEnemy, updateEnemy, pickType, killReward, ENEMY_TYPES } from './enemies_v2.js';
 import { icon } from '../ui_v2/icons.js';
+import { GROUND_SPEED, BASE_STATE, baseArt, baseSize, aimAt, dressBase, setBaseState } from './bases_v2.js';
 
 // ---- 팩션 스킬 (컨셉 시트 기준) ----
 const PHASE2 = { hpRatio: 0.5, shieldRatio: 0.3, dpsMul: 1.3 };            // 합성괴인 머리: 2페이즈 거대화 + 실드
@@ -50,9 +51,9 @@ const MELEE_CLEAVE = { radius: 60, mul: 0.4 };
 // 피해 숫자: 같은 자리 연속 표시는 위로 쌓고, 지속 피해(아군 미니언 등)는 모아서 0.5초마다 표시
 const POPUP = { column: 36, stackMs: 350, stackPx: 15, dotFlushSec: 0.5 };
 const FOOT_B = 58;   // 지면 이펙트 높이 (bottom px)
-// 거점 건물 위치 (전장 1280px 기준): 하단 오른쪽 스킬 버튼에 가리지 않도록 도크 왼쪽에 둠
-const BASE_X = { mid: 790, final: 750 };
-const aimOf = e => ({ x: e.x + (e.isBuilding ? 45 : 38), b: e.isBuilding ? 130 : 90 });   // 적 몸통 중앙
+// 거점 건물 왼쪽 끝 위치 (전장 1280px 기준): 그림 폭(약 220px)이 하단 오른쪽 스킬 도크(약 x 965부터)에 가리지 않게
+const BASE_X = { mid: 720, final: 720 };
+const aimOf = aimAt;   // 적 몸통 중앙 (건물은 그림 크기의 가운데, bases_v2.js)
 // 적 상태 외형 (우선순위: 기절 > 감속 > 저주) + 체력바 옆 상태 아이콘
 const ENEMY_TINT = {
     stun: 'grayscale(0.7) brightness(1.15) drop-shadow(0 0 6px #ffe066)',
@@ -95,6 +96,8 @@ export class BattleEngine {
         this.midBaseDestroyed = false;
         this.finalBaseSpawned = false;
         this.finalBaseDestroyed = false;
+        this.ruins = [];
+        this.ruinHoldT = 0;
 
         // 전장 엔티티 및 투사체 목록
         this.enemies = [];
@@ -163,6 +166,8 @@ export class BattleEngine {
         this.artTimer = 0;
         this.artWarned = false;
         this.boss = null;
+        this.ruins = [];          // 요새 잔해 (다시 걸으면 바닥과 함께 흘러 나감)
+        this.ruinHoldT = 0;       // 요새가 무너지는 동안 주인공이 멈춰 지켜보는 시간
         this.monsterX = 150;
         this.playerBaseHp = 5000;
         this.currentTargetHp = 3500;
@@ -469,7 +474,7 @@ export class BattleEngine {
             h: HERO_WAVE.h, color: HERO_WAVE.color,
             onPass: (x0, x1) => {
                 [...this.enemies].forEach(e => {
-                    const cx = e.x + (e.isBuilding ? 45 : 38);
+                    const cx = aimOf(e).x;
                     if (cx < x0 || cx > x1 || hit.has(e)) return;
                     hit.add(e);
                     this.fx.play(HERO_VFX.waveHit, cx, 88);
@@ -815,7 +820,8 @@ export class BattleEngine {
         if (this.artTimer >= art.every) {
             this.artTimer = 0;
             this.artWarned = false;
-            this.fx.play(BATTLE_VFX.emp, base.x + 60, 230);
+            const muzzle = baseArt('final') && baseArt('final').muzzle;   // EMP 포구 (그림이 있으면)
+            this.fx.play(BATTLE_VFX.emp, muzzle ? base.x + muzzle[0] : base.x + 60, muzzle ? muzzle[1] : 230);
             this.director.flash('#9fe0ff', 380, 0.75);
             this.director.shake(12, 700);
             this.applyPlayerStun(art.stun, 'EMP 마비!');
@@ -835,40 +841,7 @@ export class BattleEngine {
     spawnMidBase() {
         if (this.midBaseSpawned || !this.domEnemies) return;
         this.midBaseSpawned = true;
-        
-        const enemyId = 'building_mid_base';
-        const startX = window.innerWidth > 1000 ? BASE_X.mid : 650;
-        const maxHp = this.stage.base.mid;
-        this.currentTargetHp = maxHp;
-        this.maxTargetHp = maxHp;
-
-        if (this.domTargetLabel) this.domTargetLabel.textContent = '[중간 거점 요새] HP';
-
-        const el = document.createElement('div');
-        el.className = 'building-entity';
-        el.setAttribute('data-label', 'INTERMEDIATE FORT');
-        el.style.left = `${startX}px`;
-
-        const hpBar = document.createElement('div');
-        hpBar.className = 'enemy-hp';
-        hpBar.style.width = '100%';
-        el.appendChild(hpBar);
-
-        this.domEnemies.appendChild(el);
-
-        this.enemies.push({
-            id: enemyId,
-            x: startX,
-            hp: maxHp,
-            maxHp: maxHp,
-            dps: 50,
-            speed: 0,
-            isBuilding: true,
-            isFinal: false,
-            dom: el,
-            hpBar: hpBar
-        });
-
+        this.spawnBase('mid');
         this.director.warning('mid');
         this.updateHud();
     }
@@ -877,46 +850,91 @@ export class BattleEngine {
     spawnFinalBase() {
         if (this.finalBaseSpawned || !this.domEnemies) return;
         this.finalBaseSpawned = true;
-        
-        const enemyId = 'building_final_base';
-        const startX = window.innerWidth > 1000 ? BASE_X.final : 620;
-        const maxHp = this.stage.base.final;
-        this.currentTargetHp = maxHp;
-        this.maxTargetHp = maxHp;
-
-        if (this.domTargetLabel) this.domTargetLabel.textContent = '[최종 핵심 기지] HP';
-
-        const el = document.createElement('div');
-        el.className = 'building-entity final-base';
-        el.setAttribute('data-label', 'FINAL HEADQUARTERS');
-        el.style.left = `${startX}px`;
-
-        const hpBar = document.createElement('div');
-        hpBar.className = 'enemy-hp';
-        hpBar.style.width = '100%';
-        el.appendChild(hpBar);
-
-        this.domEnemies.appendChild(el);
-
-        this.enemies.push({
-            id: enemyId,
-            x: startX,
-            hp: maxHp,
-            maxHp: maxHp,
-            dps: 100,
-            speed: 0,
-            isBuilding: true,
-            isFinal: true,
-            dom: el,
-            hpBar: hpBar
-        });
+        const base = this.spawnBase('final');
 
         const boss = this.stage.boss;
         this.director.warning('final', boss ? `${ENEMY_TYPES[boss.unit].name} 출현 — 최종 기지를 지키고 있다` : null);
         sound.playBgm('boss', 0.8);
         // 보스전: 기지 앞에 보스 영웅
-        if (boss) this.boss = this.spawnMinion(boss.unit, { x: startX - 70, elite: false });
+        if (boss) this.boss = this.spawnMinion(boss.unit, { x: base.x - 70, elite: false });
         this.updateHud();
+    }
+
+    /** 거점 건물 (kind: 'mid' 요새 | 'final' 최종 기지). 그림은 bases_v2.js — 체력에 따라 온전 → 파손 → 붕괴 */
+    spawnBase(kind) {
+        const final = kind === 'final';
+        const x = window.innerWidth > 1000 ? BASE_X[kind] : (final ? 620 : 650);
+        const maxHp = this.stage.base[kind];
+        this.currentTargetHp = maxHp;
+        this.maxTargetHp = maxHp;
+        if (this.domTargetLabel) this.domTargetLabel.textContent = final ? '[최종 핵심 기지] HP' : '[중간 거점 요새] HP';
+
+        const el = document.createElement('div');
+        el.className = final ? 'building-entity final-base' : 'building-entity';
+        el.setAttribute('data-label', final ? 'FINAL HEADQUARTERS' : 'INTERMEDIATE FORT');
+        el.style.left = `${x}px`;
+        dressBase(el, kind);
+        el.classList.add('v2-base-in');
+
+        const hpBar = document.createElement('div');
+        hpBar.className = 'enemy-hp';
+        hpBar.style.width = '100%';
+        el.appendChild(hpBar);
+        this.domEnemies.appendChild(el);
+
+        const base = {
+            id: final ? 'building_final_base' : 'building_mid_base',
+            kind,
+            size: baseSize(kind),
+            artState: 0,
+            x,
+            hp: maxHp,
+            maxHp,
+            dps: final ? 100 : 50,
+            speed: 0,
+            isBuilding: true,
+            isFinal: final,
+            dom: el,
+            hpBar
+        };
+        this.enemies.push(base);
+        return base;
+    }
+
+    /** 체력이 절반 아래로 내려가면 파손 그림 (지속 피해로 깎여도 잡히게 매 프레임 확인) */
+    updateBaseArt() {
+        this.enemies.forEach(e => {
+            if (!e.isBuilding || e.artState !== 0 || e.hp > e.maxHp * BASE_STATE.damaged || !baseArt(e.kind)) return;
+            e.artState = 1;
+            setBaseState(e.dom, e.kind, 1);
+            const a = aimOf(e);
+            this.fx.play(BATTLE_VFX.baseBlast, a.x, a.b + 20, { scale: 1.1 });
+            this.director.shake(5, 300);
+            sound.play('base_blast');
+        });
+    }
+
+    /** 파괴 연출의 대폭발 순간: 잔해 그림으로 바꿈. 요새 잔해는 남겨 두었다가 바닥과 함께 흘려보냄 */
+    collapseBase(base) {
+        if (!base.dom || !baseArt(base.kind)) return false;
+        base.dom.classList.remove('v2-wreck', 'v2-wreck--final', 'v2-base-in');
+        setBaseState(base.dom, base.kind, 2);
+        if (!base.isFinal) this.ruins.push(base);
+        return true;
+    }
+
+    /** 걷는 동안(배경이 흐를 때) 잔해를 바닥과 같은 속도로 왼쪽으로 */
+    scrollRuins(dt) {
+        if (!this.ruins.length) return;
+        this.ruins = this.ruins.filter(r => {
+            r.x -= GROUND_SPEED * dt;
+            if (r.x + r.size.w < -40) {
+                r.dom.remove();
+                return false;
+            }
+            r.dom.style.left = `${r.x}px`;
+            return true;
+        });
     }
 
     // 공격 이펙트 / 투사체 생성
@@ -969,8 +987,9 @@ export class BattleEngine {
         if (react && react.dot) {
             enemy.dotAcc = (enemy.dotAcc || 0) + damage;
         } else if (damage > 0) {
-            const popupY = enemy.isBuilding ? 160 + Math.random() * 40 : 110 + Math.random() * 30;
-            this.createDamagePopup(enemy.x, popupY, damage, isCrit);
+            const popupX = enemy.isBuilding ? aimOf(enemy).x - 24 : enemy.x;
+            const popupY = enemy.isBuilding ? aimOf(enemy).b + 20 + Math.random() * 40 : 110 + Math.random() * 30;
+            this.createDamagePopup(popupX, popupY, damage, isCrit);
         }
 
         if (enemy.hpBar) {
@@ -1014,6 +1033,7 @@ export class BattleEngine {
                 } else {
                     this.midBaseDestroyed = true;
                     this.starFlags[0] = true;
+                    this.ruinHoldT = BASE_STATE.ruinHold;
                     gameState.addDarkMatter(this.stage.reward.mid);
                     if (this.domTargetLabel) this.domTargetLabel.textContent = '적 수비대 거점 HP (진격 중)';
                     this.director.baseDestroyed(enemy, false);
@@ -1087,6 +1107,7 @@ export class BattleEngine {
             }
             this.checkOverload(dt);
             this.tickAcid(dt);
+            this.updateBaseArt();
             this.tickPlayerStatus(dt);
             this.tickArtillery(dt);
             if (this.spawnSilence > 0) {
@@ -1242,8 +1263,12 @@ export class BattleEngine {
             monsterControllerV2.setState('walking-forward');
             this.monsterX += this.playerSpeed * dt * this.moveMul();
             monsterControllerV2.setMonsterPosition(this.monsterX);
+        } else if (this.ruinHoldT > 0) {
+            this.ruinHoldT -= dt;
+            monsterControllerV2.setState('victory');
         } else {
             monsterControllerV2.setState('walking');
+            this.scrollRuins(dt);
 
             if (this.monsterX > 150) {
                 this.monsterX = Math.max(150, this.monsterX - 120 * dt);

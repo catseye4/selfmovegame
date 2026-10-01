@@ -15,6 +15,10 @@
 
 import { KAIJU_VFX, BATTLE_VFX } from './vfx/vfxDefs.js';
 import { sound } from './audio/sound_v2.js';
+import { aimAt } from './bases_v2.js';
+// 적 그림 (로드맵 C단계, D-035): 리그를 구운 동작별 스프라이트 — tools/rig/bake_enemies.py가 만듦.
+// 그림이 있는 종류는 구운 크기 그대로(종류별 scale·색조 대신), 없는 종류는 임시 고블린 + 색조 (D-023)
+import { ENEMY_ART } from './enemyArt_v2.js';
 
 export const ENEMY_TYPES = {
     guard: { name: '경비병', hp: 350, dps: 35, speed: [75, 100], reward: 1 },
@@ -41,6 +45,11 @@ export const ENEMY_TYPES = {
     }
 };
 export const ELITE = { hp: 3, dps: 1.5, scale: 1.3, reward: 4 };
+
+const ENEMY_CENTER = 38;   // 적 x(왼쪽 끝)에서 몸 가운데까지 — 겨누기·이펙트 기준 (bases_v2.js aimAt)
+const ART_FOOT_B = 58;     // 그림 적의 발 높이 (bottom px)
+// 세뇌 보병(타락 히어로가 징집한 아군): 경비병 그림을 오른쪽으로 돌려 검보라로 (D-020)
+const MIND_ART = 'guard';
 const CREEP = 0.3;       // 원거리·치유형이 제자리에서도 조금씩 다가오는 속도 배율 (사거리가 짧은 캐릭터도 닿게)
 // 근접: STOP까지 다가가 멈추고, REACH 안이면 공격 (주인공 공격에 조금 밀려나도 계속 공격)
 const MELEE = { stop: 30, reach: 55 };
@@ -60,19 +69,91 @@ export function pickType(mix) {
     return entries[0][0];
 }
 
+let artStyles = false;
+
+/** 그림 적의 CSS(종류별 걷기·공격 스프라이트)를 한 번만 주입 */
+function ensureEnemyStyles() {
+    if (artStyles) return;
+    artStyles = true;
+    const css = [`
+        #screen-battle-v2 .enemy-entity.v2-enemy.has-art { background: none; animation: none; height: var(--art-h); bottom: ${ART_FOOT_B}px; }
+        #screen-battle-v2 .v2-enemy__sprite { position: absolute; bottom: 0; background-repeat: no-repeat; background-size: auto 100%; pointer-events: none; }`];
+    for (const [id, a] of Object.entries(ENEMY_ART)) {
+        css.push(`
+        #screen-battle-v2 .v2-art-${id} { --art-h: ${a.frameHeight}px; }
+        #screen-battle-v2 .v2-art-${id} .v2-enemy__sprite {
+            left: ${ENEMY_CENTER - a.anchorX}px; width: ${a.frameWidth}px; height: ${a.frameHeight}px;
+            background-image: url('${a.walk.src}');
+            animation: v2-${id}-walk ${a.walk.duration}s steps(${a.walk.frames}) infinite;
+        }
+        @keyframes v2-${id}-walk { from { background-position-x: 0; } to { background-position-x: -${a.frameWidth * a.walk.frames}px; } }`);
+        for (const clip of Object.keys(a).filter(k => a[k] && a[k].src && k !== 'walk')) {
+            const c = a[clip];
+            css.push(`
+        #screen-battle-v2 .v2-art-${id}.${clipClass(clip)} .v2-enemy__sprite {
+            background-image: url('${c.src}');
+            animation: v2-${id}-${clip} ${c.duration}s steps(${c.frames}) infinite;
+        }
+        @keyframes v2-${id}-${clip} { from { background-position-x: 0; } to { background-position-x: -${a.frameWidth * c.frames}px; } }`);
+        }
+    }
+    const m = ENEMY_ART[MIND_ART];
+    css.push(`
+        #screen-battle-v2 .ally-minion.v2-mind {
+            width: ${m.frameWidth}px; height: ${m.frameHeight}px; bottom: ${ART_FOOT_B}px;
+            background-image: url('${m.walk.src}'); background-size: auto 100%;
+            animation: v2-${MIND_ART}-walk ${m.walk.duration}s steps(${m.walk.frames}) infinite;
+        }`);
+    const style = document.createElement('style');
+    style.id = 'enemies-v2-styles';
+    style.textContent = css.join('\n');
+    document.head.appendChild(style);
+}
+
+const clipClass = clip => (clip === 'attack' ? 'is-attacking' : `is-${clip}`);
+
+/** 그림 적: 공격 중이면 공격 스프라이트로 (근접 거리 안에서 때리는 동안) */
+function setAttacking(e, on) {
+    if (e.attacking === on || !e.art) return;
+    e.attacking = on;
+    e.dom.classList.toggle('is-attacking', on);
+}
+
+/** 그림 적: 한 번만 하는 동작 (마취탄 발사, 치유 분사, 보스 방패 강타) — 한 사이클 뒤 원래 동작으로 */
+function playOnce(e, clip) {
+    const c = e.art && e.art[clip];
+    if (!c || !e.dom) return;
+    const cls = clipClass(clip);
+    clearTimeout(e.onceTimer);
+    e.dom.classList.remove(cls);
+    void e.dom.offsetWidth;            // 같은 동작을 다시 처음부터
+    e.dom.classList.add(cls);
+    e.onceTimer = setTimeout(() => {
+        if (e.dom && !(clip === 'attack' && e.attacking)) e.dom.classList.remove(cls);
+    }, c.duration * 1000);
+}
+
 /** 적 하나를 전장에 만든다. opts: { x, elite } */
 export function spawnEnemy(b, typeId, opts = {}) {
+    ensureEnemyStyles();
     const t = ENEMY_TYPES[typeId] || ENEMY_TYPES.guard;
     const se = b.stage.enemy;
     const elite = !!opts.elite && !t.boss;
     const hp = Math.round(t.hp * se.hp * (elite ? ELITE.hp : 1));
-    const scale = (t.scale || 1) * (elite ? ELITE.scale : 1);
+    const art = ENEMY_ART[typeId] || null;
+    const scale = (art ? 1 : t.scale || 1) * (elite ? ELITE.scale : 1);   // 그림은 구운 크기가 곧 게임 크기
 
     const el = document.createElement('div');
-    el.className = `enemy-entity v2-enemy v2-type-${typeId}${elite ? ' is-elite' : ''}${t.boss ? ' is-boss' : ''}`;
+    el.className = `enemy-entity v2-enemy v2-type-${typeId}${art ? ` has-art v2-art-${typeId}` : ''}${elite ? ' is-elite' : ''}${t.boss ? ' is-boss' : ''}`;
     el.dataset.name = `${elite ? '엘리트 ' : ''}${t.name}`;
     el.style.left = `${opts.x}px`;
     if (scale !== 1) el.style.transform = `scale(${scale})`;
+    if (art) {
+        const sprite = document.createElement('div');
+        sprite.className = 'v2-enemy__sprite';
+        sprite.style.animationDelay = `-${(Math.random() * art.walk.duration).toFixed(2)}s`;   // 발걸음이 모두 같지 않게
+        el.appendChild(sprite);
+    }
     const track = document.createElement('div');
     track.className = 'enemy-hp-track';
     const bar = document.createElement('div');
@@ -86,10 +167,10 @@ export function spawnEnemy(b, typeId, opts = {}) {
         id: `${typeId}_${Date.now()}_${Math.random()}`,
         type: typeId, t, x: opts.x, hp, maxHp: hp,
         dps: t.dps * se.dps * (elite ? ELITE.dps : 1),
-        speed: rand(t.speed), isBuilding: false, dom: el, hpBar: bar,
+        speed: rand(t.speed), isBuilding: false, dom: el, hpBar: bar, art, attacking: false,
         elite, boss: !!t.boss, armor: t.armor || 0, knockResist: !!t.knockResist,
         reward: (t.reward || 1) * (elite ? ELITE.reward : 1),
-        baseFilter: [t.tint, elite ? 'drop-shadow(0 0 5px #ffd24a)' : ''].filter(Boolean).join(' '),
+        baseFilter: [art ? '' : t.tint, elite ? 'drop-shadow(0 0 5px #ffd24a)' : ''].filter(Boolean).join(' '),
         cd: { skill: Math.random() * 1.5, smite: 0 }
     };
     el.style.filter = e.baseFilter;
@@ -110,6 +191,7 @@ export function updateEnemy(b, e, dt, frontX) {
     if (e.dps > 0) {
         const ally = b.allies.find(a => e.x - a.x <= 65 && e.x - a.x >= -35);
         if (ally) {
+            setAttacking(e, true);
             b.damageAlly(ally, e.dps * dt);
             return;
         }
@@ -134,8 +216,12 @@ export function updateEnemy(b, e, dt, frontX) {
 
     // 근접: 다가가서 닿으면 공격
     if (dist > MELEE.stop) moveBy(e, e.speed * slowMul * dt);
-    if (dist > MELEE.reach) return;
+    if (dist > MELEE.reach) {
+        setAttacking(e, false);
+        return;
+    }
     if (b.legContact(e)) return;   // 다리 패시브(궤도 돌진)로 밀려남
+    setAttacking(e, true);
     b.damagePlayer(e.dps * dt, dt);
 
     e.cd.skill += dt;
@@ -147,6 +233,7 @@ export function updateEnemy(b, e, dt, frontX) {
     }
     if (t.bash && e.cd.skill >= t.bash.every) {
         e.cd.skill = 0;
+        playOnce(e, 'bash');
         b.fx.play(BATTLE_VFX.shieldBash, b.monsterX + 70, 100);
         sound.play('mech_fist_hit', { rate: 0.8 });
         b.damagePlayer(b.maxPlayerHp * t.bash.dmg, 0);
@@ -169,6 +256,7 @@ function moveBy(e, px) {
 
 // 마취탄: 적 → 주인공 가슴, 맞으면 피해 + 감속
 function shootTranq(b, e) {
+    playOnce(e, 'attack');
     const from = { x: e.x + 12, bottom: 96 };
     sound.play('mech_laser', { rate: 1.7, vol: 0.6 });
     b.fx.launchOrb(from, () => ({ x: b.monsterX + 60, b: 120 }), '90, 230, 255', 0.38, () => {
@@ -183,6 +271,7 @@ function healNearest(b, e) {
     const h = e.t.heal;
     const cands = b.enemies.filter(o => o !== e && o.hp < o.maxHp && Math.abs(o.x - e.x) <= h.range);
     if (!cands.length) return;
+    playOnce(e, 'attack');
     const target = cands.sort((p, q) => p.hp / p.maxHp - q.hp / q.maxHp)[0];
     const amount = h.amount * b.stage.enemy.hp * (target.isBuilding ? h.baseMul : 1);
     target.hp = Math.min(target.maxHp, target.hp + amount);
@@ -191,7 +280,7 @@ function healNearest(b, e) {
         b.currentTargetHp = target.hp;
         b.updateHud();
     }
-    const tx = target.x + (target.isBuilding ? 45 : 38);
+    const tx = aimAt(target).x;
     b.fx.play(KAIJU_VFX.regen, tx, FOOT_B);
     b.createDamagePopup(target.x, target.isBuilding ? 200 : 130, `+${Math.round(amount)} 치유`, false);
     sound.play('kaiju_regen', { rate: 1.3 });

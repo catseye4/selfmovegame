@@ -1,0 +1,17 @@
+{
+  "frameWidth": 95,
+  "frameHeight": 103,
+  "anchorX": 47.4,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/shield/shield_walk.png",
+      "frames": 12,
+      "duration": 0.8
+    },
+    "attack": {
+      "src": "assets/sprites/rig/shield/shield_attack.png",
+      "frames": 10,
+      "duration": 0.9
+    }
+  }
+}

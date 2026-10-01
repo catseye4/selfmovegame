@@ -214,7 +214,8 @@ export class BattleDirector {
         if (!this.attach()) return;
         const token = this.token;
         const fx = this.b.fx;
-        const w = isFinal ? 120 : 90;
+        const size = enemy.size || { w: isFinal ? 120 : 90, h: isFinal ? 200 : 150 };   // 건물 그림 크기
+        const w = size.w;
         const cx = enemy.x + w / 2;
         gameTime.speed = 1;                 // 연출 타이밍을 실제 시간에 맞춤
         gameTime.hitStop(0.09, 0);
@@ -233,7 +234,7 @@ export class BattleDirector {
         const gap = isFinal ? 150 : 130;
         for (let i = 0; i < n; i++) {
             const bx = enemy.x + 12 + ((i * 37) % (w - 24));
-            const bb = FB + 30 + ((i * 53) % (isFinal ? 150 : 110));
+            const bb = FB + 30 + ((i * 53) % Math.round(size.h * 0.7));
             fx.play(BATTLE_VFX.baseBlast, bx, bb, { scale: isFinal ? 1.45 : 1.1 });
             if (i % 2 === 0) this.shake(isFinal ? 5 : 3, 200);
             await wait(gap);
@@ -246,7 +247,8 @@ export class BattleDirector {
         this.flash(isFinal ? '#fff3d0' : '#fff', isFinal ? 420 : 260, isFinal ? 0.95 : 0.7);
         this.shake(isFinal ? 16 : 10, isFinal ? 900 : 600);
         gameTime.slowMo(isFinal ? 0.3 : 0.45, isFinal ? 1.7 : 1.0);
-        if (dom) setTimeout(() => dom.remove(), 700);
+        // 그림 거점은 잔해 그림으로 바뀌어 남고(battle_v2 collapseBase), 임시 상자는 사라짐
+        if (dom && !this.b.collapseBase(enemy)) setTimeout(() => dom.remove(), 700);
 
         if (!isFinal) {
             this.flyStar(cx, FB + 110);

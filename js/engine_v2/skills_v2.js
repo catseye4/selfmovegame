@@ -11,11 +11,12 @@
 
 import { monsterControllerV2 as monster } from './monster_v2.js';
 import { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX, meleeHitVfx } from './vfx/vfxDefs.js';
+import { aimAt } from './bases_v2.js';
 
 export const SLOT_KEYS = { arm: '1', body: '2', head: '3' };
 export const ULT_FILL = { perSec: 1 / 24, perHit: 0.03 };   // 필살기 게이지: 24초 + 기본 공격 1타당 3%
 
-const aim = e => ({ x: e.x + (e.isBuilding ? 45 : 38), b: e.isBuilding ? 130 : 90 });
+const aim = aimAt;   // 적 몸통 중앙 (건물은 그림 크기의 가운데)
 
 // ---- 스킬 정의 ----
 // target: 'enemy'(사거리 안에 적이 있어야 사용) | 'self'(언제나) , range: 전방 사거리 추가 px

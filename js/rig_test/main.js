@@ -4,7 +4,7 @@
    ========================================================================== */
 
 import { Animator, Spring, Mat } from '../engine_v2/rig/rig.js';
-import { RIG_CHARACTERS, attackClipOf, hitSocketOf } from '../engine_v2/rig/characters.js';
+import { RIG_CHARACTERS, RIG_ENEMIES, attackClipOf, hitSocketOf } from '../engine_v2/rig/characters.js';
 import { loadRigAssets, applyRigEvent, buildSkeleton, restBounds, shieldGeom, ScaleTween, PHASE2_SCALE }
     from '../engine_v2/rig/rigAvatar.js';
 import { RigEffects } from '../engine_v2/rig/rigEffects.js';
@@ -73,7 +73,7 @@ async function init() {
 
 /** 캐릭터 교체: 에셋 로드 후 뼈대/스프링/애니메이터를 새로 구성하고 현재 상태 동작을 이어서 재생 */
 async function setCharacter(id) {
-    const next = RIG_CHARACTERS[id];
+    const next = RIG_CHARACTERS[id] || RIG_ENEMIES[id];
     const { layout, images } = await loadRigAssets(next);
     character = next;
     state.char = id;
@@ -599,6 +599,7 @@ window.rigTest = {
     setOption,
     playOnce,
     clipDuration: name => character.clips[name].duration,
+    anchor: [CHAR_X, GROUND_Y],      // 캐릭터 뿌리(발 사이 바닥)의 캔버스 좌표 (굽기 도구가 기준점으로 씀)
     toggleCurse,
     mindWave,
     toggleWave,

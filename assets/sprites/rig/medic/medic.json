@@ -1,0 +1,17 @@
+{
+  "frameWidth": 76,
+  "frameHeight": 92,
+  "anchorX": 41.5,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/medic/medic_walk.png",
+      "frames": 12,
+      "duration": 0.7
+    },
+    "attack": {
+      "src": "assets/sprites/rig/medic/medic_attack.png",
+      "frames": 10,
+      "duration": 0.8
+    }
+  }
+}

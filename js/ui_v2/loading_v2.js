@@ -7,8 +7,9 @@
 import { RIG_CHARACTERS } from '../engine_v2/rig/characters.js';
 import { loadRigAssets } from '../engine_v2/rig/rigAvatar.js';
 import { sound, SFX } from '../engine_v2/audio/sound_v2.js';
+import { BASE_IMAGES } from '../engine_v2/bases_v2.js';
 
-const IMAGES = ['assets/sprites/rig/kaiju/baby_walk.png', 'assets/sprites/rig/chimera/minion_walk.png', 'assets/sprites/enemy/goblin_walk_sheet.png'];
+const IMAGES = ['assets/sprites/rig/kaiju/baby_walk.png', 'assets/sprites/rig/chimera/minion_walk.png', 'assets/sprites/enemy/goblin_walk_sheet.png', ...BASE_IMAGES];
 const MIN_SHOW_MS = 700;   // 너무 빨리 깜빡이지 않게
 
 function loadImage(src) {

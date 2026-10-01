@@ -1,0 +1,22 @@
+{
+  "frameWidth": 260,
+  "frameHeight": 224,
+  "anchorX": 91.2,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/guardian/guardian_walk.png",
+      "frames": 12,
+      "duration": 0.9
+    },
+    "attack": {
+      "src": "assets/sprites/rig/guardian/guardian_attack.png",
+      "frames": 12,
+      "duration": 0.9
+    },
+    "bash": {
+      "src": "assets/sprites/rig/guardian/guardian_bash.png",
+      "frames": 10,
+      "duration": 0.8
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "frameWidth": 75,
+  "frameHeight": 92,
+  "anchorX": 51.7,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/tranq/tranq_walk.png",
+      "frames": 12,
+      "duration": 0.7
+    },
+    "attack": {
+      "src": "assets/sprites/rig/tranq/tranq_attack.png",
+      "frames": 8,
+      "duration": 0.6
+    }
+  }
+}

@@ -873,6 +873,33 @@
     70% { filter: brightness(1.3) sepia(0.6); transform: translate(2px, 10px) scaleY(0.9); opacity: 1; }
     100% { filter: brightness(0.3); transform: translateY(40px) scaleY(0.35); opacity: 0; }
 }
+/* 거점 그림 (로드맵 C단계, bases_v2.js): 상태 그림은 background-image로 바뀜 (온전 → 파손 → 붕괴) */
+.building-entity.v2-base {
+    background: no-repeat center bottom / 100% 100%;
+    border: 0;
+    box-shadow: none;
+    display: block;
+    image-rendering: auto;          /* .pixel-art-mode의 nearest 대신 부드럽게 축소 (그림 파일은 2배 크기) */
+}
+.building-entity.v2-base::before { display: none; }
+.building-entity.v2-base.is-ruin { filter: brightness(0.82) saturate(0.85); }
+.building-entity.v2-base.is-ruin::after,
+.building-entity.v2-base.is-ruin .enemy-hp,
+.building-entity.v2-base.is-ruin .v2-status { display: none; }
+.building-entity.v2-base-in { animation: v2-base-in 0.7s cubic-bezier(0.2, 0.8, 0.3, 1); }
+@keyframes v2-base-in { from { opacity: 0; transform: translateX(90px); } }
+/* 그림 거점 파괴: 가라앉아 사라지지 않고 달아오르며 흔들리다가, 대폭발 때 잔해 그림으로 바뀜 (연쇄 폭발 시간에 맞춤) */
+.building-entity.v2-base.v2-wreck { animation: v2-base-wreck 0.55s ease-in forwards; }
+.building-entity.v2-base.v2-wreck--final { animation-duration: 1.1s; }
+@keyframes v2-base-wreck {
+    0% { filter: brightness(1); }
+    15% { filter: brightness(2.1) sepia(1) saturate(4) hue-rotate(-25deg); transform: translateX(-4px); }
+    30% { transform: translateX(4px); }
+    45% { filter: brightness(1.5) sepia(0.8) saturate(3) hue-rotate(-25deg); transform: translateX(-3px); }
+    60% { transform: translateX(3px); }
+    80% { transform: translateX(-2px); }
+    100% { filter: brightness(1.9) sepia(1) saturate(3) hue-rotate(-25deg); transform: none; }
+}
 .enemy-entity.v2-rout { animation: v2-rout 0.6s ease-in forwards !important; }
 @keyframes v2-rout { to { transform: translate(40px, -10px); opacity: 0; filter: brightness(2.5); } }
 #player-sprite-canvas-v2 { transform-origin: 42% 88%; transition: filter 1s ease, transform 1s cubic-bezier(0.5, 0, 0.8, 0.6); }

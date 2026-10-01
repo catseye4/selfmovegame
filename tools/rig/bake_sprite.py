@@ -5,6 +5,10 @@
   python tools/rig/bake_sprite.py kaiju walk 12 64 assets/sprites/rig/kaiju/baby_walk.png
   인자: 캐릭터 클립 프레임수 높이(px) 출력파일
 
+  여러 클립 한 번에 (같은 틀·배율, 적 걷기/공격처럼 바꿔 끼우는 동작):
+  python tools/rig/bake_sprite.py guard walk:12,attack:10 92 assets/sprites/rig/guard/guard.png
+  → guard_walk.png, guard_attack.png, guard.json (높이 = 첫 클립 기준 키, anchorX = 프레임 안 발 사이 x)
+
 - 배경/이펙트를 끄고 투명 배경으로 한 사이클을 균등하게 찍음
 - 모든 프레임을 같은 영역(전체 프레임의 합집합)으로 잘라 흔들림 없이 가로로 이어 붙임
 - 같은 이름의 .json에 프레임 크기/수/재생 시간을 기록 (battleFx.js가 CSS 애니메이션에 사용)
@@ -36,48 +40,107 @@ def serve(root):
     return httpd
 
 
-def main():
-    char, clip, count, height, out = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]), sys.argv[5]
-    httpd = serve(os.getcwd())
-    url = f'http://127.0.0.1:{httpd.server_address[1]}/rig_test.html?bake=1'
-    frames = []
-    with sync_playwright() as p:
-        browser = p.chromium.launch(channel='chrome')
-        page = browser.new_page(viewport={'width': 1400, 'height': 820})
-        page.goto(url)
-        page.wait_for_function('window.rigTest')
-        page.evaluate('window.rigTest.ready')
-        page.evaluate('rigTest.pause()')
-        page.evaluate(f"rigTest.setCharacter('{char}')")
-        page.wait_for_timeout(300)
-        for key in ('bg', 'fx', 'scroll'):
-            page.evaluate(f"rigTest.setOption('{key}', false)")
-        page.evaluate(f"rigTest.setMode('{clip}')")
-        duration = page.evaluate(f"rigTest.clipDuration('{clip}')")
-        page.evaluate(f'rigTest.step({duration * 2})')   # 전환 보간이 끝난 사이클부터
-        for _ in range(count):
-            data = page.evaluate("document.getElementById('rig-canvas').toDataURL('image/png')")
-            frames.append(Image.open(io.BytesIO(base64.b64decode(data.split(',')[1]))).convert('RGBA'))
-            page.evaluate(f'rigTest.step({duration / count})')
-        browser.close()
-    httpd.shutdown()
+def open_rig(p, char):
+    """rig_test.html을 열고 배경·이펙트·스크롤을 끈 채 캐릭터를 세움"""
+    browser = p.chromium.launch(channel='chrome')
+    page = browser.new_page(viewport={'width': 1400, 'height': 820})
+    page.goto(URL[0])
+    page.wait_for_function('window.rigTest')
+    page.evaluate('window.rigTest.ready')
+    page.evaluate('rigTest.pause()')
+    page.evaluate(f"rigTest.setCharacter('{char}')")
+    page.wait_for_timeout(300)
+    for key in ('bg', 'fx', 'scroll'):
+        page.evaluate(f"rigTest.setOption('{key}', false)")
+    return browser, page
 
+
+def capture(page, clip, count):
+    """클립 한 사이클을 count장 균등하게 찍음 → (프레임 목록, 재생 시간)"""
+    page.evaluate(f"rigTest.setMode('{clip}')")
+    duration = page.evaluate(f"rigTest.clipDuration('{clip}')")
+    page.evaluate(f'rigTest.step({duration * 2})')   # 전환 보간이 끝난 사이클부터
+    frames = []
+    for _ in range(count):
+        data = page.evaluate("document.getElementById('rig-canvas').toDataURL('image/png')")
+        frames.append(Image.open(io.BytesIO(base64.b64decode(data.split(',')[1]))).convert('RGBA'))
+        page.evaluate(f'rigTest.step({duration / count})')
+    return frames, duration
+
+
+def union_box(frames):
     box = None
     for f in frames:
         b = f.getchannel('A').getbbox()
         box = b if box is None else (min(box[0], b[0]), min(box[1], b[1]), max(box[2], b[2]), max(box[3], b[3]))
+    return box
+
+
+def make_sheet(frames, box, fw, fh):
+    sheet = Image.new('RGBA', (fw * len(frames), fh), (0, 0, 0, 0))
+    for i, f in enumerate(frames):
+        sheet.paste(f.crop(box).resize((fw, fh), Image.LANCZOS), (i * fw, 0))
+    return sheet
+
+
+def main_single(char, clip, count, height, out):
+    with sync_playwright() as p:
+        browser, page = open_rig(p, char)
+        frames, duration = capture(page, clip, count)
+        browser.close()
+    box = union_box(frames)
     x0, y0, x1, y1 = box
     scale = height / (y1 - y0)
     fw = max(1, round((x1 - x0) * scale))
-    sheet = Image.new('RGBA', (fw * count, height), (0, 0, 0, 0))
-    for i, f in enumerate(frames):
-        sheet.paste(f.crop(box).resize((fw, height), Image.LANCZOS), (i * fw, 0))
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    sheet.save(out)
+    make_sheet(frames, box, fw, height).save(out)
     meta = {'frameWidth': fw, 'frameHeight': height, 'frames': count, 'duration': duration}
     with open(os.path.splitext(out)[0] + '.json', 'w', encoding='utf-8') as fp:
         json.dump(meta, fp, indent=2)
     print(out, meta)
+
+
+def main_multi(char, spec, height, out):
+    """여러 클립을 같은 틀·같은 배율로: 첫 클립(걷기)의 키가 height가 되게 줄이고, 모든 프레임의 합집합으로 자름.
+    → 클립을 바꿔 끼워도 캐릭터 크기·발 위치가 같음. anchorX = 프레임 안에서 캐릭터 뿌리(발 사이)의 x"""
+    clips = [(name, int(n)) for name, n in (part.split(':') for part in spec.split(','))]
+    caps = {}
+    with sync_playwright() as p:
+        browser, page = open_rig(p, char)
+        anchor = page.evaluate('rigTest.anchor')
+        for name, count in clips:
+            caps[name] = capture(page, name, count)
+        browser.close()
+    ref = union_box(caps[clips[0][0]][0])
+    scale = height / (ref[3] - ref[1])
+    box = union_box([f for frames, _ in caps.values() for f in frames])
+    x0, y0, x1, y1 = box
+    fw, fh = max(1, round((x1 - x0) * scale)), max(1, round((y1 - y0) * scale))
+    base = os.path.splitext(out)[0]
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    meta = {'frameWidth': fw, 'frameHeight': fh, 'anchorX': round((anchor[0] - x0) * scale, 1), 'clips': {}}
+    for name, (frames, duration) in caps.items():
+        path = f'{base}_{name}.png'
+        make_sheet(frames, box, fw, fh).save(path)
+        meta['clips'][name] = {'src': path.replace(os.sep, '/'), 'frames': len(frames), 'duration': duration}
+    with open(base + '.json', 'w', encoding='utf-8') as fp:
+        json.dump(meta, fp, indent=2, ensure_ascii=False)
+    print(base + '.json', meta)
+
+
+URL = ['']
+
+
+def main():
+    httpd = serve(os.getcwd())
+    URL[0] = f'http://127.0.0.1:{httpd.server_address[1]}/rig_test.html?bake=1'
+    try:
+        if ':' in sys.argv[2]:
+            main_multi(sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4])
+        else:
+            main_single(sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]), sys.argv[5])
+    finally:
+        httpd.shutdown()
 
 
 if __name__ == '__main__':
