@@ -154,6 +154,8 @@ export class BattleEngine {
         this.isActive = true;
         this.distanceTraveled = 0;
         this.stage = stageById(progress.selectedStage || defaultStage(progress).id);
+        // 보스전은 붉은 경보 조명 배경 (ui_v2.css .v2-stage-boss)
+        document.getElementById('screen-battle-v2')?.classList.toggle('v2-stage-boss', !!this.stage.boss);
         this.maxDistance = this.stage.distance;
         this.spawnInterval = this.stage.enemy.spawn;
         this.starFlags = [false, false, false];

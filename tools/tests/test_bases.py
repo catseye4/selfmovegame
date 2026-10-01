@@ -1,4 +1,4 @@
-"""그림(C단계): 거점(요새·최종 기지 → 파손 → 잔해, 요새 잔해는 다시 걸으면 흘러 나감), 적(경비병 걷기·공격 스프라이트, 세뇌 보병)"""
+"""그림(C단계): 거점(요새·최종 기지 → 파손 → 잔해, 요새 잔해는 다시 걸으면 흘러 나감), 적(경비병 걷기·공격 스프라이트, 세뇌 보병), 구역 1 배경 3층·보스전 경보 조명"""
 
 
 def state(g, final=False):
@@ -13,6 +13,7 @@ def run(ctx):
     run_bases(ctx)
     run_guard(ctx)
     run_roster(ctx)
+    run_background(ctx)
 
 
 def run_bases(ctx):
@@ -143,3 +144,20 @@ def run_roster(ctx):
     st = g.js("const d = b.enemies.find(e => e.type === 'guardian').dom; return { slash: d.classList.contains('is-attacking'), bash: d.classList.contains('is-bash') };")
     ctx.check(st['slash'] and st['bash'], '보스: 붙으면 베기 + 방패 강타 동작', str(st))
     g.shot('enemy_boss_bash', '#screen-battle-v2')
+
+
+BG = "return ['sky', 'city', 'ground'].map(k => getComputedStyle(document.getElementById(`bg-${k}-v2`)).backgroundImage);"
+
+
+def run_background(ctx):
+    """구역 1 배경: 먼 배경(탱크 홀)·중간(기계 띠)·바닥(철망 통로), 보스전은 붉은 경보 조명"""
+    g = ctx.game(fresh=True)
+    g.enter_v2()
+    g.battle('mech', wait_ms=2900)
+    sky, city, ground = g.js(BG)
+    ctx.check('hall.png' in sky and 'machinery.png' in city and 'floor.png' in ground, '배경 3층 = 탱크 홀·기계 띠·바닥', str([sky[-30:], city[-30:], ground[-30:]]))
+    ctx.check(g.js("return getComputedStyle(document.getElementById('bg-ground-v2')).animationName;") == 'scroll-bg', '걷는 동안 배경이 흐름')
+    g.js("['1-1','1-2','1-3','1-4','1-5'].forEach(id => progress.stages[id] = { stars: [true,true,true], cleared: true, bestTime: 60 }); progress.selectStage('1-B');")
+    g.battle('mech', wait_ms=1500)
+    sky = g.js(BG)[0]
+    ctx.check('hall_alarm.png' in sky, '보스전: 붉은 경보 조명 배경', sky[-40:])

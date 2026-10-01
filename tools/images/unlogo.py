@@ -4,8 +4,9 @@ Gemini 그림 오른쪽 아래의 반투명 별 로고를 지운다 (역합성)
 로고 = 흰색을 알파 a로 덮은 것: 보이는 색 = a·255 + (1-a)·원래 색
                                → 원래 색 = (보이는 색 - a·255) / (1-a)
 알파 지도는 로고가 초록 배경 위에만 찍혀 있던 그림에서 잼: 765×1024는 요새 그림 3장(세 장 상관 0.999), 1024×1024는 경비병 그림.
-로고는 그림 크기마다 자리가 정해져 있으므로 같은 크기의 그림에만 적용한다.
-다른 크기가 오면 measure()로 재서 LOGOS에 추가한다.
+로고는 그림 크기마다 자리가 정해져 있다. 잰 크기(LOGOS)는 그대로 쓰고, 처음 보는 크기는
+로고 크기·여백이 √(가로×세로)에 비례해 오른쪽 아래에 붙는다는 점(765×1024 ↔ 1024×1024 ↔ 1024×572 실측)으로
+1024×1024 지도를 늘리거나 줄여 쓴다. 로고가 단색 위에만 있는 그림이 생기면 measure()로 재서 LOGOS에 추가한다.
 
 실행 (알파 지도 다시 재기): python tools/images/unlogo.py measure <로고가 초록 위에만 있는 그림>... <x> <y>
 """
@@ -28,17 +29,61 @@ def _alpha(spec):
     return np.asarray(Image.open(os.path.join(HERE, spec['alpha']))).astype(np.float32) / 255
 
 
+def _unblend(region, a):
+    return np.clip((region - a[..., None] * 255) / (1 - a[..., None]), 0, 255)
+
+
+def _scaled(rgb):
+    """처음 보는 크기: 1024×1024 지도를 √(w·h)/1024배로 늘리거나 줄여 오른쪽 아래에 붙임.
+    예측 자리 둘레의 고정된 창 안에서, 지운 뒤가 가장 매끈한(남은 윤곽선이 없는) 자리·크기를 고른다 (±4px, ±8%)."""
+    h, w = rgb.shape[:2]
+    base = LOGOS[(1024, 1024)]
+    src = Image.fromarray((_alpha(base) * 255).astype(np.uint8))
+    img = rgb.astype(np.float32)
+    k0 = (w * h) ** 0.5 / 1024
+    n0 = round(SIZE * k0)
+    wx, wy = round(w - (1024 - base['x']) * k0) - 10, round(h - (1024 - base['y']) * k0) - 10
+    wn = n0 + 20                                            # 고정 창 (모든 후보를 같은 곳에서 비교)
+    if wx < 0 or wy < 0 or wx + wn > w or wy + wn > h:
+        return None, -1, -1
+    win = img[wy:wy + wn, wx:wx + wn]
+
+    def score(out):
+        g = out.mean(axis=2)
+        return np.abs(np.diff(g, axis=0)).mean() + np.abs(np.diff(g, axis=1)).mean()
+
+    best = (score(win), None, -1, -1)                       # 아무것도 안 지운 상태보다 나아야 함
+    for ks in np.arange(0.92, 1.081, 0.02):
+        k = k0 * ks
+        n = max(8, round(SIZE * k))
+        a = np.asarray(src.resize((n, n), Image.BILINEAR)).astype(np.float32) / 255
+        x0, y0 = round(w - (1024 - base['x']) * k), round(h - (1024 - base['y']) * k)
+        for dy in range(-4, 5):
+            for dx in range(-4, 5):
+                x, y = x0 + dx, y0 + dy
+                if x < wx or y < wy or x + n > wx + wn or y + n > wy + wn:
+                    continue
+                out = win.copy()
+                out[y - wy:y - wy + n, x - wx:x - wx + n] = _unblend(img[y:y + n, x:x + n], a)
+                sc = score(out)
+                if sc < best[0]:
+                    best = (sc, a, x, y)
+    return best[1:]
+
+
 def clean(rgb):
     """RGB 배열에서 로고를 지운 새 배열과 지웠는지 여부를 돌려준다."""
     h, w = rgb.shape[:2]
     spec = LOGOS.get((w, h))
-    if not spec:
+    if spec:
+        a, x, y = _alpha(spec), spec['x'], spec['y']
+    else:
+        a, x, y = _scaled(rgb)
+    if a is None:
         return rgb, False
-    a = _alpha(spec)[..., None]
-    x, y = spec['x'], spec['y']
+    n = a.shape[0]
     out = rgb.astype(np.float32).copy()
-    region = out[y:y + SIZE, x:x + SIZE]
-    out[y:y + SIZE, x:x + SIZE] = np.clip((region - a * 255) / (1 - a), 0, 255)
+    out[y:y + n, x:x + n] = _unblend(out[y:y + n, x:x + n], a)
     return out.round().astype(np.uint8), True
 
 
