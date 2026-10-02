@@ -36,6 +36,7 @@ LAYERS = {
     'hall_alarm': {'tile_w': 1280, 'seam': 0},    # 보스전: 붉은 경보 조명
     'machinery': {'tile_w': 640, 'seam': 0, 'key': True},   # 중간 층: 낮은 기계·난간 띠 (위·아래 초록 = 투명)
     'floor': {'tile_w': 256, 'seam': 0, 'key': True, 'feet': (195, 60)},   # 바닥: 경고 줄무늬 사이 철망 가운데에 발
+    'hangar': {'tile_w': 1280, 'seam': 0},        # 메인 화면 격납고 (정지 배경)
 }
 WRAP = 8           # 줄일 때 양 끝에 덧붙이는 반대쪽 픽셀 수
 

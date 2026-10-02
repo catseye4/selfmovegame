@@ -8,4 +8,5 @@ export const ENEMY_ART = {
     shock: { frameWidth: 83, frameHeight: 92, anchorX: 52.9, walk: { src: 'assets/sprites/rig/shock/shock_walk.png', frames: 12, duration: 0.7 }, attack: { src: 'assets/sprites/rig/shock/shock_attack.png', frames: 10, duration: 0.8 } },
     medic: { frameWidth: 76, frameHeight: 92, anchorX: 41.5, walk: { src: 'assets/sprites/rig/medic/medic_walk.png', frames: 12, duration: 0.7 }, attack: { src: 'assets/sprites/rig/medic/medic_attack.png', frames: 10, duration: 0.8 } },
     guardian: { frameWidth: 260, frameHeight: 224, anchorX: 91.2, walk: { src: 'assets/sprites/rig/guardian/guardian_walk.png', frames: 12, duration: 0.9 }, attack: { src: 'assets/sprites/rig/guardian/guardian_attack.png', frames: 12, duration: 0.9 }, bash: { src: 'assets/sprites/rig/guardian/guardian_bash.png', frames: 10, duration: 0.8 } },
+    minion: { frameWidth: 98, frameHeight: 92, anchorX: 51.2, walk: { src: 'assets/sprites/rig/minion/minion_walk.png', frames: 12, duration: 0.75 }, attack: { src: 'assets/sprites/rig/minion/minion_attack.png', frames: 10, duration: 0.8 } },
 };

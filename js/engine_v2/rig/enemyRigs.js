@@ -11,7 +11,7 @@
 const dir = id => `assets/sprites/rig/${id}/`;
 
 /** 뼈대: 망토(있으면) → 다리 → 몸통 → 뒷팔 → 머리 → 앞팔(또는 두 팔 한 조각) 순으로 앞에 그림 */
-function bones({ arms = 'two', cape = false } = {}) {
+function bones({ arms = 'two', cape = false, tail = false } = {}) {
     const list = [
         { name: 'root', parent: null },
         { name: 'legB', parent: 'root', part: 'legB', z: 1 },
@@ -19,6 +19,7 @@ function bones({ arms = 'two', cape = false } = {}) {
         { name: 'body', parent: 'root', part: 'torso', z: 3 }
     ];
     if (cape) list.push({ name: 'cape', parent: 'body', part: 'cape', z: 0 });
+    if (tail) list.push({ name: 'tail', parent: 'body', part: 'tail', z: 0 });   // 꼬리 뿌리는 뒷다리 뒤에 숨음
     if (arms === 'two') list.push({ name: 'armB', parent: 'body', part: 'armB', z: 4 });
     list.push({ name: 'head', parent: 'body', part: 'head', z: 5 });
     list.push(arms === 'two' ? { name: 'armF', parent: 'body', part: 'armF', z: 6 } : { name: 'arms', parent: 'body', part: 'arms', z: 6 });
@@ -45,6 +46,7 @@ function walk(o) {
     if (o.armB != null) tracks.armB = { rot: [[0, o.armB], [h, -o.armB], [d, o.armB]] };
     if (o.arms != null) tracks.arms = { rot: [[0, -o.arms], [h, o.arms], [d, -o.arms]], y: [[0, 0], [q, 6], [h, 0], [h + q, 6], [d, 0]] };
     if (o.cape) tracks.cape = { rot: [[0, o.cape], [h, -o.cape], [d, o.cape]] };
+    if (o.tail) tracks.tail = { rot: [[0, o.tail], [q, -o.tail], [h, o.tail], [h + q, -o.tail], [d, o.tail]] };   // 걸음마다 좌우로 살랑
     return {
         duration: d, loop: true, tracks,
         events: [[0, 'step', { foot: 'footF', bone: 'legF' }], [h, 'step', { foot: 'footB', bone: 'legB' }]]
@@ -153,10 +155,10 @@ const GUARDIAN_BASH = {
     events: impact(0.4, '120, 200, 255')
 };
 
-function enemy(id, name, { arms = 'two', cape = false, walkOpt, clips, hitBone = 'armF', shadow }) {
+function enemy(id, name, { arms = 'two', cape = false, tail = false, walkOpt, clips, hitBone = 'armF', shadow }) {
     return {
         id, name, assetDir: dir(id),
-        bones: bones({ arms, cape }),
+        bones: bones({ arms, cape, tail }),
         springs: [{ bone: 'head', channel: 'y', axis: 1, gain: 0.3, k: 260, damping: 12, limit: 6 }],
         clips: { idle: idle(arms === 'two' ? 'armF' : 'arms'), walk: walk(walkOpt), ...clips },
         arms: null,
@@ -169,6 +171,12 @@ function enemy(id, name, { arms = 'two', cape = false, walkOpt, clips, hitBone =
 
 const SOLDIER_WALK = { dur: 0.7, leg: 22, lift: 22, bob: 10 };
 
+// 합성괴인 졸개(아군): 가시 곤봉 내려치기 + 꼬리를 치켜들었다 휘두름
+const MINION_SWING = {
+    ...BATON_SWING,
+    tracks: { ...BATON_SWING.tracks, tail: { rot: [[0, 0], [0.3, -14, 'in'], [0.4, 12, 'out'], [0.8, 0]] } }
+};
+
 export const ENEMY_RIGS = {
     guard: enemy('guard', '경비병', { walkOpt: { ...SOLDIER_WALK, armF: 12, armB: 12 }, clips: { attack: BATON_SWING } }),
     shield: enemy('shield', '방패병', { walkOpt: { ...SOLDIER_WALK, dur: 0.8, leg: 18, armF: 2, armB: 10 }, clips: { attack: SHIELD_BASH } }),
@@ -178,5 +186,7 @@ export const ENEMY_RIGS = {
     guardian: enemy('guardian', '정의의 수호자', {
         cape: true, walkOpt: { dur: 0.9, leg: 18, lift: 20, bob: 12, armF: 3, armB: 8, cape: 4 },
         clips: { attack: SWORD_SLASH, bash: GUARDIAN_BASH }, shadow: { rx: 260, ry: 22 }
-    })
+    }),
+    // 아군 (오른쪽을 보는 그림을 뒤집어 잘랐으므로 적처럼 왼쪽을 봄 — 게임에선 아군이라 다시 뒤집어 그림)
+    minion: enemy('minion', '합성괴인 졸개', { tail: true, walkOpt: { ...SOLDIER_WALK, dur: 0.75, armF: 10, armB: 6, tail: 8 }, clips: { attack: MINION_SWING } })
 };

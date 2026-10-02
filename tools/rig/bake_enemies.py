@@ -24,6 +24,7 @@ ENEMIES = {
     'shock': (92, 'walk:12,attack:10'),
     'medic': (92, 'walk:12,attack:10'),
     'guardian': (196, 'walk:12,attack:12,bash:10'),
+    'minion': (92, 'walk:12,attack:10'),        # 합성괴인 졸개(아군) — 경비병과 같은 키
 }
 
 

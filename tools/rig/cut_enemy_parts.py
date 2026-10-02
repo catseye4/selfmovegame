@@ -40,6 +40,7 @@ OUT = 'assets/sprites/rig/{name}'
 # arm_top: 팔(무기) 차이를 찾기 시작하는 y (방패가 머리 높이까지 올라오면 더 위로), head_x: 머리 조각 x 범위 (어깨 갑옷 제외)
 # cape: (x, y) 오른쪽 아래의 파란 망토를 따로 한 조각으로 (다리에 붙어 같이 흔들리지 않게, 몸통 뒤에서 살랑임)
 # pivot: 자동으로 잡은 회전 중심 대신 (방패·분사기는 맨 위가 아니라 손잡이/어깨에서 돌아야 함)
+# flip: 좌우 뒤집어서 처리 (오른쪽을 보는 그림), tail: (x0, y0, x1, y1) 이 영역의 꼬리를 따로 한 조각으로
 ENEMIES = {
     'guard':    {'key': 'green', 'head_y': 392, 'hip_y': 700, 'crotch': 510, 'slope': 0.35, 'arms': 'two', 'close': 0},
     'shield':   {'key': 'green', 'head_y': 408, 'hip_y': 700, 'crotch': 510, 'slope': 0.35, 'arms': 'two', 'close': 11,
@@ -50,6 +51,10 @@ ENEMIES = {
                  'pivot': {'armF': (425, 478)}},
     'guardian': {'key': 'green', 'head_y': 305, 'hip_y': 752, 'crotch': 577, 'slope': 0.35, 'arms': 'two', 'close': 7,
                  'arm_top': 200, 'head_x': (370, 600), 'cape': (600, 380), 'pivot': {'armF': (365, 410)}},
+    # 합성괴인 졸개(아군): 오른쪽을 보는 그림 → 뒤집어서 적과 같은 방향으로 자름 (게임에선 아군이라 다시 뒤집어 그림)
+    'minion':   {'key': 'green', 'flip': True, 'head_y': 470, 'hip_y': 640, 'crotch': 505, 'slope': 0.12, 'arms': 'two',
+                 'close': 7, 'arm_top': 400, 'head_x': (200, 560), 'tail': (712, 655, 1024, 775),
+                 'pivot': {'armF': (320, 515), 'armB': (585, 470), 'legB': (590, 655), 'tail': (712, 728)}},
 }
 NECK_BAND = 14            # 몸통이 머리 아래쪽으로 더 가지는 목 띠(px)
 HIP_BAND = 32             # 다리가 골반(몸통) 아래로 더 올라가는 겹침(px)
@@ -103,6 +108,8 @@ def masks_for(name):
     cfg = ENEMIES[name]
     full = keyed(SRC.format(name=name, n=1), cfg['key'])
     armless = keyed(SRC.format(name=name, n=2), cfg['key'])
+    if cfg.get('flip'):
+        full, armless = np.ascontiguousarray(full[:, ::-1]), np.ascontiguousarray(armless[:, ::-1])
     H, W = full.shape[:2]
     op1, op2 = full[..., 3] > 0, armless[..., 3] > 0
     rows = np.broadcast_to(np.arange(H)[:, None], (H, W))
@@ -111,12 +118,21 @@ def masks_for(name):
     anyarm = np.zeros_like(op1)
     for m in arms.values():
         anyarm |= m
-    cape = np.zeros_like(op1)
+    # 따로 흔드는 조각: 보스 망토(파란색) / 졸개 꼬리(영역)
+    cape, extra_name, region = np.zeros_like(op1), None, None
     if 'cape' in cfg:
         rgb = armless[..., :3].astype(int)
         blue = (rgb[..., 2] > rgb[..., 0] + 50) & (rgb[..., 2] > rgb[..., 1] + 30)
-        cape = largest(op2 & blue & (cols >= cfg['cape'][0]) & (rows >= cfg['cape'][1]))
-        cape = grow(cape, op2 & (cols >= cfg['cape'][0]) & (rows >= cfg['cape'][1]), SEAM)
+        region = (cols >= cfg['cape'][0]) & (rows >= cfg['cape'][1])
+        cape = largest(op2 & blue & region)
+        extra_name = 'cape'
+    elif 'tail' in cfg:
+        x0, y0, x1, y1 = cfg['tail']
+        region = (cols >= x0) & (cols < x1) & (rows >= y0) & (rows < y1)
+        cape = largest(op2 & region)
+        extra_name = 'tail'
+    if extra_name:
+        cape = grow(cape, op2 & region, SEAM)
     head = op1 & (rows < cfg['head_y']) & ~anyarm
     if 'head_x' in cfg:
         head &= (cols >= cfg['head_x'][0]) & (cols < cfg['head_x'][1])
@@ -126,11 +142,11 @@ def masks_for(name):
     leg_b, leg_f = largest(legs & (cols >= split)), largest(legs & (cols < split))
     rest = legs & ~leg_b & ~leg_f                      # 떨어져 나간 자투리(망토 윤곽선, 뒤꿈치): 망토 또는 가까운 다리로
     if cape.any():
-        cape |= rest & (cols >= cfg['cape'][0]) & (rows >= cfg['cape'][1])
+        cape |= rest & region
         rest &= ~cape
     leg_b |= rest & (cols >= split)
     leg_f |= rest & (cols < split)
-    masks = {**({'cape': cape} if cape.any() else {}),
+    masks = {**({extra_name: cape} if cape.any() else {}),
              'legB': leg_b, 'legF': leg_f,
              'torso': torso, **arms, 'head': head}
     return cfg, full, armless, masks
@@ -138,7 +154,7 @@ def masks_for(name):
 
 def preview(name):
     cfg, full, armless, masks = masks_for(name)
-    colors = {'cape': (255, 255, 60), 'legB': (80, 80, 255), 'legF': (60, 200, 255), 'torso': (120, 120, 120), 'armB': (255, 160, 40),
+    colors = {'cape': (255, 255, 60), 'tail': (255, 255, 60), 'legB': (80, 80, 255), 'legF': (60, 200, 255), 'torso': (120, 120, 120), 'armB': (255, 160, 40),
               'armF': (255, 60, 60), 'arms': (255, 60, 60), 'head': (80, 230, 80)}
     vis = (full[..., :3] * 0.45).astype(np.uint8)
     for k, m in masks.items():
@@ -171,7 +187,7 @@ def build(name):
     }
     sockets = {'footF': (pivots['legF'][0], float(ground)), 'footB': (pivots['legB'][0], float(ground))}
     weapon = masks.get('armF', masks.get('arms'))
-    for k in ('armF', 'armB', 'arms', 'cape'):
+    for k in ('armF', 'armB', 'arms', 'cape', 'tail'):
         if k in masks:
             pivots[k] = arm_pivot(masks[k])
     pivots.update({k: (float(x), float(y)) for k, (x, y) in cfg.get('pivot', {}).items()})
@@ -190,7 +206,7 @@ def build(name):
               'sockets': {k: [float(x), float(y)] for k, (x, y) in sockets.items()}}
     write_layout(out_dir, layout)
     print(name, 'parts:', {k: (v['w'], v['h']) for k, v in layout['parts'].items()})
-    order = [k for k in ('cape',) if k in parts] + ['legB', 'legF', 'torso'] + [k for k in ('armB', 'arms', 'armF') if k in parts] + ['head']
+    order = [k for k in ('cape', 'tail') if k in parts] + ['legB', 'legF', 'torso'] + [k for k in ('armB', 'arms', 'armF') if k in parts] + ['head']
     rest_check(out_dir, layout, order, full, os.path.join(HERE, f'_rest_check_{name}.png'))
 
 

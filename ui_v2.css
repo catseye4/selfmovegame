@@ -1076,11 +1076,12 @@ div.v2-settings__row > span { flex: 1; }
     overflow: hidden;
     font-family: var(--v2-font);
     color: var(--v2-text);
+    /* 격납고 그림(C단계, tools/images/build_bg.py) 위에 어두운 막 — 패널 글자가 읽히게 */
     background:
         radial-gradient(ellipse 70% 45% at 50% -5%, rgba(255, 176, 32, 0.13), transparent 70%),
-        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 48px),
-        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 48px),
-        linear-gradient(180deg, #10131a, #08090d 55%, #050608);
+        linear-gradient(180deg, rgba(10, 12, 18, 0.38), rgba(5, 6, 8, 0.62)),
+        url('assets/sprites/stage/bg/hangar.png') center / cover no-repeat,
+        #08090d;
 }
 .v2-hangar::before {
     content: '';

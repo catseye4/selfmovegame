@@ -110,6 +110,16 @@ def run_guard(ctx):
     ctx.check('guard_walk' in (img or ''), '세뇌 보병: 경비병 그림(검보라)', str(img))
     g.shot('enemy_guard_mind', '#screen-battle-v2')
 
+    # 합성괴인 졸개(아군): 졸개 그림, 오른쪽(좌우 반전), 적과 붙으면 공격 동작
+    g.js("""b.allies.forEach(a => a.dom && a.dom.remove()); b.allies = [];
+        b.spawnAllyMinion(b.monsterX + 200, 'chimera');
+        b.spawnMinion('guard', { x: b.monsterX + 240 }); b.enemies.forEach(e => { e.hp = e.maxHp = 99999; e.speed = 0; e.dps = 0; });""")
+    g.wait(500)
+    st = g.js("""const a = document.querySelector('.ally-minion.chimera-minion-v2'); const cs = a && getComputedStyle(a);
+        return a && { img: cs.backgroundImage, flip: cs.transform, h: a.offsetHeight, att: a.classList.contains('is-attacking') };""")
+    ctx.check(st and 'minion/minion_attack' in st['img'] and st['att'], '합성괴인 졸개: 졸개 그림, 붙으면 공격 동작', str(st))
+    ctx.check(st and st['flip'].startswith('matrix(-1') and st['h'] == 92, '합성괴인 졸개: 오른쪽을 봄, 92px', str(st))
+
 
 TYPES = ['guard', 'shield', 'tranq', 'shock', 'medic', 'guardian']
 

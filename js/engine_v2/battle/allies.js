@@ -8,6 +8,7 @@
 import { monsterControllerV2 } from '../monster_v2.js';
 import { HERO_ORB } from '../vfx/heroVfx.js';
 import { HERO_VFX, CHIMERA_VFX } from '../vfx/vfxDefs.js';
+import { ensureEnemyStyles } from '../enemies_v2.js';
 import { BABY, EGG, FOOT_B } from './tuning.js';
 
 export const AllyMethods = {
@@ -16,6 +17,7 @@ export const AllyMethods = {
     //      'chimera': 합성괴인 몸통의 졸개 소환 (소환진 이펙트)
     spawnAllyMinion(startX, kind = 'mind') {
         if (!this.domEnemies) return;
+        ensureEnemyStyles();   // 세뇌 보병·졸개 그림 CSS (적보다 먼저 나올 수 있음 — 합성괴인 졸개는 출격 직후)
         const baby = kind === 'baby_kaiju';
         const maxHp = baby ? BABY.hp : 350;
         const dps = baby ? BABY.dps : 17.5; // 세뇌 미니언은 적 보병 데미지의 절반
@@ -82,7 +84,12 @@ export const AllyMethods = {
             });
 
             const hitRange = (closestEnemyToAlly && closestEnemyToAlly.isBuilding) ? 110 : 65;
-            if (closestEnemyToAlly && minAllyDist <= hitRange) {
+            const fighting = !!closestEnemyToAlly && minAllyDist <= hitRange;
+            if (fighting !== !!ally.attacking && ally.dom) {   // 싸우는 동안 공격 동작 (그림이 있는 아군)
+                ally.attacking = fighting;
+                ally.dom.classList.toggle('is-attacking', fighting);
+            }
+            if (fighting) {
                 this.dealDamageToEnemy(closestEnemyToAlly, ally.dps * dt, false, { dot: true });
 
                 if (closestEnemyToAlly.isBuilding) {

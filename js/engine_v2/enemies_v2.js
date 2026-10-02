@@ -48,8 +48,12 @@ export const ELITE = { hp: 3, dps: 1.5, scale: 1.3, reward: 4 };
 
 const ENEMY_CENTER = 38;   // 적 x(왼쪽 끝)에서 몸 가운데까지 — 겨누기·이펙트 기준 (bases_v2.js aimAt)
 const ART_FOOT_B = 58;     // 그림 적의 발 높이 (bottom px)
-// 세뇌 보병(타락 히어로가 징집한 아군): 경비병 그림을 오른쪽으로 돌려 검보라로 (D-020)
-const MIND_ART = 'guard';
+// 아군 그림 (.ally-minion은 index.css에서 좌우 반전 → 왼쪽을 보는 구운 그림이 오른쪽을 봄)
+// 세뇌 보병(타락 히어로 징집, D-020) = 경비병 그림 + 검보라(ui_v2.css), 합성괴인 졸개 = 졸개 그림(D-039)
+const ALLY_ART = {
+    'v2-mind': { art: 'guard', filter: null },
+    'chimera-minion-v2': { art: 'minion', filter: 'drop-shadow(0 0 5px rgba(255, 150, 40, 0.5))' }
+};
 const CREEP = 0.3;       // 원거리·치유형이 제자리에서도 조금씩 다가오는 속도 배율 (사거리가 짧은 캐릭터도 닿게)
 // 근접: STOP까지 다가가 멈추고, REACH 안이면 공격 (주인공 공격에 조금 밀려나도 계속 공격)
 const MELEE = { stop: 30, reach: 55 };
@@ -71,8 +75,8 @@ export function pickType(mix) {
 
 let artStyles = false;
 
-/** 그림 적의 CSS(종류별 걷기·공격 스프라이트)를 한 번만 주입 */
-function ensureEnemyStyles() {
+/** 그림 적·아군의 CSS(종류별 걷기·공격 스프라이트)를 한 번만 주입 */
+export function ensureEnemyStyles() {
     if (artStyles) return;
     artStyles = true;
     const css = [`
@@ -97,13 +101,21 @@ function ensureEnemyStyles() {
         @keyframes v2-${id}-${clip} { from { background-position-x: 0; } to { background-position-x: -${a.frameWidth * c.frames}px; } }`);
         }
     }
-    const m = ENEMY_ART[MIND_ART];
-    css.push(`
-        #screen-battle-v2 .ally-minion.v2-mind {
+    for (const [cls, { art, filter }] of Object.entries(ALLY_ART)) {
+        const m = ENEMY_ART[art];
+        if (!m) continue;
+        css.push(`
+        #screen-battle-v2 .ally-minion.${cls} {
             width: ${m.frameWidth}px; height: ${m.frameHeight}px; bottom: ${ART_FOOT_B}px;
             background-image: url('${m.walk.src}'); background-size: auto 100%;
-            animation: v2-${MIND_ART}-walk ${m.walk.duration}s steps(${m.walk.frames}) infinite;
+            animation: v2-${art}-walk ${m.walk.duration}s steps(${m.walk.frames}) infinite;${filter ? `
+            filter: ${filter};` : ''}
+        }
+        #screen-battle-v2 .ally-minion.${cls}.is-attacking {
+            background-image: url('${m.attack.src}');
+            animation: v2-${art}-attack ${m.attack.duration}s steps(${m.attack.frames}) infinite;
         }`);
+    }
     const style = document.createElement('style');
     style.id = 'enemies-v2-styles';
     style.textContent = css.join('\n');

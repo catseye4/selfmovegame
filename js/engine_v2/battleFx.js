@@ -19,8 +19,6 @@ import { sound } from './audio/sound_v2.js';
 
 // 새끼 괴수 걷기 스프라이트 (tools/rig/bake_sprite.py 결과 assets/sprites/rig/kaiju/baby_walk.json 과 맞춤)
 export const BABY_KAIJU = { src: 'assets/sprites/rig/kaiju/baby_walk.png', frameWidth: 80, frameHeight: 64, frames: 12, duration: 1.2 };
-// 합성괴인 졸개: 합성괴인 리그를 작게 구운 걷기 스프라이트 (assets/sprites/rig/chimera/minion_walk.json)
-export const CHIMERA_MINION = { src: 'assets/sprites/rig/chimera/minion_walk.png', frameWidth: 54, frameHeight: 60, frames: 12, duration: 1.1 };
 
 const TOXIC = '170, 255, 40';
 const DRONE_CORE = '200, 90, 255';
@@ -28,12 +26,12 @@ const EGG_B = 60;   // 알이 놓이는 지면 높이 (bottom px)
 
 let stylesInjected = false;
 
-/** 새끼 괴수 아군의 CSS(스프라이트 걷기 애니메이션)를 한 번만 주입 (index.css 공용 규칙은 건드리지 않음) */
+/** 새끼 괴수 아군의 CSS(스프라이트 걷기 애니메이션)를 한 번만 주입 (index.css 공용 규칙은 건드리지 않음).
+    세뇌 보병·합성괴인 졸개 그림은 enemies_v2.js ensureEnemyStyles */
 export function ensureSkillStyles() {
     if (stylesInjected) return;
     stylesInjected = true;
     const b = BABY_KAIJU;
-    const c = CHIMERA_MINION;
     const style = document.createElement('style');
     style.id = 'battle-fx-v2-styles';
     style.textContent = `
@@ -49,18 +47,7 @@ export function ensureSkillStyles() {
             from { background-position-x: 0; }
             to { background-position-x: -${b.frameWidth * b.frames}px; }
         }
-        .ally-minion.chimera-minion-v2 {
-            width: ${c.frameWidth}px; height: ${c.frameHeight}px;
-            background-image: url('${c.src}');
-            background-size: auto 100%;
-            animation: chimera-minion-walk-v2 ${c.duration}s steps(${c.frames}) infinite;
-            transform: none;
-            filter: drop-shadow(0 0 6px rgba(255, 150, 40, 0.55));
-        }
-        @keyframes chimera-minion-walk-v2 {
-            from { background-position-x: 0; }
-            to { background-position-x: -${c.frameWidth * c.frames}px; }
-        }`;
+`;
     document.head.appendChild(style);
 }
 
