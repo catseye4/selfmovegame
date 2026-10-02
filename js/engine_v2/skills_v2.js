@@ -214,7 +214,7 @@ export const PART_SKILL = {
     head_hero: 'massMind', head_chimera: 'rampage'
 };
 
-// 다리 패시브 (v2 기준 설명 — parts.js 설명은 구버전과 공용이라 여기서 덮어씀). 효과는 battle_v2.js
+// 다리 패시브 (v2 기준 설명 — parts.js 설명은 구버전과 공용이라 여기서 덮어씀). 효과는 battle/player.js (수치는 battle/tuning.js LEG)
 export const LEG_PASSIVES = {
     leg_red_robot: { name: '유압 서스펜션', desc: '진격 속도 증가 (능력치)' },
     leg_chimera: { name: '지진 분쇄', desc: '전방 적에게 계속 지진 피해 (초당 30)' },

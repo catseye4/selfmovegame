@@ -2,9 +2,19 @@
 from common import BUILDS
 
 
+# 다른 파일(skills_v2, enemies_v2, HUD, 연출, 검사)이 부르는 전투 엔진 메서드 — battle/ 폴더를 고치다 이름이 바뀌거나 빠지면 바로 걸림
+PUBLIC_API = ['applyAcid', 'applyPlayerSlow', 'applyPlayerStun', 'applyShield', 'collapseBase', 'convertEnemy',
+              'createDamagePopup', 'damageAlly', 'damagePlayer', 'dealDamageToEnemy', 'enemiesInRange', 'fireMissile',
+              'frontX', 'launchDarkWave', 'launchDrones', 'layEgg', 'legContact', 'nearestEnemy', 'playerStunned',
+              'schedule', 'setAutoSkills', 'skillState', 'slowEnemy', 'spawnAllyMinion', 'stunEnemy', 'timeLeft', 'unit',
+              'updateHud', 'useSkill', 'spawnMinion', 'startBattle', 'stopBattle', 'finishBattle', 'fireAttack']
+
+
 def run(ctx):
     g = ctx.game(fresh=True)
     g.enter_v2()
+    missing = g.js(f"return {PUBLIC_API}.filter(n => typeof b[n] !== 'function');")
+    ctx.check(not missing, '전투 엔진: 다른 파일이 부르는 메서드가 모두 있음', str(missing))
 
     for cid in BUILDS:
         g.battle(cid)

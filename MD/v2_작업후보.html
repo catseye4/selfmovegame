@@ -128,7 +128,7 @@ footer { color: var(--dim); font-size: 12px; margin-top: 60px; border-top: 1px s
 <!-- 1. 충돌 지도 -->
 <section>
   <h2><i>1</i>어디를 고치나 · 충돌 지도</h2>
-  <p class="lead">초록 = 표에 한 줄 추가 · 빨강 = 모두가 지나가는 파일</p>
+  <p class="lead">초록 = 표에 한 줄 추가 · 빨강 = 모두가 지나가는 파일 (전투 파일은 10-02에 나눔: 수치는 <code>battle/tuning.js</code>)</p>
   <div class="diagram">
     <svg viewBox="0 0 980 470" role="img" aria-label="작업별로 고치는 파일과 충돌 위험">
       <defs>
@@ -146,8 +146,8 @@ footer { color: var(--dim); font-size: 12px; margin-top: 60px; border-top: 1px s
       <!-- 중심 -->
       <rect class="r" x="380" y="190" width="220" height="80" rx="12"/>
       <text class="t1" x="490" y="220" style="font-size:17px">전투 흐름</text>
-      <text class="t2" x="490" y="240">battle_v2.js · 1,341줄</text>
-      <text class="t2" x="490" y="258" style="fill:#ff5468">먼저 나누기</text>
+      <text class="t2" x="490" y="240">battle_v2.js + battle/</text>
+      <text class="t2" x="490" y="258" style="fill:#5fdc9a">나눔 ✅ (10-02)</text>
       <!-- 주변 -->
       <g>
         <line class="ln" x1="250" y1="85" x2="400" y2="190"/><line class="ln" x1="250" y1="230" x2="380" y2="230"/><line class="ln" x1="250" y1="375" x2="400" y2="270"/>
@@ -280,10 +280,10 @@ footer { color: var(--dim); font-size: 12px; margin-top: 60px; border-top: 1px s
     <div class="lane-h"><i class="bar" style="background:var(--red)"></i><b>한 사람이 맡을 것</b><span>다른 작업과 많이 겹침</span></div>
     <div class="cards">
       <div class="card red">
-        <div class="vis"><div class="split"><div class="big">1,341</div><span class="arrow">→</span><div class="smalls"><div>적</div><div>아군</div><div>전투 흐름</div></div></div></div>
+        <div class="vis"><div class="split"><div class="big">1,341</div><span class="arrow">→</span><div class="smalls"><div>흐름</div><div>주인공·공격</div><div>적·아군</div></div></div></div>
         <div class="body">
-          <h3>battle_v2.js 나누기 <span class="badge b-first">먼저</span></h3>
-          <p>여러 사람이 붙기 전에. 나머지 작업의 충돌이 줄어듦</p>
+          <h3>battle_v2.js 나누기 <span class="badge b-easy">✅ 완료 10-02</span></h3>
+          <p>흐름 487줄 + <code>battle/</code> 5개 파일 (수치 · 주인공 · 공격 · 적 · 아군)</p>
           <div class="meta"><span class="lv">●●<s>●</s></span></div>
           <div class="files"><code>battle_v2.js</code></div>
         </div>
@@ -315,7 +315,7 @@ footer { color: var(--dim); font-size: 12px; margin-top: 60px; border-top: 1px s
   <h2><i>3</i>순서 · 먼저 할 것</h2>
   <p class="lead">화살표 앞이 끝나야 뒤를 시작</p>
   <div class="order">
-    <div class="chain"><span class="k">코드</span><span class="node r">battle_v2 나누기</span><span class="arrow">→</span><span class="node a">SPECIAL MAP</span><span class="node r">성능</span></div>
+    <div class="chain"><span class="k">코드</span><span class="node g">battle_v2 나누기 ✅</span><span class="arrow">→</span><span class="node a">SPECIAL MAP</span><span class="node r">성능</span></div>
     <div class="chain"><span class="k">기획</span><span class="node r">별의 쓰임 결정</span><span class="arrow">→</span><span class="node r">별 = 특수 재화</span></div>
     <div class="chain"><span class="k">그림</span><span class="node a">Gemini 그림</span><span class="arrow">→</span><span class="node a">새 적</span><span class="arrow">→</span><span class="node a">구역 2</span></div>
     <div class="chain"><span class="k">언제든</span><span class="node g">새 파츠·스킬</span><span class="node g">사운드</span><span class="node g">튜토리얼</span><span class="node g">밸런스 리포트</span><span class="node g">적 도감</span></div>
