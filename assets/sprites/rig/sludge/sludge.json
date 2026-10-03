@@ -1,0 +1,17 @@
+{
+  "frameWidth": 94,
+  "frameHeight": 93,
+  "anchorX": 56.0,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/sludge/sludge_walk.png",
+      "frames": 12,
+      "duration": 0.7
+    },
+    "attack": {
+      "src": "assets/sprites/rig/sludge/sludge_attack.png",
+      "frames": 8,
+      "duration": 0.8
+    }
+  }
+}

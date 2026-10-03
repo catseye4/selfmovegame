@@ -44,6 +44,38 @@ export const ENEMY_TYPES = {
         bash: { every: 7, stun: 1.0, dmg: 0.05 }, smite: { every: 11, warn: 1.2, dmg: 0.09 }
     }
 };
+// ---- 구역 2: 고철 약탈단 (D-040) — 기획서 2-⑥의 바리케이드·늪 + 속박·수리 ----
+Object.assign(ENEMY_TYPES, {
+    raider: { name: '고철 약탈자', hp: 360, dps: 36, speed: [78, 102], reward: 1 },
+    builder: {
+        name: '고철 방벽병', hp: 520, dps: 26, speed: [48, 60], reward: 2, armor: 0.15,
+        // 주인공 앞 range px 안에 오면 멈춰서 바리케이드를 세움 (every초에 한 번, 근처에 이미 있으면 안 세움)
+        barricade: { range: 300, every: 9, hp: 520, gap: 140 }
+    },
+    sludge: {
+        name: '오물 투척병', hp: 260, dps: 0, speed: [66, 80], reward: 1.5,
+        // 주인공 발밑에 오물을 던져 늪 장판 (위에 있으면 진격·동작 감속, 반중력 부양은 면역)
+        sludge: { range: 250, every: 3.6, sec: 4.5, width: 120 }
+    },
+    netter: {
+        name: '그물총 사수', hp: 280, dps: 0, speed: [70, 84], reward: 1.5,
+        // 그물: 맞으면 속박(진격 불가, 공격·스킬은 가능)
+        net: { range: 240, every: 3.8, dmg: 18, root: 1.8 }
+    },
+    mechanic: {
+        name: '수리공', hp: 320, dps: 0, speed: [58, 66], reward: 2,
+        // 수리: 거점·바리케이드를 먼저 (repair). 배율: 거점 baseMul, 바리케이드 barricadeMul, 병사 soldierMul
+        // (치유량은 스테이지 적 체력 배율도 곱해짐 — 거점 4배였을 때 2-5에서 초당 640을 고쳐 최종 기지를 못 부숨. 1.2배 = 2-B 초당 약 200)
+        heal: { every: 2.4, amount: 120, range: 220, keepBack: 260, baseMul: 1.2, barricadeMul: 0.5, soldierMul: 0.35, repair: true }
+    },
+    scrapking: {
+        name: '고철왕', boss: true, hp: 5800, dps: 45, speed: [34, 34], reward: 40, armor: 0.3, knockResist: true, scale: 1.7,
+        tint: 'sepia(0.4) saturate(1.4)',
+        // 자석: 크레인 자석으로 붙잡아 뒤로 내던짐(주인공 밀려남 + 잠깐 기절) / 고철 낙하: 예고 원 → 큰 피해
+        magnet: { every: 9, warn: 0.6, push: 130, stun: 0.6, range: 420 },
+        drop: { every: 12, warn: 1.3, dmg: 0.08 }
+    }
+});
 export const ELITE = { hp: 3, dps: 1.5, scale: 1.3, reward: 4 };
 
 const ENEMY_CENTER = 38;   // 적 x(왼쪽 끝)에서 몸 가운데까지 — 겨누기·이펙트 기준 (bases_v2.js aimAt)
@@ -209,21 +241,46 @@ export function updateEnemy(b, e, dt, frontX) {
         }
     }
 
-    // 원거리(마취총) · 치유(의무병): 정해진 거리에서 멈추고 천천히 다가오며 능력 사용
-    const hold = t.ranged ? t.ranged.range : t.heal ? t.heal.keepBack : 0;
+    // 보스 기술 (거리와 상관없이 주기마다): 고철왕 자석·고철 낙하
+    if (t.magnet || t.drop) tickBossSkills(b, e, dt, dist);
+
+    // 원거리(마취총·오물·그물) · 치유(의무병·수리공): 정해진 거리에서 멈추고 천천히 다가오며 능력 사용
+    const shot = t.ranged || t.sludge || t.net;
+    const hold = shot ? shot.range : t.heal ? t.heal.keepBack : 0;
     if (hold) {
         const moving = dist > hold ? 1 : dist > 40 ? CREEP : 0;
         if (moving) moveBy(e, e.speed * slowMul * moving * dt);
         e.cd.skill += dt;
-        if (t.ranged && dist <= hold + 20 && e.cd.skill >= t.ranged.every) {
+        if (shot && dist <= hold + 20 && e.cd.skill >= shot.every) {
             e.cd.skill = 0;
-            shootTranq(b, e);
+            if (t.ranged) shootTranq(b, e);
+            else if (t.sludge) throwSludge(b, e);
+            else shootNet(b, e);
         }
         if (t.heal && e.cd.skill >= t.heal.every) {
             e.cd.skill = 0;
             healNearest(b, e);
         }
         return;
+    }
+
+    // 방벽병: 사거리에 들어오면 멈춰서 바리케이드를 박음 (망치 동작 동안 서 있음)
+    if (t.barricade) {
+        e.cd.build = (e.cd.build ?? t.barricade.every * 0.6) + dt;
+        if (e.busyT > 0) {
+            e.busyT -= dt;
+            return;
+        }
+        if (dist <= t.barricade.range && dist > MELEE.reach && e.cd.build >= t.barricade.every
+            && !b.enemies.some(o => o.isBarricade && Math.abs(o.x - (e.x - 40)) < t.barricade.gap)) {
+            e.cd.build = 0;
+            e.busyT = 0.9;
+            playOnce(e, 'attack');
+            b.schedule(0.5, () => {
+                if (b.isActive && b.enemies.includes(e)) b.spawnBarricade(e.x - 70, t.barricade.hp * b.stage.enemy.hp);
+            });
+            return;
+        }
     }
 
     // 근접: 다가가서 닿으면 공격
@@ -278,14 +335,80 @@ function shootTranq(b, e) {
     }, null);
 }
 
-// 치유: 사거리 안에서 체력 비율이 가장 낮은 적(거점 포함)
+// 오물 투척: 국자로 오물을 던져 주인공 발밑에 늪 장판
+function throwSludge(b, e) {
+    const s = e.t.sludge;
+    playOnce(e, 'attack');
+    const from = { x: e.x + 8, bottom: 110 };
+    const tx = b.monsterX + 60;
+    sound.play('kaiju_spore', { rate: 0.8, vol: 0.6 });
+    b.fx.launchOrb(from, () => ({ x: tx, b: FOOT_B + 6 }), '190, 230, 40', 0.55, () => {
+        if (b.isActive) b.addPuddle(tx - s.width / 2, s.width, s.sec);
+    }, null);
+}
+
+// 그물: 맞으면 피해 + 속박 (진격 불가, 공격은 가능)
+function shootNet(b, e) {
+    const n = e.t.net;
+    playOnce(e, 'attack');
+    const from = { x: e.x + 4, bottom: 104 };
+    sound.play('mech_missile_launch', { rate: 1.5, vol: 0.5 });
+    b.fx.launchOrb(from, () => ({ x: b.monsterX + 60, b: 110 }), '210, 190, 140', 0.42, () => {
+        if (!b.isActive) return;
+        b.damagePlayer(n.dmg * b.stage.enemy.dps, 0);
+        b.applyPlayerRoot(n.root);
+    }, null);
+}
+
+// 고철왕 기술: 자석으로 붙잡아 뒤로 내던짐 / 예고 원 자리에 고철 낙하
+function tickBossSkills(b, e, dt, dist) {
+    const t = e.t;
+    e.cd.magnet = (e.cd.magnet || 0) + dt;
+    e.cd.drop = (e.cd.drop ?? t.drop.every * 0.5) + dt;
+    if (t.magnet && e.cd.magnet >= t.magnet.every && dist <= t.magnet.range) {
+        e.cd.magnet = 0;
+        const m = t.magnet;
+        playOnce(e, 'magnet');
+        b.createDamagePopup(e.x, 250, '🧲 자석!', false);
+        sound.play('charge_up', { rate: 0.7, vol: 0.7 });
+        b.schedule(m.warn, () => {
+            if (!b.isActive || !b.enemies.includes(e)) return;
+            b.fx.launchOrb({ x: e.x - 20, bottom: 120 }, () => ({ x: b.monsterX + 60, b: 120 }), '120, 200, 255', 0.25, () => {
+                if (!b.isActive) return;
+                b.knockPlayerBack(m.push, '자석에 붙잡혀 내던져짐!');
+                b.applyPlayerStun(m.stun, '자석!');
+            }, null);
+        });
+    }
+    if (t.drop && e.cd.drop >= t.drop.every) {
+        e.cd.drop = 0;
+        const d = t.drop;
+        playOnce(e, 'drop');
+        b.fx.play(BATTLE_VFX.smiteWarn, b.monsterX + 35, FOOT_B, { follow: () => [b.monsterX + 35, FOOT_B] });
+        b.createDamagePopup(b.monsterX + 20, 220, '⚠ 고철 낙하', false);
+        sound.play('warning', { vol: 0.5, rate: 1.2 });
+        b.schedule(d.warn, () => {
+            if (!b.isActive || !b.enemies.includes(e)) return;
+            b.fx.play(BATTLE_VFX.baseBlast, b.monsterX + 35, FOOT_B + 20, { scale: 1.2 });
+            b.director.shake(10, 450);
+            sound.play('chimera_slam', { rate: 0.8 });
+            b.damagePlayer(b.maxPlayerHp * d.dmg, 0);
+        });
+    }
+}
+
+// 치유·수리: 사거리 안에서 체력 비율이 가장 낮은 적(거점·바리케이드 포함)
 function healNearest(b, e) {
     const h = e.t.heal;
     const cands = b.enemies.filter(o => o !== e && o.hp < o.maxHp && Math.abs(o.x - e.x) <= h.range);
     if (!cands.length) return;
     playOnce(e, 'attack');
-    const target = cands.sort((p, q) => p.hp / p.maxHp - q.hp / q.maxHp)[0];
-    const amount = h.amount * b.stage.enemy.hp * (target.isBuilding ? h.baseMul : 1);
+    // 수리공은 건물·바리케이드를 먼저
+    const fixed = o => o.isBuilding || o.isBarricade;
+    const pool = h.repair && cands.some(fixed) ? cands.filter(fixed) : cands;
+    const target = pool.sort((p, q) => p.hp / p.maxHp - q.hp / q.maxHp)[0];
+    const mul = target.isBarricade ? (h.barricadeMul ?? h.baseMul) : target.isBuilding ? h.baseMul : (h.soldierMul ?? 1);
+    const amount = h.amount * b.stage.enemy.hp * mul;
     target.hp = Math.min(target.maxHp, target.hp + amount);
     if (target.hpBar) target.hpBar.style.width = `${(target.hp / target.maxHp) * 100}%`;
     if (target.isBuilding) {
@@ -294,7 +417,7 @@ function healNearest(b, e) {
     }
     const tx = aimAt(target).x;
     b.fx.play(KAIJU_VFX.regen, tx, FOOT_B);
-    b.createDamagePopup(target.x, target.isBuilding ? 200 : 130, `+${Math.round(amount)} 치유`, false);
+    b.createDamagePopup(target.x, target.isBuilding ? 200 : 130, `+${Math.round(amount)} ${h.repair ? '수리' : '치유'}`, false);
     sound.play('kaiju_regen', { rate: 1.3 });
 }
 

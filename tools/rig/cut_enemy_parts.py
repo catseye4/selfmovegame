@@ -41,6 +41,8 @@ OUT = 'assets/sprites/rig/{name}'
 # cape: (x, y) 오른쪽 아래의 파란 망토를 따로 한 조각으로 (다리에 붙어 같이 흔들리지 않게, 몸통 뒤에서 살랑임)
 # pivot: 자동으로 잡은 회전 중심 대신 (방패·분사기는 맨 위가 아니라 손잡이/어깨에서 돌아야 함)
 # flip: 좌우 뒤집어서 처리 (오른쪽을 보는 그림), tail: (x0, y0, x1, y1) 이 영역의 꼬리를 따로 한 조각으로
+# not_arm: [(x0, y0, x1, y1)] 팔 차이에서 뺄 곳 (팔 없는 그림이 가슴·망토를 다시 그려 차이가 생긴 곳)
+# head_cut: [(x0, y0, x1, y1)] 머리에서 뺄 곳 (머리 높이까지 올라온 등짐 — 몸통에 남김)
 ENEMIES = {
     'guard':    {'key': 'green', 'head_y': 392, 'hip_y': 700, 'crotch': 510, 'slope': 0.35, 'arms': 'two', 'close': 0},
     'shield':   {'key': 'green', 'head_y': 408, 'hip_y': 700, 'crotch': 510, 'slope': 0.35, 'arms': 'two', 'close': 11,
@@ -51,6 +53,20 @@ ENEMIES = {
                  'pivot': {'armF': (425, 478)}},
     'guardian': {'key': 'green', 'head_y': 305, 'hip_y': 752, 'crotch': 577, 'slope': 0.35, 'arms': 'two', 'close': 7,
                  'arm_top': 200, 'head_x': (370, 600), 'cape': (600, 380), 'pivot': {'armF': (365, 410)}},
+    # ---- 구역 2: 고철 약탈단 (마젠타 배경, D-040) ----
+    'raider':   {'key': 'magenta', 'head_y': 400, 'hip_y': 700, 'crotch': 510, 'slope': 0.35, 'arms': 'two', 'close': 9,
+                 'not_arm': [(410, 440, 610, 700)]},
+    'builder':  {'key': 'magenta', 'head_y': 430, 'hip_y': 735, 'crotch': 517, 'slope': 0.3, 'arms': 'two', 'close': 9,
+                 'head_x': (320, 565)},
+    'sludge':   {'key': 'magenta', 'head_y': 405, 'hip_y': 700, 'crotch': 510, 'slope': 0.35, 'arms': 'two', 'close': 9,
+                 'head_cut': [(615, 285, 900, 410)]},
+    'netter':   {'key': 'magenta', 'head_y': 395, 'hip_y': 715, 'crotch': 540, 'slope': 0.3, 'arms': 'one', 'close': 9,
+                 'not_arm': [(605, 380, 800, 800)]},
+    'mechanic': {'key': 'magenta', 'head_y': 405, 'hip_y': 700, 'crotch': 510, 'slope': 0.35, 'arms': 'two', 'close': 9},
+    # 보스 고철왕: 폐차 조종석 = 몸통, 조종사(위) = 머리, 크레인 팔(앞) = armF, 집게 팔(뒤) = armB
+    'scrapking': {'key': 'magenta', 'head_y': 290, 'hip_y': 560, 'crotch': 535, 'slope': 0.25, 'arms': 'two', 'close': 5,
+                  'arm_top': 60, 'head_x': (470, 700),
+                  'pivot': {'armF': (395, 300), 'armB': (812, 420), 'legF': (450, 580), 'legB': (690, 575)}},
     # 합성괴인 졸개(아군): 오른쪽을 보는 그림 → 뒤집어서 적과 같은 방향으로 자름 (게임에선 아군이라 다시 뒤집어 그림)
     'minion':   {'key': 'green', 'flip': True, 'head_y': 470, 'hip_y': 640, 'crotch': 505, 'slope': 0.12, 'arms': 'two',
                  'close': 7, 'arm_top': 400, 'head_x': (200, 560), 'tail': (712, 655, 1024, 775),
@@ -76,7 +92,10 @@ def keyed(path, key):
 
 def arm_masks(full, armless, cfg, rows, op1, op2):
     diff = np.abs(full[..., :3].astype(int) - armless[..., :3].astype(int)).max(axis=2) > ARM_DIFF
+    cols = np.broadcast_to(np.arange(rows.shape[1])[None, :], rows.shape)
     arms = op1 & (diff | ~op2) & (rows >= cfg.get('arm_top', cfg['head_y']))
+    for x0, y0, x1, y1 in cfg.get('not_arm', []):
+        arms &= ~((cols >= x0) & (cols < x1) & (rows >= y0) & (rows < y1))
     arms = cv2.morphologyEx(arms.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8)) > 0
     if cfg['close']:
         k = np.ones((cfg['close'], cfg['close']), np.uint8)
@@ -136,6 +155,8 @@ def masks_for(name):
     head = op1 & (rows < cfg['head_y']) & ~anyarm
     if 'head_x' in cfg:
         head &= (cols >= cfg['head_x'][0]) & (cols < cfg['head_x'][1])
+    for x0, y0, x1, y1 in cfg.get('head_cut', []):
+        head &= ~((cols >= x0) & (cols < x1) & (rows >= y0) & (rows < y1))
     torso = op2 & ((rows >= cfg['head_y'] - NECK_BAND) | (op1 & ~head & ~anyarm)) & (rows < cfg['hip_y']) & ~cape
     legs = op2 & (rows >= cfg['hip_y'] - HIP_BAND) & ~cape
     split = cfg['crotch'] + cfg['slope'] * (rows - cfg['hip_y'])

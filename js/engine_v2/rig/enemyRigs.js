@@ -155,6 +155,67 @@ const GUARDIAN_BASH = {
     events: impact(0.4, '120, 200, 255')
 };
 
+// ---- 구역 2: 고철 약탈단 (D-040) ----
+// 방벽병 망치 내리찍기(바리케이드를 박을 때도 같은 동작): 몸을 크게 젖혀 망치를 머리 위로 → 내리찍음
+const HAMMER_SLAM = {
+    duration: 1.0, loop: true,
+    tracks: {
+        armF: { rot: [[0, 0], [0.4, 150, 'in'], [0.52, -20, 'out'], [0.7, -14], [1.0, 0]] },
+        armB: { rot: [[0, 0], [0.4, -20], [0.52, 24, 'out'], [1.0, 0]] },
+        body: { x: [[0, 0], [0.4, 12, 'in'], [0.52, -24, 'out'], [0.75, -18], [1.0, 0]],
+                rot: [[0, 0], [0.4, 7, 'in'], [0.52, -9, 'out'], [0.75, -6], [1.0, 0]], y: [[0, 0], [0.4, -8], [0.52, 10], [1.0, 0]] },
+        head: { rot: [[0, 0], [0.4, 4], [0.52, -5], [1.0, 0]] },
+        legF: { rot: [[0, 0], [0.52, 10, 'out'], [1.0, 0]] },
+        legB: { rot: [[0, 0], [0.52, -8, 'out'], [1.0, 0]] }
+    },
+    events: impact(0.52, '255, 210, 120')
+};
+
+// 오물 투척(한 번): 국자를 뒤로 당겼다가 머리 위로 휘둘러 던짐
+const LADLE_THROW = {
+    duration: 0.8, loop: true,
+    tracks: {
+        armF: { rot: [[0, 0], [0.25, -40, 'in'], [0.45, 120, 'out'], [0.6, 100], [0.8, 0]] },
+        armB: { rot: [[0, 0], [0.25, 15], [0.45, -15], [0.8, 0]] },
+        body: { x: [[0, 0], [0.25, 10, 'in'], [0.45, -14, 'out'], [0.8, 0]], rot: [[0, 0], [0.25, 5], [0.45, -6], [0.8, 0]] },
+        head: { rot: [[0, 0], [0.25, 3], [0.45, -4], [0.8, 0]] }
+    },
+    events: impact(0.45, '200, 230, 60')
+};
+
+// 고철왕: 걷기는 무거운 보행 기계, 공격 = 뒤쪽 집게 팔 휘둘러 내려치기
+const CLAW_SMASH = {
+    duration: 1.1, loop: true,
+    tracks: {
+        armB: { rot: [[0, 0], [0.4, -28, 'in'], [0.55, 70, 'out'], [0.75, 60], [1.1, 0]] },
+        armF: { rot: [[0, 0], [0.4, 6], [0.55, -4], [1.1, 0]] },
+        body: { x: [[0, 0], [0.4, 14, 'in'], [0.55, -26, 'out'], [0.8, -18], [1.1, 0]], rot: [[0, 0], [0.4, 4], [0.55, -5, 'out'], [1.1, 0]] },
+        head: { rot: [[0, 0], [0.4, 3], [0.55, -4], [1.1, 0]] },
+        legF: { rot: [[0, 0], [0.55, 8, 'out'], [1.1, 0]] },
+        legB: { rot: [[0, 0], [0.55, -6, 'out'], [1.1, 0]] }
+    },
+    events: [[0.55, 'impact', { socket: 'tip', bone: 'armB', color: '255, 200, 120' }]]
+};
+// 자석 끌어당기기(한 번): 크레인 팔을 앞으로 낮춰 자석을 겨누고 버팀 (주인공을 뒤로 끌어당김)
+const MAGNET_PULL = {
+    duration: 1.6, loop: true,
+    tracks: {
+        armF: { rot: [[0, 0], [0.35, -16, 'out'], [0.45, -14], [0.55, -16], [0.65, -14], [0.75, -16], [0.85, -14], [1.25, -16], [1.6, 0]] },
+        body: { x: [[0, 0], [0.35, 10], [1.25, 10], [1.6, 0]], rot: [[0, 0], [0.35, 3], [1.25, 3], [1.6, 0]] },
+        legF: { rot: [[0, 0], [0.35, -6], [1.25, -6], [1.6, 0]] }
+    },
+    events: [[0.35, 'impact', { socket: 'tip', bone: 'armF', color: '120, 200, 255' }]]
+};
+// 고철 낙하(한 번): 크레인을 높이 들어 올렸다가 내리찍음 (예고 원 자리에 고철이 떨어짐)
+const SCRAP_DROP = {
+    duration: 1.2, loop: true,
+    tracks: {
+        armF: { rot: [[0, 0], [0.5, 24, 'in'], [0.65, -12, 'out'], [0.85, -8], [1.2, 0]] },
+        body: { y: [[0, 0], [0.5, -8], [0.65, 6], [1.2, 0]], rot: [[0, 0], [0.5, -3], [0.65, 2], [1.2, 0]] }
+    },
+    events: [[0.65, 'impact', { socket: 'tip', bone: 'armF', color: '255, 200, 120' }]]
+};
+
 function enemy(id, name, { arms = 'two', cape = false, tail = false, walkOpt, clips, hitBone = 'armF', shadow }) {
     return {
         id, name, assetDir: dir(id),
@@ -188,5 +249,15 @@ export const ENEMY_RIGS = {
         clips: { attack: SWORD_SLASH, bash: GUARDIAN_BASH }, shadow: { rx: 260, ry: 22 }
     }),
     // 아군 (오른쪽을 보는 그림을 뒤집어 잘랐으므로 적처럼 왼쪽을 봄 — 게임에선 아군이라 다시 뒤집어 그림)
-    minion: enemy('minion', '합성괴인 졸개', { tail: true, walkOpt: { ...SOLDIER_WALK, dur: 0.75, armF: 10, armB: 6, tail: 8 }, clips: { attack: MINION_SWING } })
+    minion: enemy('minion', '합성괴인 졸개', { tail: true, walkOpt: { ...SOLDIER_WALK, dur: 0.75, armF: 10, armB: 6, tail: 8 }, clips: { attack: MINION_SWING } }),
+    // ---- 구역 2: 고철 약탈단 ----
+    raider: enemy('raider', '고철 약탈자', { walkOpt: { ...SOLDIER_WALK, armF: 12, armB: 12 }, clips: { attack: BATON_SWING } }),
+    builder: enemy('builder', '고철 방벽병', { walkOpt: { ...SOLDIER_WALK, dur: 0.85, leg: 18, armF: 6, armB: 8 }, clips: { attack: HAMMER_SLAM } }),
+    sludge: enemy('sludge', '오물 투척병', { walkOpt: { ...SOLDIER_WALK, armF: 10, armB: 8 }, clips: { attack: LADLE_THROW } }),
+    netter: enemy('netter', '그물총 사수', { arms: 'one', walkOpt: { ...SOLDIER_WALK, arms: 2 }, clips: { attack: RIFLE_SHOT }, hitBone: 'arms' }),
+    mechanic: enemy('mechanic', '수리공', { walkOpt: { ...SOLDIER_WALK, armF: 8, armB: 12 }, clips: { attack: HEAL_SPRAY } }),
+    scrapking: enemy('scrapking', '고철왕', {
+        walkOpt: { dur: 1.0, leg: 14, lift: 22, bob: 12, armF: 3, armB: 6 },
+        clips: { attack: CLAW_SMASH, magnet: MAGNET_PULL, drop: SCRAP_DROP }, shadow: { rx: 300, ry: 24 }
+    })
 };

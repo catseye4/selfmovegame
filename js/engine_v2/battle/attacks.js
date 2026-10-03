@@ -57,6 +57,8 @@ export const AttackMethods = {
     },
 
     // [타락 히어로 팔] 어둠 파동: 칼끝에서 초승달 파동이 앞으로 날아가며 지나가는 적 전부에게 피해 + 감속
+    // 거점·바리케이드는 앞면(왼쪽 끝)에 닿으면 맞음 — 가운데로 판정하면 넓은 거점 그림(벙커 217px 등)에는 사거리 끝에서 파동이 닿지 않아
+    // 기본 공격이 거점에 안 들어갔음 (2026-10-03 발견)
     launchDarkWave(fromX, dmg, isCrit) {
         const hit = new Set();
         let mul = 1;   // 관통할수록 약해짐
@@ -65,12 +67,13 @@ export const AttackMethods = {
             h: HERO_WAVE.h, color: HERO_WAVE.color,
             onPass: (x0, x1) => {
                 [...this.enemies].forEach(e => {
-                    const cx = aimOf(e).x;
+                    const solid = e.isBuilding || e.isBarricade;
+                    const cx = solid ? e.x + 12 : aimOf(e).x;
                     if (cx < x0 || cx > x1 || hit.has(e)) return;
                     hit.add(e);
                     this.fx.play(HERO_VFX.waveHit, cx, 88);
-                    if (!e.isBuilding) this.slowEnemy(e);
-                    this.dealDamageToEnemy(e, dmg * mul, isCrit, { knock: 0.6 });
+                    if (!solid) this.slowEnemy(e);
+                    this.dealDamageToEnemy(e, dmg * mul * (solid ? HERO.waveBaseMul : 1), isCrit, { knock: 0.6 });
                     mul *= HERO.wavePierce;
                 });
             }

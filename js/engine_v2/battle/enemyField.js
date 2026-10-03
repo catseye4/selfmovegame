@@ -1,7 +1,8 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // 전투 — 전장의 적과 거점 (v2)
    적 소환·이동(종류별 행동은 enemies_v2.js), 피해·처치·보상, 피격 반응과 상태 외형(기절·감속·저주·산성),
-   거점(요새·최종 기지) 출현·파손·잔해(그림은 bases_v2.js), 보스전 EMP 포격.
+   거점(요새·최종 기지) 출현·파손·잔해(그림은 bases_v2.js), 보스전 EMP 포격·유독 가스,
+   구역 2 장애물: 바리케이드(방벽병이 세움, 부숴야 진격), 늪 장판(오물 투척병, 위에 있으면 감속).
    battle_v2.js의 BattleEngine에 메서드로 붙는다 (this = 전투 엔진).
    ========================================================================== */
 
@@ -12,7 +13,7 @@ import { sound } from '../audio/sound_v2.js';
 import { KAIJU_VFX, BATTLE_VFX } from '../vfx/vfxDefs.js';
 import { spawnEnemy, updateEnemy, pickType, killReward, ENEMY_TYPES } from '../enemies_v2.js';
 import { icon } from '../../ui_v2/icons.js';
-import { GROUND_SPEED, BASE_STATE, baseArt, baseSize, aimAt as aimOf, dressBase, setBaseState } from '../bases_v2.js';
+import { GROUND_SPEED, BASE_STATE, baseArt, baseArtName, baseSize, aimAt as aimOf, dressBase, setBaseState } from '../bases_v2.js';
 import { HERO, HIT_REACT, ACID, POPUP, FOOT_B, BASE_X } from './tuning.js';
 
 // 적 상태 외형 (우선순위: 기절 > 감속 > 저주) + 체력바 옆 상태 아이콘
@@ -22,6 +23,7 @@ const ENEMY_TINT = {
     curse: 'brightness(0.72) saturate(0.7) drop-shadow(0 0 4px rgba(170, 80, 255, 0.9))'
 };
 const STATUS_ICON = { curse: 'curse', slow: 'slow', stun: 'stun', acid: 'acid' };
+const PUDDLE_STICK = 1.5;   // 늪을 밟은 뒤 감속이 남는 시간(초)
 
 export const EnemyMethods = {
     // ---- 적 소환 ----
@@ -42,7 +44,7 @@ export const EnemyMethods = {
             return;
         }
         this.spawnTimer += dt;
-        if (this.spawnTimer >= this.spawnInterval && this.enemies.filter(e => !e.isBuilding).length < this.stage.enemy.max) {
+        if (this.spawnTimer >= this.spawnInterval && this.enemies.filter(e => !e.isBuilding && !e.isBarricade).length < this.stage.enemy.max) {
             this.spawnTimer = 0;
             this.spawnMinion();
         }
@@ -60,7 +62,7 @@ export const EnemyMethods = {
                 if (enemy.stunT <= 0) this.updateEnemyFilter(enemy);
                 return;   // 기절: 이동/공격 없음
             }
-            if (!enemy.isBuilding) updateEnemy(this, enemy, dt, frontX);   // 이동·공격·종류별 능력
+            if (!enemy.isBuilding && !enemy.isBarricade) updateEnemy(this, enemy, dt, frontX);   // 이동·공격·종류별 능력
         });
     },
 
@@ -136,6 +138,14 @@ export const EnemyMethods = {
 
     /** 적 처치: 처치 수·보상, 보스 격파 연출, 타락 히어로 머리면 확률로 세뇌 징집 */
     onEnemyKilled(enemy) {
+        if (enemy.isBarricade) {   // 바리케이드: 터지며 사라짐 (처치 수·징집 없음)
+            const a = aimOf(enemy);
+            this.fx.play(BATTLE_VFX.baseBlast, a.x, a.b, { scale: 0.8 });
+            sound.play('base_blast', { rate: 1.3, vol: 0.7 });
+            gameState.addDarkMatter(Math.round(this.stage.reward.kill * 0.5));
+            this.updateHud();
+            return;
+        }
         this.stats.kills += 1;
         sound.play('enemy_die');
         gameState.addDarkMatter(killReward(this, enemy));
@@ -262,6 +272,7 @@ export const EnemyMethods = {
         const final = kind === 'final';
         const x = window.innerWidth > 1000 ? BASE_X[kind] : (final ? 620 : 650);
         const maxHp = this.stage.base[kind];
+        const art = baseArtName(this.stage, kind);   // 구역별 그림 (bases_v2.js)
         this.currentTargetHp = maxHp;
         this.maxTargetHp = maxHp;
         if (this.domTargetLabel) this.domTargetLabel.textContent = final ? '[최종 핵심 기지] HP' : '[중간 거점 요새] HP';
@@ -270,7 +281,7 @@ export const EnemyMethods = {
         el.className = final ? 'building-entity final-base' : 'building-entity';
         el.setAttribute('data-label', final ? 'FINAL HEADQUARTERS' : 'INTERMEDIATE FORT');
         el.style.left = `${x}px`;
-        dressBase(el, kind);
+        dressBase(el, art, kind);
         el.classList.add('v2-base-in');
 
         const hpBar = document.createElement('div');
@@ -282,7 +293,8 @@ export const EnemyMethods = {
         const base = {
             id: final ? 'building_final_base' : 'building_mid_base',
             kind,
-            size: baseSize(kind),
+            art,
+            size: baseSize(art, kind),
             artState: 0,
             x,
             hp: maxHp,
@@ -298,12 +310,12 @@ export const EnemyMethods = {
         return base;
     },
 
-    /** 체력이 절반 아래로 내려가면 파손 그림 (지속 피해로 깎여도 잡히게 매 프레임 확인) */
+    /** 체력이 절반 아래로 내려가면 파손 그림 (지속 피해로 깎여도 잡히게 매 프레임 확인) — 거점·바리케이드 */
     updateBaseArt() {
         this.enemies.forEach(e => {
-            if (!e.isBuilding || e.artState !== 0 || e.hp > e.maxHp * BASE_STATE.damaged || !baseArt(e.kind)) return;
+            if (!(e.isBuilding || e.isBarricade) || e.artState !== 0 || e.hp > e.maxHp * BASE_STATE.damaged || !baseArt(e.art)) return;
             e.artState = 1;
-            setBaseState(e.dom, e.kind, 1);
+            setBaseState(e.dom, e.art, 1);
             const a = aimOf(e);
             this.fx.play(BATTLE_VFX.baseBlast, a.x, a.b + 20, { scale: 1.1 });
             this.director.shake(5, 300);
@@ -313,9 +325,9 @@ export const EnemyMethods = {
 
     /** 파괴 연출의 대폭발 순간: 잔해 그림으로 바꿈. 요새 잔해는 남겨 두었다가 바닥과 함께 흘려보냄 */
     collapseBase(base) {
-        if (!base.dom || !baseArt(base.kind)) return false;
+        if (!base.dom || !baseArt(base.art)) return false;
         base.dom.classList.remove('v2-wreck', 'v2-wreck--final', 'v2-base-in');
-        setBaseState(base.dom, base.kind, 2);
+        setBaseState(base.dom, base.art, 2);
         if (!base.isFinal) this.ruins.push(base);
         return true;
     },
@@ -334,9 +346,73 @@ export const EnemyMethods = {
         });
     },
 
+    // ---- 구역 2 장애물 ----
+    /** 바리케이드 (방벽병이 세움): 체력 있는 작은 벽 — 주인공·아군이 부숴야 지나감, 수리공이 고침 */
+    spawnBarricade(x, hp) {
+        if (!this.domEnemies) return null;
+        const el = document.createElement('div');
+        el.className = 'enemy-entity v2-barricade';
+        el.style.left = `${x}px`;
+        dressBase(el, 'barricade', 'barricade');
+        const track = document.createElement('div');
+        track.className = 'enemy-hp-track';
+        const bar = document.createElement('div');
+        bar.className = 'enemy-hp';
+        bar.style.width = '100%';
+        track.appendChild(bar);
+        el.appendChild(track);
+        this.domEnemies.appendChild(el);
+        const b = {
+            id: `barricade_${Date.now()}_${Math.random()}`, type: 'barricade', isBarricade: true, art: 'barricade', artState: 0,
+            size: baseSize('barricade', 'mid'), x, hp, maxHp: hp, dps: 0, speed: 0, knockResist: true, reward: 0.5,
+            dom: el, hpBar: bar, baseFilter: '', t: { name: '바리케이드' }, cd: {}
+        };
+        this.enemies.push(b);
+        this.fx.play(BATTLE_VFX.shieldBash, x + b.size.w / 2, FOOT_B + 30, { scale: 0.7 });
+        sound.play('mech_fist_hit', { rate: 0.7, vol: 0.7 });
+        this.createDamagePopup(x + 20, 160, '🚧 바리케이드!', false);
+        return b;
+    },
+
+    /** 늪 장판 (오물 투척병): 바닥에 sec초 — 주인공이 밟으면 PUDDLE_STICK초 감속 (걷는 동안은 바닥과 함께 흘러 금방 지나가므로) */
+    addPuddle(x, w, sec) {
+        if (!this.domEnemies) return;
+        const el = document.createElement('div');
+        el.className = 'v2-puddle';
+        el.style.left = `${x}px`;
+        el.style.width = `${w}px`;
+        this.domEnemies.appendChild(el);
+        this.hazards.push({ x, w, t: sec, dom: el });
+        sound.play('kaiju_spore', { rate: 0.6, vol: 0.5 });
+    },
+
+    tickHazards(dt) {
+        if (!this.hazards.length) return;
+        const footL = this.monsterX + 20, footR = this.monsterX + 100;
+        this.hazards = this.hazards.filter(h => {
+            h.t -= dt;
+            if (h.t <= 0) {
+                h.dom.classList.add('is-fading');
+                setTimeout(() => h.dom.remove(), 400);
+                return false;
+            }
+            if (h.x < footR && h.x + h.w > footL) this.applyPlayerSlow(PUDDLE_STICK, true);   // 밟으면 끈적한 오물이 묻어 잠시 감속
+            return true;
+        });
+    },
+
+    /** 걷는 동안 늪도 바닥과 같이 흘러감 */
+    scrollHazards(dt) {
+        this.hazards.forEach(h => {
+            h.x -= GROUND_SPEED * dt;
+            h.dom.style.left = `${h.x}px`;
+        });
+    },
+
     // ---- 보스전: 최종 기지 EMP 광역 포격 (기획서 2-⑥) ----
     // 경보 → 발사: 주인공 기절, 대신 전장의 적 보병 전멸 + 잠시 소환 중단
     tickArtillery(dt) {
+        this.tickGas(dt);
         const art = this.stage.boss && this.stage.boss.artillery;
         const base = this.enemies.find(e => e.isBuilding && e.isFinal);
         if (!art || !base) return;
@@ -348,7 +424,7 @@ export const EnemyMethods = {
         if (this.artTimer >= art.every) {
             this.artTimer = 0;
             this.artWarned = false;
-            const muzzle = baseArt('final') && baseArt('final').muzzle;   // EMP 포구 (그림이 있으면)
+            const muzzle = baseArt(base.art) && baseArt(base.art).muzzle;   // EMP 포구 (그림이 있으면)
             this.fx.play(BATTLE_VFX.emp, muzzle ? base.x + muzzle[0] : base.x + 60, muzzle ? muzzle[1] : 230);
             this.director.flash('#9fe0ff', 380, 0.75);
             this.director.shake(12, 700);
@@ -363,5 +439,31 @@ export const EnemyMethods = {
             this.enemies = this.enemies.filter(e => e.isBuilding || e.boss);
             this.spawnSilence = art.silence;
         }
+    },
+
+    // ---- 구역 2 보스전: 소각탑 유독 가스 — 경보 → 전장 전체 감속 (적도 같이 느려짐), 가스가 퍼진 동안은 약탈단도 새로 못 나옴 ----
+    tickGas(dt) {
+        const gas = this.stage.boss && this.stage.boss.gas;
+        const base = gas && this.enemies.find(e => e.isBuilding && e.isFinal);
+        if (!base) return;
+        this.gasTimer += dt;
+        if (!this.gasWarned && this.gasTimer >= gas.every - gas.warn) {
+            this.gasWarned = true;
+            this.director.alarm('유독 가스', `${gas.warn.toFixed(0)}초 뒤 소각탑 가스 분출 — 적도 느려지고 증원이 멈춘다`, gas.warn);
+        }
+        if (this.gasTimer < gas.every) return;
+        this.gasTimer = 0;
+        this.gasWarned = false;
+        const muzzle = baseArt(base.art) && baseArt(base.art).muzzle;
+        this.fx.play(BATTLE_VFX.emp, muzzle ? base.x + muzzle[0] : base.x + 100, muzzle ? muzzle[1] : 300, { scale: 0.8 });
+        this.director.flash('#c8ff60', 420, 0.45);
+        this.director.gas(gas.sec);
+        this.applyPlayerSlow(gas.sec);
+        this.enemies.forEach(e => {
+            if (e.isBuilding || e.isBarricade) return;
+            e.slowT = Math.max(e.slowT || 0, gas.sec);
+            this.updateEnemyFilter(e);
+        });
+        this.spawnSilence = Math.max(this.spawnSilence, gas.silence ?? gas.sec);
     }
 };

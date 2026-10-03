@@ -210,7 +210,7 @@ export class BattleHud {
         });
 
         // 주인공 상태 이상 (감속·기절) 아이콘 + 남은 시간
-        const ps = [b.pStunT > 0 && ['stun', b.pStunT], b.pSlowT > 0 && ['slow', b.pSlowT]].filter(Boolean);
+        const ps = [b.pStunT > 0 && ['stun', b.pStunT], b.pRootT > 0 && ['net', b.pRootT], b.pSlowT > 0 && ['slow', b.pSlowT]].filter(Boolean);
         this.set('pstatus', ps.map(([k, t]) => `${k}${Math.ceil(t * 2)}`).join(), () => {
             this.el.pstatus.innerHTML = ps.map(([k, t]) => `<span class="v2-status__icon is-${k}">${icon(k, 11)}</span><em>${t.toFixed(1)}</em>`).join('');
         });

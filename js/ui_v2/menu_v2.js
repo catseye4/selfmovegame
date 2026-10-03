@@ -10,7 +10,7 @@ import { gameState } from '../engine/state.js';
 import { monsterControllerV2 } from '../engine_v2/monster_v2.js';
 import { skillsForParts, legPassiveOf } from '../engine_v2/skills_v2.js';
 import { progress } from '../engine_v2/progress_v2.js';
-import { CHAPTER1, STAGES, stageById, isUnlocked, defaultStage } from '../engine_v2/stages_v2.js';
+import { CHAPTERS, stageById, isUnlocked, defaultStage, chapterOf, chapterUnlocked, defaultStageIn } from '../engine_v2/stages_v2.js';
 import { ENEMY_TYPES } from '../engine_v2/enemies_v2.js';
 import { sound } from '../engine_v2/audio/sound_v2.js';
 import { icon, fillIcons } from './icons.js';
@@ -58,7 +58,8 @@ export class MenuController {
         this.root.querySelectorAll('.v2-maptab').forEach(t => t.classList.toggle('is-on', t.dataset.map === map));
         const story = map === 'story';
         $('menu-radar-locked-v2').hidden = story;
-        $('menu-map-name-v2').textContent = story ? CHAPTER1.name : 'SPECIAL · 무한 파밍 / 엘리트 챌린지';
+        $('menu-map-name-v2').textContent = story ? chapterOf(this.currentStage()).name : 'SPECIAL · 무한 파밍 / 엘리트 챌린지';
+        $('menu-zones-v2').hidden = !story;
         const sortie = $('btn-to-battle-v2');
         sortie.disabled = !story;
         if (story) this.renderStages();
@@ -86,10 +87,41 @@ export class MenuController {
         this.renderStages();
     }
 
+    /** 구역 탭: 구역 1 / 구역 2(1-B를 깨면 열림) — 누르면 그 구역의 아직 못 깬 첫 스테이지 */
+    selectZone(id) {
+        const ch = CHAPTERS.find(c => c.id === id);
+        if (!ch) return;
+        if (!chapterUnlocked(ch, progress)) {
+            sound.play('ui_error');
+            const prev = CHAPTERS[CHAPTERS.indexOf(ch) - 1];
+            const last = prev && prev.stages[prev.stages.length - 1];
+            $('menu-map-foot-v2').innerHTML = `<b>구역 ${ch.zone}</b> 잠김 — ${last ? `${last.id} ${last.name}을(를) ` : '이전 구역을 '}클리어하세요`;
+            return;
+        }
+        sound.play('ui_tab');
+        progress.selectStage(defaultStageIn(ch, progress).id);
+        this.renderStages();
+    }
+
+    renderZones(cur) {
+        const box = $('menu-zones-v2');
+        if (!box) return;
+        const curCh = chapterOf(cur);
+        box.innerHTML = CHAPTERS.map(ch => {
+            const open = chapterUnlocked(ch, progress);
+            return `<button class="v2-zonetab${ch === curCh ? ' is-on' : ''}${open ? '' : ' is-locked'}" data-zone="${ch.id}" title="${ch.name}">`
+                + `${open ? '' : icon('lock', 11)}구역 ${ch.zone}</button>`;
+        }).join('');
+        box.querySelectorAll('.v2-zonetab').forEach(b => b.addEventListener('click', () => this.selectZone(b.dataset.zone)));
+    }
+
     renderStages() {
         const cur = this.currentStage();
         progress.selectedStage = cur.id;
-        const nodes = STAGES.map(st => ({
+        const ch = chapterOf(cur);
+        $('menu-map-name-v2').textContent = ch.name;
+        this.renderZones(cur);
+        const nodes = ch.stages.map(st => ({
             id: st.id, at: st.map, boss: !!st.boss, name: `${st.id} ${st.name}`,
             state: progress.stage(st.id).cleared ? 'cleared' : isUnlocked(st.id, progress) ? 'open' : 'locked',
             stars: progress.starCount(st.id)
@@ -120,10 +152,7 @@ export class MenuController {
         this.renderCallouts(equipped);
         this.renderStats();
         this.renderStatusBar(equipped);
-        if (this.map === 'story') {
-            $('menu-map-name-v2').textContent = CHAPTER1.name;
-            this.renderStages();
-        }
+        if (this.map === 'story') this.renderStages();
         if (gameState.currentScreen === 'menu' || !gameState.currentScreen) this.radar.start();
     }
 

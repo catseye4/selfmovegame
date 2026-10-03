@@ -352,6 +352,7 @@ export class MonsterController {
         if (!c) return;
         c.classList.toggle('v2-st-slow', state === 'slow');
         c.classList.toggle('v2-st-stun', state === 'stun');
+        c.classList.toggle('v2-st-root', state === 'root');
     }
 
     // 패배 연출: 쓰러진 순간 그대로 멈춤 (on=false면 다시 재생)

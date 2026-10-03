@@ -26,10 +26,12 @@ BUILDS = {
     'mech_free': ('head_red_robot', 'body_red_robot', 'arm_red_robot', 'leg_red_robot'),
     'chimera_free': ('head_chimera', 'body_chimera', 'arm_chimera', 'leg_chimera'),
     'mech_laser': ('head_mech', 'body_mech', 'arm_mech_laser', 'leg_mech_wheel'),
+    'mech_missile': ('head_mech', 'body_mech', 'arm_mech_missile', 'leg_mech_wheel'),
     'kaiju': ('head_mutant', 'body_mutant', 'arm_mutant', 'leg_mutant'),
     'hero': ('head_hero', 'body_hero', 'arm_hero_wave', 'leg_hero_hover'),
 }
-STAGE_IDS = ['1-1', '1-2', '1-3', '1-4', '1-5', '1-B']
+ZONES = {1: ['1-1', '1-2', '1-3', '1-4', '1-5', '1-B'], 2: ['2-1', '2-2', '2-3', '2-4', '2-5', '2-B']}
+STAGE_IDS = ZONES[1]   # 스테이지를 안 고르면 구역 1
 MARK = '<!-- 아래는 손으로 쓰는 부분: report가 지우지 않음 -->'
 LIMIT = 300   # 안전장치(게임 시간, 초). 실제 패배는 스테이지 제한 시간(TIME OVER)
 
@@ -41,7 +43,7 @@ def save(build, level, results, errors):
     if os.path.exists(path):
         old = {r['stage']: r for r in json.load(open(path, encoding='utf-8')).get('results', [])}
         old.update({r['stage']: r for r in results})
-        results = [old[sid] for sid in STAGE_IDS if sid in old]
+        results = [old[sid] for ids in ZONES.values() for sid in ids if sid in old]
     with open(path, 'w', encoding='utf-8') as f:
         json.dump({'build': build, 'level': level, 'results': results, 'errors': errors}, f, ensure_ascii=False, indent=1)
 
@@ -65,7 +67,7 @@ def _sim(build, level, speed, results, stages):
             g.reload_v2()
         head, body, arm, leg = BUILDS[build]
         for sid in stages:
-            g.js(f"""['1-1','1-2','1-3','1-4','1-5'].forEach(id => progress.stages[id] = {{ stars: [true,true,true], cleared: true, bestTime: 1 }});
+            g.js(f"""{ZONES[1] + ZONES[2][:-1]}.forEach(id => progress.stages[id] = {{ stars: [true,true,true], cleared: true, bestTime: 1 }});
                 ['{head}','{body}','{arm}','{leg}'].forEach(id => {{ progress.owned.add(id); progress.levels[id] = {level}; }});
                 gameState.equippedParts = {{ head: '{head}', body: '{body}', arm: '{arm}', leg: '{leg}' }};
                 progress.selectStage('{sid}');
@@ -125,31 +127,39 @@ def batch(specs, parallel=2, limit_sec=1200, stages=None):
     report()
 
 
+LIMITS = {1: '1-1 150/100, 1-2 180/110, 1-3 180/110, 1-4 200/120, 1-5 230/140, 1-B 225/150',
+          2: '2-1 200/130, 2-2 210/135, 2-3 220/140, 2-4 230/145, 2-5 240/150, 2-B 240/160'}
+
+
 def report():
-    rows = []
-    for path in sorted(glob.glob(os.path.join(OUT, 'balance_*.json'))):
-        d = json.load(open(path, encoding='utf-8'))
-        by_stage = {r['stage']: r for r in d['results']}
-        cells = []
-        for sid in STAGE_IDS:
-            r = by_stage.get(sid)
-            if not r:
-                cells.append('—')
-                continue
-            mark = '✅' if r['win'] else ('⚠' if r['timeout'] else '⌛')
-            over = f" · 과부하{r['over']}" if r.get('over') else ''
-            cells.append(f"{mark} {r['time']}s · ★{r['stars']}{over}")
-        if d.get('errors') and '—' in cells:
-            cells[cells.index('—')] = '⚠ ' + d['errors'][0][:40]
-        rows.append((f"{d['build']} Lv{d['level']}", cells))
+    data = [json.load(open(p, encoding='utf-8')) for p in sorted(glob.glob(os.path.join(OUT, 'balance_*.json')))]
     lines = ['# 밸런스 기록', '',
              '`python tools/tests/balance_sim.py <조합> <레벨>`로 자동 전투(자동 스킬, 실제 게임 루프)한 결과.',
-             '✅ 승리 / ⌛ 제한 시간 초과 패배 / ⚠ 측정 중단. 칸: 걸린 시간 · 별 · 과부하(내구도 0 → 4초 정지) 횟수.',
-             '제한 시간·별 목표 시간: 1-1 150/100, 1-2 180/110, 1-3 180/110, 1-4 200/120, 1-5 230/140, 1-B 225/150 (초).', '',
-             f"측정: {time.strftime('%Y-%m-%d %H:%M')}", '',
-             '| 조합 | ' + ' | '.join(STAGE_IDS) + ' |', '|---|' + '---|' * len(STAGE_IDS)]
-    for name, cells in rows:
-        lines.append(f'| {name} | ' + ' | '.join(cells) + ' |')
+             '✅ 승리 / ⌛ 제한 시간 초과 패배 / ⚠ 측정 중단. 칸: 걸린 시간 · 별 · 과부하(내구도 0 → 4초 정지) 횟수.', '',
+             f"측정: {time.strftime('%Y-%m-%d %H:%M')}"]
+    for zone, ids in ZONES.items():
+        rows = []
+        for d in data:
+            by_stage = {r['stage']: r for r in d['results']}
+            if not any(sid in by_stage for sid in ids):
+                continue
+            cells = []
+            for sid in ids:
+                r = by_stage.get(sid)
+                if not r:
+                    cells.append('—')
+                    continue
+                mark = '✅' if r['win'] else ('⚠' if r['timeout'] else '⌛')
+                over = f" · 과부하{r['over']}" if r.get('over') else ''
+                cells.append(f"{mark} {r['time']}s · ★{r['stars']}{over}")
+            if d.get('errors') and '—' in cells:
+                cells[cells.index('—')] = '⚠ ' + d['errors'][0][:40]
+            rows.append((f"{d['build']} Lv{d['level']}", cells))
+        if not rows:
+            continue
+        lines += ['', f'## 구역 {zone}', f'제한 시간·별 목표 시간(초): {LIMITS[zone]}', '',
+                  '| 조합 | ' + ' | '.join(ids) + ' |', '|---|' + '---|' * len(ids)]
+        lines += [f'| {name} | ' + ' | '.join(cells) + ' |' for name, cells in rows]
     out = os.path.join(ROOT, 'MD', '밸런스_기록.md')
     # 표 아래의 손으로 쓴 부분(목표·조정 이력·남은 문제)은 그대로 둔다
     manual = ''

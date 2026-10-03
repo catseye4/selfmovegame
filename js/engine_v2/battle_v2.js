@@ -47,6 +47,9 @@ export class BattleEngine {
         this.starFlags = [false, false, false];   // 요새 / 최종 기지 / 목표 시간 안에 클리어 (D-029)
         this.pSlowT = 0;
         this.pStunT = 0;
+        this.pRootT = 0;
+        this.hazards = [];
+        this.gasTimer = 0;
 
         // 아군 몬스터 스탯 및 좌표
         this.monsterX = 150; // 캐릭터 초기 좌측 X 좌표
@@ -126,13 +129,19 @@ export class BattleEngine {
         this.isActive = true;
         this.distanceTraveled = 0;
         this.stage = stageById(progress.selectedStage || defaultStage(progress).id);
-        // 보스전은 붉은 경보 조명 배경 (ui_v2.css .v2-stage-boss)
-        document.getElementById('screen-battle-v2')?.classList.toggle('v2-stage-boss', !!this.stage.boss);
+        // 구역 배경 (ui_v2.css .v2-zone-2), 보스전은 경보 조명·불길 판 (.v2-stage-boss)
+        const screen = document.getElementById('screen-battle-v2');
+        screen?.classList.toggle('v2-stage-boss', !!this.stage.boss);
+        screen?.classList.toggle('v2-zone-2', this.stage.chapter === 'ch2');
         this.maxDistance = this.stage.distance;
         this.spawnInterval = this.stage.enemy.spawn;
         this.starFlags = [false, false, false];
         this.pSlowT = 0;
         this.pStunT = 0;
+        this.pRootT = 0;
+        this.hazards = [];        // 늪 장판 (구역 2)
+        this.gasTimer = 0;
+        this.gasWarned = false;
         this.spawnSilence = 0;
         this.overloadT = 0;
         this.timeUp = false;
@@ -230,6 +239,7 @@ export class BattleEngine {
         this.isActive = false;
         this.pSlowT = 0;
         this.pStunT = 0;
+        this.pRootT = 0;
         this.pStatusShown = undefined;
         monsterControllerV2.setStatusVisual(null, 1);
         sound.stopAllLoops();
@@ -386,6 +396,7 @@ export class BattleEngine {
         }
         this.checkOverload(dt);          // player.js
         this.tickAcid(dt);               // enemyField.js
+        this.tickHazards(dt);            // enemyField.js (늪 장판)
         this.updateBaseArt();            // enemyField.js
         this.tickPlayerStatus(dt);       // player.js
         this.tickArtillery(dt);          // enemyField.js
@@ -448,6 +459,7 @@ export class BattleEngine {
         } else {
             monsterControllerV2.setState('walking');
             this.scrollRuins(dt);
+            if (this.moveMul() > 0) this.scrollHazards(dt);
 
             if (this.monsterX > 150) {
                 this.monsterX = Math.max(150, this.monsterX - 120 * dt);

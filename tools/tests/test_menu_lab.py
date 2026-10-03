@@ -14,6 +14,8 @@ def run(ctx):
     ctx.check(st['callouts'] == 4, '메인: 부위 설명 4칸')
     ctx.check(st['scale'] not in ('', '0'), '화면 크기 맞춤 배율 적용', st['scale'])
     ctx.check(st['loaded'] >= 60, '로딩: 효과음 미리 받기', str(st['loaded']))
+    st = g.js("return progress.equippedStats();")   # 기본 로봇: 속도 10 + 5 + 10 + 기본 다리 70, 공격력 80 + 60 + 기본 팔 520 + 30 (v2에서만, D-043)
+    ctx.check(st['speed'] == 95 and st['dps'] == 690, 'v2 능력치 덮어쓰기: 기본 로봇 속도 95·공격력 690', str(st))
     g.shot('menu_main', '#screen-menu-v2')
 
     # 연구소: 타락 히어로 몸통 구매 (800 DM)

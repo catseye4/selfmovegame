@@ -891,6 +891,55 @@
     image-rendering: auto;
 }
 #screen-battle-v2 #bg-city-v2::after { display: none; }
+/* 구역 2 · 하부 쓰레기 폐기 정착지 (D-040): 폐기장 / 판잣집 띠 / 고철판 바닥, 보스전은 소각로 불길 판.
+   갈색 적이 판잣집 띠에 묻히지 않게 중간 층을 조금 더 어둡게 */
+#screen-battle-v2.v2-zone-2 #bg-sky-v2 { background-image: url('assets/sprites/stage/bg2/dump.png'); filter: brightness(0.5) saturate(0.85); }
+#screen-battle-v2.v2-zone-2.v2-stage-boss #bg-sky-v2 { background-image: url('assets/sprites/stage/bg2/dump_fire.png'); filter: brightness(0.62) saturate(0.9); }
+#screen-battle-v2.v2-zone-2 #bg-city-v2 { background-image: url('assets/sprites/stage/bg2/shanty.png'); bottom: 30px; filter: brightness(0.55) saturate(0.8); }
+#screen-battle-v2.v2-zone-2 #bg-ground-v2 { background-image: url('assets/sprites/stage/bg2/ground.png'); }
+
+/* 구역 2 장애물: 바리케이드 (방벽병이 세움, battle/enemyField.js spawnBarricade) */
+#screen-battle-v2 .enemy-entity.v2-barricade {
+    animation: none;
+    background-repeat: no-repeat;
+    background-position: center bottom;
+    background-size: 100% 100%;
+    image-rendering: auto;
+    transform-origin: 50% 100%;
+    z-index: 9;
+}
+#screen-battle-v2 .enemy-entity.v2-barricade::after { display: none; }
+#screen-battle-v2 .enemy-entity.v2-barricade .enemy-hp-track { left: 50%; translate: -50% 0; }
+/* 늪 장판 (오물 투척병): 바닥의 누런 연두 오물 웅덩이, 거품이 일렁임 */
+#screen-battle-v2 .v2-puddle {
+    position: absolute;
+    bottom: 50px;
+    height: 18px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at 50% 45%, rgba(214, 240, 70, 0.95), rgba(150, 190, 30, 0.85) 45%, rgba(70, 95, 10, 0.75) 70%, transparent 72%);
+    box-shadow: 0 0 10px rgba(190, 230, 50, 0.5);
+    z-index: 7;
+    pointer-events: none;
+    animation: v2-puddle-in 0.35s ease-out, v2-puddle-bubble 0.9s ease-in-out infinite alternate;
+    transition: opacity 0.4s;
+}
+#screen-battle-v2 .v2-puddle.is-fading { opacity: 0; }
+@keyframes v2-puddle-in { from { transform: scaleX(0.2); opacity: 0; } }
+@keyframes v2-puddle-bubble { to { filter: brightness(1.18); transform: scaleY(1.15); } }
+/* 속박 (그물총 사수): 그물에 묶여 갈색 테두리 + 살짝 떨림 */
+#player-sprite-canvas-v2.v2-st-root { filter: drop-shadow(0 0 6px #d8be8a) sepia(0.35) brightness(0.95); animation: v2-stun-jitter 0.3s steps(2) infinite; }
+.v2-status__icon.is-net { color: #e2c890; }
+/* 유독 가스 (구역 2 보스전): 전장 전체 누런 연두 안개 */
+.v2-battle.v2-gas .battle-viewport::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 70% 80%, rgba(190, 230, 60, 0.35), rgba(120, 150, 30, 0.22) 60%, rgba(60, 80, 10, 0.18));
+    pointer-events: none;
+    z-index: 30;
+    animation: v2-gas-in 0.6s ease-out;
+}
+@keyframes v2-gas-in { from { opacity: 0; } }
 #screen-battle-v2 #bg-ground-v2 {
     height: 76px;
     border: 0;
@@ -1331,6 +1380,16 @@ div.v2-settings__row > span { flex: 1; }
 .v2-radar__locked small { font-size: 12px; }
 .v2-radar__foot { font-family: var(--v2-font-num); font-size: 11px; letter-spacing: 1px; text-align: center; color: var(--v2-dim); }
 .v2-radar__tabs { display: flex; gap: 12px; }
+/* 구역 탭 (레이더 머리, menu_v2.js renderZones): 잠긴 구역은 자물쇠 */
+.v2-zonetabs { display: flex; gap: 6px; margin-left: auto; margin-right: 10px; }
+.v2-zonetab {
+    display: inline-flex; align-items: center; gap: 4px;
+    font: 800 12px var(--v2-font); color: var(--v2-dim); background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 4px; padding: 3px 10px; cursor: pointer;
+}
+.v2-zonetab:hover { color: var(--v2-text); border-color: var(--v2-amber); }
+.v2-zonetab.is-on { color: #16120a; background: var(--v2-amber); border-color: var(--v2-amber); }
+.v2-zonetab.is-locked { opacity: 0.55; }
 .v2-maptab {
     flex: 1;
     height: 44px;

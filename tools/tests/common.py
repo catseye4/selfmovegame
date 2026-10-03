@@ -52,8 +52,17 @@ class _Server(http.server.ThreadingHTTPServer):
     request_queue_size = 64
 
 
+# Chrome이 막는 포트(ERR_UNSAFE_PORT) — 임의 포트가 여기 걸리면 페이지를 못 엶 (예: 5060)
+UNSAFE_PORTS = {1719, 1720, 1723, 2049, 3659, 4045, 4190, 5060, 5061, 6000, 6566, 6665, 6666, 6667, 6668, 6669,
+                6679, 6697, 10080}
+
+
 def start_server():
-    httpd = _Server(('127.0.0.1', 0), functools.partial(_Handler, directory=ROOT))
+    while True:
+        httpd = _Server(('127.0.0.1', 0), functools.partial(_Handler, directory=ROOT))
+        if httpd.server_address[1] not in UNSAFE_PORTS:
+            break
+        httpd.server_close()
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     return httpd, f'http://127.0.0.1:{httpd.server_address[1]}'
 

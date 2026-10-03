@@ -1,6 +1,6 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // 전투 — 주인공 (v2)
-   내구도·실드·과부하(D-028), 상태 이상(감속·기절), 다리 패시브(궤도 돌진·반중력 부양),
+   내구도·실드·과부하(D-028), 상태 이상(감속·기절·속박), 다리 패시브(궤도 돌진·반중력 부양),
    팩션 패시브(괴수 재생, 히어로 흑마법 장판, 괴수 포자, 합성괴인 지진·2페이즈).
    battle_v2.js의 BattleEngine에 메서드로 붙는다 (this = 전투 엔진).
    ========================================================================== */
@@ -92,9 +92,9 @@ export const PlayerMethods = {
     },
 
     // ---- 주인공 상태 이상 (적 공격) ----
-    applyPlayerSlow(sec) {
+    applyPlayerSlow(sec, quiet = false) {
         if (this.equippedLegId === 'leg_hero_hover') {   // 다리 패시브: 감속 무시
-            this.createDamagePopup(this.monsterX + 40, 190, '감속 무효', false);
+            if (!quiet) this.createDamagePopup(this.monsterX + 40, 190, '감속 무효', false);
             return;
         }
         if (this.pSlowT <= 0) this.createDamagePopup(this.monsterX + 40, 190, '❄ 감속!', false);
@@ -108,17 +108,32 @@ export const PlayerMethods = {
         this.updatePlayerStatus();
     },
 
+    /** 속박 (그물): 진격 불가, 공격·스킬은 가능 (구역 2 그물총 사수) */
+    applyPlayerRoot(sec) {
+        if (this.pRootT <= 0) this.createDamagePopup(this.monsterX + 40, 200, '🕸 그물에 묶임!', false);
+        this.pRootT = Math.max(this.pRootT, sec);
+        this.updatePlayerStatus();
+    },
+
+    /** 뒤로 밀려남 (고철왕 자석): 거점을 향해 다시 걸어야 해서 시간 손실 */
+    knockPlayerBack(px, label) {
+        this.monsterX = Math.max(80, this.monsterX - px);
+        monsterControllerV2.setMonsterPosition(this.monsterX);
+        if (label) this.createDamagePopup(this.monsterX + 30, 210, label, false);
+        this.director.shake(8, 350);
+    },
+
     playerStunned() {
         return this.pStunT > 0;
     },
 
-    /** 진격 속도 배율 (기절 0, 감속 0.5) */
+    /** 진격 속도 배율 (기절·속박 0, 감속 0.5) */
     moveMul() {
-        return this.pStunT > 0 ? 0 : this.pSlowT > 0 ? PLAYER_STATUS.slowMove : 1;
+        return this.pStunT > 0 || this.pRootT > 0 ? 0 : this.pSlowT > 0 ? PLAYER_STATUS.slowMove : 1;
     },
 
     updatePlayerStatus() {
-        const state = this.pStunT > 0 ? 'stun' : this.pSlowT > 0 ? 'slow' : null;
+        const state = this.pStunT > 0 ? 'stun' : this.pRootT > 0 ? 'root' : this.pSlowT > 0 ? 'slow' : null;
         if (state === this.pStatusShown) return;
         this.pStatusShown = state;
         monsterControllerV2.setStatusVisual(state, state === 'slow' ? PLAYER_STATUS.slowAnim : state === 'stun' ? 0 : 1);
@@ -127,6 +142,7 @@ export const PlayerMethods = {
     tickPlayerStatus(dt) {
         if (this.pSlowT > 0) this.pSlowT = Math.max(0, this.pSlowT - dt);
         if (this.pStunT > 0) this.pStunT = Math.max(0, this.pStunT - dt);
+        if (this.pRootT > 0) this.pRootT = Math.max(0, this.pRootT - dt);
         this.updatePlayerStatus();
     },
 

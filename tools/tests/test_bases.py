@@ -11,9 +11,26 @@ def state(g, final=False):
 
 def run(ctx):
     run_bases(ctx)
+    run_hero_wave(ctx)
     run_guard(ctx)
     run_roster(ctx)
     run_background(ctx)
+
+
+def run_hero_wave(ctx):
+    """타락 히어로 어둠 파동이 사거리 끝에서도 넓은 거점 그림에 맞는지 (가운데로 판정하던 때는 기본 공격이 거점에 안 들어감)"""
+    g = ctx.game(fresh=True)
+    g.enter_v2()
+    g.battle('hero', wait_ms=2900)
+    g.js("b.setAutoSkills(false); b.spawnInterval = 999; b.enemies.forEach(e => e.dom && e.dom.remove()); b.enemies = []; b.distanceTraveled = b.stage.midAt - 0.5;")
+    g.wait(1500)
+    g.js("const f = b.enemies.find(e => e.isBuilding); if (f) { f.hp = f.maxHp = 50000; }")   # 재는 동안 부서지지 않게
+    g.wait(3000)   # 주인공이 사거리 끝까지 걸어감
+    hp0 = g.js("const f = b.enemies.find(e => e.isBuilding); return f && { hp: f.hp, gap: Math.round(f.x - b.frontX()), range: b.playerRange };")
+    g.wait(2500)
+    hp1 = g.js("const f = b.enemies.find(e => e.isBuilding); return f && f.hp;")
+    ctx.check(hp0 and hp0['gap'] > hp0['range'] - 40 and hp1 is not None and hp1 < hp0['hp'],
+              '타락 히어로 파동: 사거리 끝에서 넓은 거점에 맞음', f'{hp0} → {hp1}')
 
 
 def run_bases(ctx):

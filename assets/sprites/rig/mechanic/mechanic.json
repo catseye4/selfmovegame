@@ -1,0 +1,17 @@
+{
+  "frameWidth": 77,
+  "frameHeight": 92,
+  "anchorX": 47.9,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/mechanic/mechanic_walk.png",
+      "frames": 12,
+      "duration": 0.7
+    },
+    "attack": {
+      "src": "assets/sprites/rig/mechanic/mechanic_attack.png",
+      "frames": 10,
+      "duration": 0.8
+    }
+  }
+}

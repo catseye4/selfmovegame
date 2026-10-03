@@ -14,7 +14,7 @@ export const DRONE = { dmgMul: 0.35, splash: 70 };
 // curseZone: 적 왼쪽 끝 기준 저주 범위 (몸 앞 기준 px). auraDx: 저주 장판 중심 (몸 앞 기준, 장판은 발밑~범위 끝)
 // wavePierce: 관통 파동이 두 번째 적부터 주는 피해 배율 (적을 지날 때마다 곱해짐, 밸런스 1차)
 export const HERO = { recruitChance: 0.1, curseTick: 0.65, curseZone: [-40, 180], curseDps: 22, auraDx: 65,
-    waveRange: 280, slowSec: 2.5, slowMul: 0.5, wavePierce: 0.5 };
+    waveRange: 280, slowSec: 2.5, slowMul: 0.5, wavePierce: 0.5, waveBaseMul: 0.7 };   // waveBaseMul: 파동이 거점·바리케이드에 주는 피해 배율
 // 팩션 패시브 수치 (밸런스 1차): 괴수 머리 재생(최대 체력 비율/초), 합성괴인 다리 지진(초당 피해), 괴수 다리 포자(초당 피해)
 export const PASSIVE = { regen: 0.012, quakeDps: 30, sporeDps: 30 };
 export const HIT_REACT = { flashMs: 80, knockPx: 10, stopSec: 0.05 };

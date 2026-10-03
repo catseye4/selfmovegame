@@ -1,0 +1,27 @@
+{
+  "frameWidth": 268,
+  "frameHeight": 237,
+  "anchorX": 135.2,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/scrapking/scrapking_walk.png",
+      "frames": 12,
+      "duration": 1
+    },
+    "attack": {
+      "src": "assets/sprites/rig/scrapking/scrapking_attack.png",
+      "frames": 12,
+      "duration": 1.1
+    },
+    "magnet": {
+      "src": "assets/sprites/rig/scrapking/scrapking_magnet.png",
+      "frames": 12,
+      "duration": 1.6
+    },
+    "drop": {
+      "src": "assets/sprites/rig/scrapking/scrapking_drop.png",
+      "frames": 10,
+      "duration": 1.2
+    }
+  }
+}

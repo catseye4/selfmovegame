@@ -1,0 +1,17 @@
+{
+  "frameWidth": 75,
+  "frameHeight": 92,
+  "anchorX": 45.9,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/netter/netter_walk.png",
+      "frames": 12,
+      "duration": 0.7
+    },
+    "attack": {
+      "src": "assets/sprites/rig/netter/netter_attack.png",
+      "frames": 8,
+      "duration": 0.6
+    }
+  }
+}

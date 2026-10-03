@@ -32,6 +32,7 @@ const P = {
     egg: '<path d="M12 2c4 0 6.8 6.5 6.8 11A6.8 6.8 0 0 1 5.2 13C5.2 8.5 8 2 12 2z"/><circle cx="10" cy="10" r="1.4" fill="rgba(0,0,0,.35)"/><circle cx="14" cy="14.5" r="1.8" fill="rgba(0,0,0,.35)"/><circle cx="9.5" cy="16" r="1.1" fill="rgba(0,0,0,.35)"/>',
     // ---- 상태 (적 체력바 옆) ----
     slow: '<path d="M4 4l8 7 8-7v5l-8 7-8-7z"/><path d="M4 12l8 7 8-7v4l-8 6-8-6z" opacity=".6"/>',
+    net: '<path d="M3 5l18 14M21 5L3 19M3 12h18M8 4l-2 16M16 4l2 16" fill="none" stroke="currentColor" stroke-width="2"/>',
     stun: '<path d="M12 3l1.8 3.8 4.2.5-3.1 2.9.8 4.1L12 12.2l-3.7 2.1.8-4.1L6 7.3l4.2-.5z"/><ellipse cx="12" cy="18" rx="9" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>',
     curse: '<path d="M12 2.5a7.5 7.5 0 0 0-7.5 7.5c0 2.6 1.3 4.3 2.8 5.5V19h9.4v-3.5c1.5-1.2 2.8-2.9 2.8-5.5A7.5 7.5 0 0 0 12 2.5z"/><circle cx="9" cy="10.5" r="1.9" fill="rgba(0,0,0,.55)"/><circle cx="15" cy="10.5" r="1.9" fill="rgba(0,0,0,.55)"/><path d="M9 19v2.5M12 19v2.5M15 19v2.5" stroke="currentColor" stroke-width="1.6"/>',
     drone: '<circle cx="12" cy="12" r="4"/><path d="M12 12L5 5M12 12l7-7M12 12l-7 7M12 12l7 7" stroke="currentColor" stroke-width="2"/><circle cx="4.5" cy="4.5" r="2.5"/><circle cx="19.5" cy="4.5" r="2.5"/><circle cx="4.5" cy="19.5" r="2.5"/><circle cx="19.5" cy="19.5" r="2.5"/><circle cx="12" cy="12" r="1.6" fill="rgba(255,255,255,.9)"/>',

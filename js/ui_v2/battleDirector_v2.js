@@ -21,7 +21,7 @@ import { BATTLE_VFX } from '../engine_v2/vfx/vfxDefs.js';
 import { sound } from '../engine_v2/audio/sound_v2.js';
 import { settings } from '../engine_v2/settings_v2.js';
 
-import { CHAPTER1 } from '../engine_v2/stages_v2.js';
+import { chapterOf } from '../engine_v2/stages_v2.js';
 
 // 별 3개 조건 (D-029): 요새 / 최종 기지 / 목표 시간 안에 클리어
 const starLabels = stage => ['중간 요새', '최종 기지', `${stage.starTime}초 안에`];
@@ -60,7 +60,7 @@ export class BattleDirector {
         if (!this.attach()) return;
         this.token += 1;
         this.frame.querySelectorAll('.v2-fx-layer').forEach(n => n.remove());
-        this.frame.classList.remove('v2-intro', 'v2-lowhp', 'v2-alert', 'v2-ending');
+        this.frame.classList.remove('v2-intro', 'v2-lowhp', 'v2-alert', 'v2-ending', 'v2-gas');
         this.lowHp = false;
         sound.stopLoop('low_hp', 0.1);
         const canvas = document.getElementById('player-sprite-canvas-v2');
@@ -90,7 +90,7 @@ export class BattleDirector {
         const bars = this.layer('v2-letterbox', '<i></i><i></i>');
         const card = this.layer('v2-opcard', `
             <div class="v2-opcard__inner">
-                <small>STAGE ${stage.id} · ${CHAPTER1.name}</small>
+                <small>STAGE ${stage.id} · ${chapterOf(stage).name}</small>
                 <h2>${stage.id}<span>//</span>${stage.name}</h2>
                 <p>${icon(stage.boss ? 'hq' : 'fort', 14)} ${stage.desc}</p>
                 <div class="v2-hazard v2-opcard__stripe"></div>
@@ -261,6 +261,15 @@ export class BattleDirector {
         this.stamp('MISSION COMPLETE', '최종 핵심 기지 완전 분쇄', 'is-gold is-big', 1900);
         this.sfx('mission_complete');
         await wait(2000);
+    }
+
+    /** 유독 가스 (구역 2 보스전): 전장이 sec초 동안 누런 연두빛 안개 */
+    gas(sec) {
+        if (!this.attach()) return;
+        this.frame.classList.add('v2-gas');
+        this.sfx('warning_danger');
+        clearTimeout(this.gasTimer);
+        this.gasTimer = setTimeout(() => this.frame && this.frame.classList.remove('v2-gas'), sec * 1000);
     }
 
     /** 가운데 도장 문구 (잠깐 표시) */
