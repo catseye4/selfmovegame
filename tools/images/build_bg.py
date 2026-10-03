@@ -25,18 +25,23 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'
 from unlogo import load_clean  # noqa: E402
 from build_bases import key_out  # noqa: E402
 
-SRC = 'assets/sprites/stage/src/bg/{name}_gemini.png'
-OUT = 'assets/sprites/stage/bg/{name}.png'
-PREVIEW = 'tools/images/_out/bg_{name}_tiled.png'
+SRC = 'assets/sprites/stage/src/{name}_gemini.png'   # name = bg/<층> (구역 1) · bg2/<층> (구역 2)
+OUT = 'assets/sprites/stage/{name}.png'
+PREVIEW = 'tools/images/_out/{name}_tiled.png'
 
-# tile_w: 게임에서 그림 한 장의 가로(px), seam: 이음매를 섞는 폭(원본 px, 0이면 안 섞음), key: 초록 배경을 투명하게
+# tile_w: 게임에서 그림 한 장의 가로(px), seam: 이음매를 섞는 폭(원본 px, 0이면 안 섞음), key: 단색 배경을 투명하게 (True = 초록, 'magenta' = 분홍)
 # feet: (원본 줄, 화면 바닥에서 px) — 캐릭터 발이 디딜 원본 줄이 게임 발 높이에 오도록, 띠 맨 위부터 화면 바닥까지만 잘라 냄
 LAYERS = {
-    'hall': {'tile_w': 1280, 'seam': 0},          # 먼 배경: 연구소 대형 홀 (가장 느리게)
-    'hall_alarm': {'tile_w': 1280, 'seam': 0},    # 보스전: 붉은 경보 조명
-    'machinery': {'tile_w': 640, 'seam': 0, 'key': True},   # 중간 층: 낮은 기계·난간 띠 (위·아래 초록 = 투명)
-    'floor': {'tile_w': 256, 'seam': 0, 'key': True, 'feet': (195, 60)},   # 바닥: 경고 줄무늬 사이 철망 가운데에 발
-    'hangar': {'tile_w': 1280, 'seam': 0},        # 메인 화면 격납고 (정지 배경)
+    'bg/hall': {'tile_w': 1280, 'seam': 0},          # 먼 배경: 연구소 대형 홀 (가장 느리게)
+    'bg/hall_alarm': {'tile_w': 1280, 'seam': 0},    # 보스전: 붉은 경보 조명
+    'bg/machinery': {'tile_w': 640, 'seam': 0, 'key': True},   # 중간 층: 낮은 기계·난간 띠 (위·아래 초록 = 투명)
+    'bg/floor': {'tile_w': 256, 'seam': 0, 'key': True, 'feet': (195, 60)},   # 바닥: 경고 줄무늬 사이 철망 가운데에 발
+    'bg/hangar': {'tile_w': 1280, 'seam': 0},        # 메인 화면 격납고 (정지 배경)
+    # ---- 구역 2: 하부 쓰레기 폐기 정착지 (D-040) ----
+    'bg2/dump': {'tile_w': 1280, 'seam': 0},         # 먼 배경: 지하 쓰레기 폐기장
+    'bg2/dump_fire': {'tile_w': 1280, 'seam': 0},    # 보스전: 소각로 불길로 물든 폐기장
+    'bg2/shanty': {'tile_w': 640, 'seam': 0, 'key': 'magenta'},   # 중간 층: 낮은 판잣집 띠 (위·아래 분홍 = 투명)
+    'bg2/ground': {'tile_w': 256, 'seam': 0, 'key': 'magenta', 'feet': (240, 60)},   # 바닥: 고철판 길 가운데에 발
 }
 WRAP = 8           # 줄일 때 양 끝에 덧붙이는 반대쪽 픽셀 수
 
@@ -59,7 +64,8 @@ def blend_seam(a, px):
 
 def build(name, cfg):
     rgb, unlogoed = load_clean(SRC.format(name=name))
-    a = key_out(rgb)[0] if cfg.get('key') else rgb
+    key = cfg.get('key')
+    a = key_out(rgb, 'magenta' if key == 'magenta' else 'green')[0] if key else rgb
     edge, inner = seam_diff(a)
     if cfg['seam'] and edge > inner * 2:
         a = blend_seam(a, cfg['seam'])
@@ -89,8 +95,8 @@ def build(name, cfg):
     tiled.alpha_composite(img.convert('RGBA'), (tw, 0))
     tiled = tiled.convert('RGB')
     ImageDraw.Draw(tiled).line([(tw, 0), (tw, 12)], fill=(255, 60, 60), width=3)
-    os.makedirs(os.path.dirname(PREVIEW.format(name=name)), exist_ok=True)
-    tiled.resize((tw, th // 2)).save(PREVIEW.format(name=name))
+    os.makedirs(os.path.dirname(PREVIEW.format(name=name.replace('/', '_'))), exist_ok=True)
+    tiled.resize((tw, th // 2)).save(PREVIEW.format(name=name.replace('/', '_')))
     extra = ''
     if cfg.get('key'):
         al = np.asarray(img)[..., 3]

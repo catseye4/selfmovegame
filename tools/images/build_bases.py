@@ -43,13 +43,22 @@ MIN_PART = 40               # 이보다 작은 떨어진 덩어리는 잡티로 
 GROUND_B = 60               # 게임 바닥 높이 (bottom px, index.css .building-entity)
 
 
-def key_out(rgb):
+def key_out(rgb, key='green'):
+    """단색 배경 지우기 — key 'green'(#00FF00) | 'magenta'(#FF00FF, 구역 2)"""
     a = rgb.astype(np.float32)
     r, g, b = a[..., 0], a[..., 1], a[..., 2]
-    k = g - np.maximum(r, b)
-    alpha = np.clip((KEY_HI - k) / (KEY_HI - KEY_LO), 0, 1)
-    # 반투명·가장자리 픽셀에 섞인 배경 초록을 뺌 (연기가 초록빛으로 남지 않게)
-    a[..., 1] = np.where(k > KEY_LO, np.maximum(r, b), g)
+    if key == 'magenta':
+        k = np.minimum(r, b) - g
+        alpha = np.clip((KEY_HI - k) / (KEY_HI - KEY_LO), 0, 1)
+        # 섞인 배경 분홍을 뺌: 빨강·파랑을 초록 쪽으로 끌어내림
+        lim = g + KEY_LO
+        a[..., 0] = np.where(k > KEY_LO, np.minimum(r, lim), r)
+        a[..., 2] = np.where(k > KEY_LO, np.minimum(b, lim), b)
+    else:
+        k = g - np.maximum(r, b)
+        alpha = np.clip((KEY_HI - k) / (KEY_HI - KEY_LO), 0, 1)
+        # 반투명·가장자리 픽셀에 섞인 배경 초록을 뺌 (연기가 초록빛으로 남지 않게)
+        a[..., 1] = np.where(k > KEY_LO, np.maximum(r, b), g)
     mask = alpha > 0.05
     n, lab, st, _ = cv2.connectedComponentsWithStats(mask.astype(np.uint8), connectivity=8)
     keep = np.zeros(n, bool)
