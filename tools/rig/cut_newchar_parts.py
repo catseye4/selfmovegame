@@ -18,6 +18,9 @@
      'poly' : 다리 다각형 둘 — 치마·로브가 다리 위를 덮는 캐릭터. 다리는 몸통 뒤에 그리고, leg_cut_y 아래만 몸통에서 뺌
               (다리를 들면 윗부분이 치맛자락 밑으로 들어감)
  - 뒷머리 (hair_poly, 있을 때만): 몸 뒤로 흘러내린 긴 머리를 따로 한 조각 → 몸통 뒤에 그려 스프링으로 살랑임
+ - arm_no_thread: 팔 차이에 섞인 청록 실 고리를 빼고 팔 덩어리만 (인형사)
+ - keep_blue: 마젠타 배경 위 가는 하늘색 실이 배경 번짐 보정(spill)으로 회색이 되거나 끊기지 않게 — 파란 픽셀은 원래 색,
+   배경과 섞여 지워진 실 픽셀은 실 색으로 되살림 (인형사)
 """
 import os
 import sys
@@ -29,6 +32,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from rigcut import poly_mask, rect_mask, largest, grow, cut, save_parts, write_layout, rest_check  # noqa: E402
 from cut_enemy_parts import keyed, arm_masks  # noqa: E402
+from unlogo import load_clean  # noqa: E402
 
 NECK_BAND = 14         # 몸통이 머리 가장자리를 더 가지는 띠(px)
 HIP_BAND = 32          # 'split' 다리가 골반(몸통) 아래로 더 올라가는 겹침(px)
@@ -74,6 +78,26 @@ CHARS = {
                     'chest': (530, 470), 'hairTip': (250, 620),         # 가슴(강화 하트 코어), 뒷머리 끝
                     'footB': (445, 920), 'footF': (585, 920)},
     },
+    # 뒤틀린 인형사 (마젠타): 앞팔 = 재단 가위(강화: 가위 칼날 집게), 뒷팔 = 나무 손(강화: 황동 대포 — 몸 앞을 가로지름)
+    # 등 뒤 꼭두각시 십자틀·청록 실·실에 매달린 토끼 인형은 몸통. 앞치마가 허벅지를 덮어 다리는 다각형
+    'doll': {
+        'key': 'magenta',
+        'src': ('doll_1_gemini.png', 'doll_2_gemini.png', 'doll_3_gemini.png', 'doll_4_gemini.png'),
+        'head_poly': [(455, 330), (480, 290), (520, 268), (600, 258), (660, 255), (715, 285), (765, 330), (768, 420),
+                      (740, 480), (680, 500), (600, 515), (540, 515), (495, 500), (465, 470), (450, 430)],
+        'arm': {'arms': 'two', 'close': 9, 'head_y': 500, 'arm_top': 470},
+        'arm_no_thread': True, 'keep_blue': True,   # 손에 걸려 늘어진 청록 실 고리는 팔이 아님 (팔 없는 그림에 실이 따로 다시 그려짐)
+        'legs': 'poly', 'leg_cut_y': 785,
+        'leg_b_poly': [(425, 665), (492, 665), (488, 760), (470, 800), (458, 840), (458, 882), (368, 882), (370, 830),
+                       (400, 790), (425, 750)],
+        'leg_f_poly': [(572, 742), (628, 742), (628, 820), (690, 838), (690, 882), (576, 882), (572, 820)],
+        'pivots': {'root': (530, 873), 'torso': (525, 700), 'head': (565, 505),
+                   'armF': (612, 572), 'armB': (440, 555), 'legB': (460, 690), 'legF': (600, 745)},
+        'sockets': {'blade': (880, 645), 'bladeUp': (905, 690),        # 가위 끝 / 강화 가위 칼날 집게 끝
+                    'hand': (320, 705), 'cannon': (285, 735),          # 뒷손 / 강화 대포 포구
+                    'spool': (575, 630), 'crossL': (200, 300), 'crossR': (650, 175),   # 가슴 실패, 십자틀 양 끝 (실이 내려오는 곳)
+                    'eye': (650, 420), 'footB': (410, 870), 'footF': (630, 870)},
+    },
     'saint': {
         'key': 'green',
         'src': ('saint_1_gemini.png', 'saint_2_gemini.png', 'saint_3_gemini.png', 'saint_4_clean.png'),
@@ -93,6 +117,19 @@ CHARS = {
 }
 
 
+def load(path, cfg):
+    """배경 제거 RGBA. keep_blue면 파란빛 픽셀(b > r + 50, 청록·하늘색 실)은 번짐 보정 전 원래 색으로 되돌림"""
+    img = keyed(path, cfg['key'])
+    if cfg.get('keep_blue'):
+        rgb = load_clean(path)[0].astype(int)
+        blue = (img[..., 3] > 0) & (rgb[..., 2] > rgb[..., 0] + 50)
+        img[blue, :3] = rgb[blue].astype(np.uint8)
+        # 배경과 반쯤 섞여 지워진 실 픽셀(마젠타보다 파란 쪽)을 되살려 실이 끊기지 않게 — 실 색으로 칠함
+        lost = (img[..., 3] == 0) & (rgb[..., 2] - rgb[..., 0] > 25) & (rgb[..., 2] > 150)
+        img[lost] = (110, 215, 250, 255)
+    return img
+
+
 def masks_for(cfg, full, armless):
     H, W = full.shape[:2]
     op1, op2 = full[..., 3] > 0, armless[..., 3] > 0
@@ -100,6 +137,11 @@ def masks_for(cfg, full, armless):
     cols = np.broadcast_to(np.arange(W)[None, :], (H, W))
     arms = arm_masks(full, armless, cfg['arm'], rows, op1, op2)
     arm_b, arm_f = arms['armF'], arms['armB']             # arm_masks는 왼쪽 덩어리를 armF로 줌 (적은 왼쪽을 봄)
+    if cfg.get('arm_no_thread'):
+        # 청록 실을 뺀 가장 큰 덩어리 = 팔, 그 가까이(6px)의 실만 되살림 (팔을 가로지르는 실은 남고 늘어진 고리는 빠짐)
+        rgb = full[..., :3].astype(int)
+        thread = (rgb[..., 1] > 140) & (rgb[..., 2] > 140) & (rgb[..., 0] < 140)
+        arm_b, arm_f = (grow(largest(m & ~thread), m, 6) for m in (arm_b, arm_f))
     head = poly_mask(full.shape, cfg['head_poly']) & op2
     near_body = grow(op2 & ~head, head, NECK_BAND) & head   # 몸통에 닿는 머리 가장자리 띠
     if cfg['legs'] == 'split':
@@ -166,8 +208,8 @@ def main():
     full_b, armless_b, full_u, armless_u = cfg['src']
     parts, sheets = {}, []
     for suffix, (full_name, armless_name) in {'': (full_b, armless_b), '_up': (full_u, armless_u)}.items():
-        full = keyed(src_dir + full_name, cfg['key'])
-        armless = keyed(src_dir + armless_name, cfg['key'])
+        full = load(src_dir + full_name, cfg)
+        armless = load(src_dir + armless_name, cfg)
         masks = masks_for(cfg, full, armless)
         if '--preview' in sys.argv:
             preview(cfg, masks, full, os.path.join(HERE, f'_cut_{cid}{suffix}.png'))

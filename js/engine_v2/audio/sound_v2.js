@@ -74,6 +74,12 @@ export const SFX = {
     frost_crescent: { vol: 0.55 },
     frost_blizzard: { vol: 0.55 },
     frost_eternal: { vol: 0.7, duck: 0.55 },
+    // 뒤틀린 인형사 (합성음)
+    doll_snip: { vol: 0.3, gap: 0.06, voices: 3, pitch: 0.1 },
+    doll_xcut: { vol: 0.55 },
+    doll_summon: { vol: 0.4, gap: 0.1, pitch: 0.12 },
+    doll_burst: { vol: 0.45, gap: 0.08, voices: 3, pitch: 0.12 },
+    doll_strings: { vol: 0.65, duck: 0.55 },
     chimera_phase2: { vol: 0.8, duck: 0.45 },
     generic_slash: { vol: 0.42, gap: 0.05, pitch: 0.08 },
     // 실드

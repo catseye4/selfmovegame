@@ -12,6 +12,7 @@ import { VfxPlayer } from '../engine_v2/vfx/vfxPlayer.js';
 import { HERO_WAVE, HERO_ORB } from '../engine_v2/vfx/heroVfx.js';
 import { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX, DIVER_VFX, SAINT_VFX, FROST_VFX } from '../engine_v2/vfx/vfxDefs.js';
 import { ICE, MIST } from '../engine_v2/vfx/frostVfx.js';
+import { DOLL_VFX } from '../engine_v2/vfx/vfxDefs.js';
 import { BLOOD } from '../engine_v2/vfx/saintVfx.js';
 import { WATER, ABYSS } from '../engine_v2/vfx/diverVfx.js';
 
@@ -400,6 +401,15 @@ function toggleBlizzard() {
     if (skill.blizzard) vfx.play(FROST_VFX.blizzardOpen, CHAR_X + 60 * VFX_SCALE, GROUND_Y, { scale: VFX_SCALE });
 }
 
+// 뒤틀린 인형사: 가위 · X자 · 인형 내려옴 · 인형 터짐 · 인형 실(더미마다 위에서 실)
+function previewPuppet() {
+    vfxAtSelf(DOLL_VFX.stringsCall);
+    dummies.forEach((d, i) => setTimeout(() => {
+        vfx.play(DOLL_VFX.puppetString, d.x, GROUND_Y - 330 * VFX_SCALE * 0.56, { scale: VFX_SCALE, to: [d.x, dummyCenterY()] });
+        d.slow = 2;
+    }, 120 * i / opts.speed));
+}
+
 const PREVIEWS = {
     mech: [
         ['레이저 포격', previewLaser],
@@ -448,6 +458,13 @@ const PREVIEWS = {
         ['눈보라 (켜기/끄기)', toggleBlizzard],
         ['빙결', () => vfxAtEachDummy(FROST_VFX.freeze)],
         ['영원한 안식', () => { vfxAtSelf(FROST_VFX.eternalCall); vfxAtEachDummy(seq(FROST_VFX.encase, FROST_VFX.shatter, 2.4)); }]
+    ],
+    doll: [
+        ['가위 참격', () => vfxAtDummy(DOLL_VFX.snipHit, 0)],
+        ['가위 참격 X자', () => { skill.castCb = () => vfxAtDummy(DOLL_VFX.xcut, 0); playOnce('xcut'); }],
+        ['인형 내려옴', () => dummies.forEach(d => vfx.play(DOLL_VFX.dollDrop, d.x, GROUND_Y, { scale: VFX_SCALE, to: [d.x, GROUND_Y - 300 * VFX_SCALE * 0.56] }))],
+        ['인형 터짐', () => vfxAtDummy(DOLL_VFX.dollBurst, 1, true)],
+        ['인형 실', previewPuppet]
     ]
 };
 

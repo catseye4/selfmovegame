@@ -21,7 +21,8 @@ const $ = id => document.getElementById(id);
 const ROLE = { arm: { tag: '1', label: '스킬 1' }, body: { tag: '2', label: '스킬 2' }, head: { tag: 'ULT', label: '필살기' }, leg: { tag: 'P', label: '패시브' } };
 // 팩션 문자열(parts.js) → 리그 캐릭터 / 표시 색
 const FACTIONS = [['거대로봇', 'mech', '#3ee6ff'], ['거대괴수', 'kaiju', '#a0ff32'], ['타락 히어로', 'hero', '#c86eff'], ['합성괴인', 'chimera', '#ff9628'],
-    ['심연의 길잡이', 'diver', '#3fe0c8'], ['봉합 성녀', 'saint', '#ff4d6d'], ['서리의 무희', 'frost', '#7fd4ff']];
+    ['심연의 길잡이', 'diver', '#3fe0c8'], ['봉합 성녀', 'saint', '#ff4d6d'], ['서리의 무희', 'frost', '#7fd4ff'],
+    ['뒤틀린 인형사', 'doll', '#5ae6f0']];
 // 카드 그림: 같은 팩션 리그 캐릭터의 해당 부위 그림 (새 캐릭터는 강화 파츠면 <부위>_up 그림)
 const upThumb = file => p => (p.rigUpgrade ? file.replace('.png', '_up.png') : file);
 const NEW_THUMB = { head: upThumb('head.png'), body: upThumb('torso.png'), arm: upThumb('armF.png'), leg: upThumb('legF.png') };
@@ -33,7 +34,8 @@ const THUMB = {
     // 새 캐릭터: 강화 파츠는 강화 그림 (D-044)
     diver: NEW_THUMB,
     saint: NEW_THUMB,
-    frost: NEW_THUMB
+    frost: NEW_THUMB,
+    doll: NEW_THUMB
 };
 const LAB_RIG = { width: 350, height: 400, rootX: 175, rootY: 384, scale: 0.36, fit: { x: 22, y: 16 }, shadow: true };
 

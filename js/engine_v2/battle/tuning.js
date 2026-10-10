@@ -72,6 +72,23 @@ export const FROST = {
     restMax: 8, restSec: 2.4, restDmg: 3, restBaseDmg: 2.5,
     shatter: { leg_frost: 0.3, leg_frost_up: 0.45 }
 };
+// 뒤틀린 인형사 (새 캐릭터, D-049) — 효과는 battle/doll.js, 스킬은 skills_v2.js
+//   가위 참격(기본 공격): 방어(armor) 중 pierce 비율만큼 무시
+//   가위 참격 X자: 가장 가까운 적부터 xWidth px 안 적 모두 피해(기본 1타 배수, 거점 xBaseDmg), 방어 xPierce 무시
+//   인형 가족: 토끼 인형 rabbitCount기(최대 rabbitMax), 체력·초당 피해·이동 속도(px/초, 주인공 속도와 따로),
+//             붙잡으면 holdSec초씩 멈춤 — 붙잡힌 적은 발버둥쳐 인형에게 (적 공격력 × struggle)/초 피해,
+//             쓰러지면 burstRadius px 안 피해 burstDmg (거점·바리케이드 × burstBaseMul)
+//   인형 실: 최대 puppetMax명 puppetSec초 꼭두각시 — puppetReach px 안 다른 적을 (적 공격력 × puppetDpsMul + 기본 1타 × puppetUnit)/초로 때림,
+//           보스는 puppetBossStun초 멈춤만
+//   실 걸음(다리 패시브): 토끼 인형 하나마다 진격 속도 + stride (최대 strideMax기)
+export const DOLL = {
+    pierce: 0.5,
+    xWidth: 170, xDmg: 1.8, xBaseDmg: 1.5, xPierce: 0.6,
+    rabbitCount: 3, rabbitMax: 4, rabbitHp: 420, rabbitDps: 16, rabbitSpeed: 90, holdSec: 0.35, struggle: 1.2,
+    burstRadius: 90, burstDmg: 0.6, burstBaseMul: 0.5,
+    puppetMax: 4, puppetSec: 4, puppetReach: 130, puppetDpsMul: 1.0, puppetUnit: 0.1, puppetBossStun: 1.2,
+    stride: { leg_doll: 0.05, leg_doll_up: 0.07 }, strideMax: 4
+};
 // 근접 기본 공격 휩쓸기: 맞은 적 뒤 radius px 안의 적에게도 피해 × mul (거대 캐릭터가 무리를 쳐냄)
 export const MELEE_CLEAVE = { radius: 60, mul: 0.4 };
 

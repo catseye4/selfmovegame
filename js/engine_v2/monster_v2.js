@@ -21,7 +21,8 @@ const BATTLE_RIG = {
 // 캐릭터별 전투 배율 (히어로는 사람 크기라 조금 작게)
 // 심연의 길잡이: 사람 크기(그림 약 780px) → 히어로보다 조금 큰 약 195px / 봉합 성녀: 1.6m(그림 약 650px) → 약 155px
 // 서리의 무희: 2m(그림 약 830px) → 히어로와 비슷한 약 185px
-const BATTLE_RIG_SCALE = { mech: 0.235, kaiju: 0.235, hero: 0.215, chimera: 0.235, diver: 0.25, saint: 0.235, frost: 0.225 };
+// 뒤틀린 인형사: 1.8m(머리~발 약 610px) → 약 160px, 등 뒤 십자틀까지 약 190px
+const BATTLE_RIG_SCALE = { mech: 0.235, kaiju: 0.235, hero: 0.215, chimera: 0.235, diver: 0.25, saint: 0.235, frost: 0.225, doll: 0.26 };
 const HP_BAR = { width: 80, gap: 16 };  // 머리 위 체력바 (index.css .monster-hp-container 폭)
 // 메뉴(메인 화면 대기실): 캐릭터마다 캔버스 안에 들어오도록 배율/위치 자동 맞춤 (최대 0.34)
 // (좌우에 부위 설명이 붙으므로 가로 여백을 넉넉히)

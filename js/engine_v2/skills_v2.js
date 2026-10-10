@@ -118,6 +118,13 @@ export const SKILLS = {
             monster.playCast(() => b.crescentSlash(this.range), 'crescent');
         }
     },
+    scissorX: {
+        name: '가위 참격 X자', slot: 'arm', cd: 8, icon: 'scissors', color: '#d8e8f4', target: 'enemy', range: 60,
+        desc: '앞의 적을 X자로 크게 벰 (방패 방어 일부 무시)',
+        use(b) {
+            monster.playCast(() => b.scissorX(this.range), 'xcut');
+        }
+    },
     acidCharge: {
         name: '산성 돌진', slot: 'arm', cd: 9, icon: 'acid', color: '#a0ff32', target: 'enemy', range: 90,
         desc: '거체로 들이받아 큰 피해 + 주변 적을 밀쳐내고 산성 웅덩이로 부식 (거점에 강함)',
@@ -203,6 +210,14 @@ export const SKILLS = {
         }
     },
 
+    dollFamily: {
+        name: '인형 가족', slot: 'body', cd: 14, icon: 'rabbit', color: '#5ae6f0', target: 'self',
+        desc: '토끼 인형 3기: 적을 붙잡아 막고 쓰러지면 터짐 (최대 4)',
+        use(b) {
+            monster.playCast(() => b.dollFamily());
+        }
+    },
+
     // ===== 머리 (필살기) =====
     droneSwarm: {
         name: '스웜 드론 총출격', slot: 'head', ult: true, icon: 'drone', color: '#d75aff', target: 'enemy', range: 400,
@@ -254,6 +269,13 @@ export const SKILLS = {
             monster.playCast(() => b.eternalRest(this.range));
         }
     },
+    puppetStrings: {
+        name: '인형 실', slot: 'head', ult: true, icon: 'puppet', color: '#5ae6f0', target: 'minion', range: 320,
+        desc: '적 4명까지 4초간 꼭두각시로: 멈춘 채 다른 적을 때림',
+        use(b) {
+            monster.playCast(() => b.puppetStrings(this.range), 'strings');
+        }
+    },
     rampage: {
         name: '파괴 광란', slot: 'head', ult: true, icon: 'rampage', color: '#ff9628', target: 'self',
         desc: '즉시 2페이즈 변신. 이미 변신했다면 대형 충격파 + 1.5초 기절',
@@ -287,7 +309,10 @@ export const PART_SKILL = {
     head_saint: 'forcedRevive', head_saint_up: 'forcedRevive',
     // 서리의 무희
     arm_frost: 'crescentSlash', arm_frost_up: 'crescentSlash', body_frost: 'blizzardDance', body_frost_up: 'blizzardDance',
-    head_frost: 'eternalRest', head_frost_up: 'eternalRest'
+    head_frost: 'eternalRest', head_frost_up: 'eternalRest',
+    // 뒤틀린 인형사
+    arm_doll: 'scissorX', arm_doll_up: 'scissorX', body_doll: 'dollFamily', body_doll_up: 'dollFamily',
+    head_doll: 'puppetStrings', head_doll_up: 'puppetStrings'
 };
 
 // 다리 패시브 (v2 기준 설명 — parts.js 설명은 구버전과 공용이라 여기서 덮어씀). 효과는 battle/player.js (수치는 battle/tuning.js LEG)
@@ -302,7 +327,9 @@ export const LEG_PASSIVES = {
     leg_saint: { name: '자가 봉합', desc: '잃은 내구도가 많을수록 빨리 회복 (최대 초당 2%)' },
     leg_saint_up: { name: '자가 봉합 (강화)', desc: '잃은 내구도가 많을수록 빨리 회복 (최대 초당 2.8%)' },
     leg_frost: { name: '빙판 걸음', desc: '얼어 있는 적에게 주는 피해 30% 증가' },
-    leg_frost_up: { name: '빙판 걸음 (강화)', desc: '얼어 있는 적에게 주는 피해 45% 증가' }
+    leg_frost_up: { name: '빙판 걸음 (강화)', desc: '얼어 있는 적에게 주는 피해 45% 증가' },
+    leg_doll: { name: '실 걸음', desc: '토끼 인형 하나마다 진격 속도 5% 증가 (최대 4기)' },
+    leg_doll_up: { name: '실 걸음 (강화)', desc: '토끼 인형 하나마다 진격 속도 7% 증가 (최대 4기)' }
 };
 
 /** 다리 파츠 패시브 { name, desc } (없으면 null) */

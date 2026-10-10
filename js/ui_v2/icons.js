@@ -44,6 +44,10 @@ const P = {
     crescent: '<path d="M14 2.5a9.5 9.5 0 1 0 7.5 15.2A11 11 0 0 1 14 2.5z"/><path d="M20 3l1 2.2 2.2.8-2.2.8L20 9l-.8-2.2-2.2-.8 2.2-.8z"/>',
     icecage: '<path d="M4 22L7 6l3 7 2-11 2 11 3-7 3 16z"/><circle cx="12" cy="15" r="2.4" fill="rgba(0,0,0,.45)"/><path d="M9.5 21c0-2.5 1.1-3.6 2.5-3.6s2.5 1.1 2.5 3.6" fill="rgba(0,0,0,.45)"/>',
     snow: '<path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M9.5 3.5L12 6l2.5-2.5M9.5 20.5L12 18l2.5 2.5" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+    // 뒤틀린 인형사: 가위 · 토끼 인형 · 꼭두각시 (상태 아이콘도 꼭두각시)
+    scissors: '<circle cx="6" cy="18" r="3.2" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="18" cy="18" r="3.2" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M8 15.5L20 2.5M16 15.5L4 2.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+    rabbit: '<path d="M8.5 9C7 5.5 7 2 8.5 1.5s2.5 3.5 2.2 7.2M15.5 9c1.5-3.5 1.5-7 0-7.5s-2.5 3.5-2.2 7.2" stroke="currentColor" stroke-width="2" fill="currentColor"/><circle cx="12" cy="13" r="5.5"/><path d="M8 18.5h8l1 4H7z"/><circle cx="10" cy="12.5" r="1" fill="rgba(0,0,0,.6)"/><circle cx="14" cy="12.5" r="1" fill="rgba(0,0,0,.6)"/>',
+    puppet: '<path d="M3 2h18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M7 2v7M17 2v7M12 2v4" stroke="currentColor" stroke-width="1.2"/><circle cx="12" cy="9" r="3"/><path d="M8.5 13h7l1 6h-2.5l-.5 3h-3l-.5-3H7.5z"/><path d="M8.5 13L6 10M15.5 13L18 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
     // ---- 상태 (적 체력바 옆) ----
     slow: '<path d="M4 4l8 7 8-7v5l-8 7-8-7z"/><path d="M4 12l8 7 8-7v4l-8 6-8-6z" opacity=".6"/>',
     net: '<path d="M3 5l18 14M21 5L3 19M3 12h18M8 4l-2 16M16 4l2 16" fill="none" stroke="currentColor" stroke-width="2"/>',

@@ -16,6 +16,7 @@ export const AllyMethods = {
     // kind 'baby_kaiju': 거대괴수 산란으로 부화한 새끼 괴수 (리그에서 구운 스프라이트)
     //      'chimera': 합성괴인 몸통의 졸개 소환 (소환진 이펙트)
     //      'stitch': 봉합 성녀가 꿰매 일으킨 적 — opts { art(적 종류 그림), hp, dps } (battle/saint.js)
+    //      'rabbit': 뒤틀린 인형사의 토끼 인형 — opts { hp, dps, speed(px/초) } (battle/doll.js), 쓰러지면 onAllyDown
     spawnAllyMinion(startX, kind = 'mind', opts = {}) {
         if (!this.domEnemies) return;
         ensureEnemyStyles();   // 세뇌 보병·졸개 그림 CSS (적보다 먼저 나올 수 있음 — 합성괴인 졸개는 출격 직후)
@@ -27,7 +28,7 @@ export const AllyMethods = {
         const el = document.createElement('div');
         // 외형: 새끼 괴수 / 합성괴인 졸개(미니 괴인 스프라이트) / 세뇌 보병(적 보병 + 검보라 세뇌 표식)
         el.className = `ally-minion ${baby ? 'baby-kaiju-v2' : kind === 'chimera' ? 'chimera-minion-v2'
-            : kind === 'stitch' ? `v2-stitch v2-stitch-${opts.art || 'guard'}` : 'v2-mind'}`;
+            : kind === 'stitch' ? `v2-stitch v2-stitch-${opts.art || 'guard'}` : kind === 'rabbit' ? 'doll-rabbit-v2' : 'v2-mind'}`;
         el.style.left = `${startX}px`;
 
         const hpBar = document.createElement('div');
@@ -42,6 +43,9 @@ export const AllyMethods = {
         } else if (kind === 'stitch') {
             hpBar.style.background = '#ff4d6d';
             hpBar.style.boxShadow = '0 0 6px #ff4d6d';
+        } else if (kind === 'rabbit') {
+            hpBar.style.background = '#5ae6f0';
+            hpBar.style.boxShadow = '0 0 6px #5ae6f0';
         }
         el.appendChild(hpBar);
 
@@ -54,13 +58,13 @@ export const AllyMethods = {
             hp: maxHp,
             maxHp: maxHp,
             dps: dps,
-            speed: this.playerSpeed * (baby ? BABY.speedMul : 0.55),
+            speed: opts.speed ?? this.playerSpeed * (baby ? BABY.speedMul : 0.55),
             dom: el,
             hpBar: hpBar
         });
 
         if (kind === 'chimera') this.fx.play(CHIMERA_VFX.summon, startX + 38, FOOT_B);
-        const label = { baby_kaiju: '🥚 새끼 괴수 부화!', chimera: '👹 졸개 소환!', stitch: '✚ 봉합 부활!' }[kind] || '★ 세뇌 징집! (MIND CONTROL)';
+        const label = { baby_kaiju: '🥚 새끼 괴수 부화!', chimera: '👹 졸개 소환!', stitch: '✚ 봉합 부활!', rabbit: '🐰 인형 가족!' }[kind] || '★ 세뇌 징집! (MIND CONTROL)';
         this.createDamagePopup(startX, 180, label, false);
     },
 
@@ -68,10 +72,15 @@ export const AllyMethods = {
     damageAlly(ally, amount) {
         ally.hp -= amount;
         if (ally.hpBar) ally.hpBar.style.width = `${Math.max(0, (ally.hp / ally.maxHp) * 100)}%`;
-        if (ally.hp <= 0) {
-            if (ally.dom) ally.dom.remove();
-            this.allies = this.allies.filter(a => a.id !== ally.id);
-        }
+        if (ally.hp <= 0) this.removeAlly(ally);
+    },
+
+    /** 아군이 쓰러짐: 지우고 알림 (토끼 인형은 솜이 터짐 — doll.js onAllyDown) */
+    removeAlly(ally) {
+        if (!this.allies.includes(ally)) return;
+        if (ally.dom) ally.dom.remove();
+        this.allies = this.allies.filter(a => a.id !== ally.id);
+        this.onAllyDown(ally);
     },
 
     /** 아군 이동·공격: 가장 가까운 적(뒤로 35px까지)과 붙으면 싸우고, 아니면 앞으로 (주인공보다 너무 멀리 가지 않음) */
@@ -102,10 +111,7 @@ export const AllyMethods = {
                     if (ally.hpBar) {
                         ally.hpBar.style.width = `${Math.max(0, (ally.hp / ally.maxHp) * 100)}%`;
                     }
-                    if (ally.hp <= 0) {
-                        if (ally.dom) ally.dom.remove();
-                        this.allies = this.allies.filter(a => a.id !== ally.id);
-                    }
+                    if (ally.hp <= 0) this.removeAlly(ally);
                 }
             } else if (closestEnemyToAlly || ally.x < this.monsterX + 180) {
                 ally.x += ally.speed * dt;

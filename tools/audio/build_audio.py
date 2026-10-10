@@ -17,6 +17,7 @@ MAD OVERLORD // 게임 사운드 만들기 (v2)
         python tools/audio/build_audio.py - sfx diver_   # 이름이 diver_로 시작하는 합성 효과음만 (팩 없이)
         python tools/audio/build_audio.py - sfx saint_   # 봉합 성녀 합성 효과음만
         python tools/audio/build_audio.py - sfx frost_   # 서리의 무희 합성 효과음만
+        python tools/audio/build_audio.py - sfx doll_    # 뒤틀린 인형사 합성 효과음만
 
 효과음 이름은 이펙트 정의(sfx: '...')와 전투 연출(director.sfx)에서 부르는 이름과 같다.
 음량/겹침 제한 같은 재생 규칙은 js/engine_v2/audio/sound_v2.js 의 SFX 표에서 정한다.
@@ -400,6 +401,68 @@ def synth_frost_eternal():
     return (choir * 0.9 + grow + _chimes(sec, 8, 0.2, 1.2, 1500, 3500, 0.2, 0.3)).astype(np.float32)
 
 
+def _snip(sec, at=0.0, gain=1.0):
+    """가위 날이 맞물리는 '싹둑': 금속 마찰 잡음이 짧게 미끄러지다 딸깍"""
+    out = np.zeros(int(sec * SR), np.float32)
+    t = t_axis(0.09)
+    slide = _band(rng.standard_normal(len(t)).astype(np.float32), 3000 + 20000 * t, 9000 + 20000 * t) * np.sin(np.pi * t / 0.09) * 1.6
+    t2 = t_axis(0.03)
+    click = (np.sin(2 * np.pi * 3200 * t2) + 0.5 * np.sin(2 * np.pi * 5100 * t2)) * np.exp(-t2 / 0.006)
+    i = int(at * SR)
+    out[i:i + len(slide)] += slide[: len(out) - i] * gain
+    j = i + len(slide)
+    out[j:j + len(click)] += click[: max(0, len(out) - j)] * gain * 0.8
+    return out
+
+
+def synth_doll_snip():
+    """가위 참격: 싹둑"""
+    return _snip(0.16).astype(np.float32)
+
+
+def synth_doll_xcut():
+    """가위 참격 X자: 크게 휙 + 싹둑 두 번"""
+    sec = 0.6
+    return (synth_whoosh(sec, 600, 5000) * 0.8 + _snip(sec, 0.12, 1.2) + _snip(sec, 0.28, 1.2)).astype(np.float32)
+
+
+def synth_doll_summon():
+    """인형 가족: 실이 퉁 + 인형이 내려앉는 폭신한 소리 + 삑삑이 장난감"""
+    sec = 0.45
+    t = t_axis(sec)
+    twang = np.sin(2 * np.pi * 330 * t) * np.exp(-t / 0.15) * (1 + 0.3 * np.sin(2 * np.pi * 6 * t))
+    thump = _band(rng.standard_normal(len(t)).astype(np.float32), 100, 700) * np.exp(-((t - 0.18) / 0.03) ** 2) * 1.5
+    sq_t = t_axis(0.12)
+    squeak = np.sin(2 * np.pi * np.cumsum(1300 + 900 * np.sin(np.pi * sq_t / 0.12)) / SR) * np.sin(np.pi * sq_t / 0.12) * 0.4
+    out = twang * 0.6 + thump
+    i = int(0.2 * SR)
+    out[i:i + len(squeak)] += squeak[: len(out) - i]
+    return out.astype(np.float32)
+
+
+def synth_doll_burst():
+    """토끼 인형이 터짐: 퐁 + 솜이 흩어지는 사각사각"""
+    sec = 0.6
+    t = t_axis(sec)
+    pop = np.sin(2 * np.pi * np.cumsum(220 * np.exp(-t / 0.08) + 80) / SR) * np.exp(-t / 0.07)
+    fluff = _band(rng.standard_normal(len(t)).astype(np.float32), 800, 4000) * np.exp(-t / 0.18) * 1.2
+    return (pop + fluff).astype(np.float32)
+
+
+def synth_doll_strings():
+    """인형 실: 여러 줄이 차례로 퉁기는 하프 같은 소리 + 낮은 웅웅"""
+    sec = 1.3
+    out = np.zeros(int(sec * SR), np.float32)
+    for k, f in enumerate([392.0, 466.2, 587.3, 698.5, 784.0]):
+        t = t_axis(0.8)
+        pluck = (np.sin(2 * np.pi * f * t) + 0.4 * np.sin(2 * np.pi * f * 2 * t)) * np.exp(-t / 0.25)
+        i = int(k * 0.09 * SR)
+        out[i:i + len(pluck)] += pluck[: len(out) - i] * 0.5
+    t = t_axis(sec)
+    drone = np.sin(2 * np.pi * 98 * t + 0.5 * np.sin(2 * np.pi * 3 * t)) * np.sin(np.pi * t / sec) * 0.4
+    return (out + drone).astype(np.float32)
+
+
 # ---------------------------------------------------------------------------
 # 효과음 조합: 이름 → [(파일, 옵션)] 또는 합성 함수
 SFX = {
@@ -457,6 +520,12 @@ SFX = {
     'frost_crescent': lambda: synth_frost_crescent(),
     'frost_blizzard': lambda: synth_frost_blizzard(),
     'frost_eternal': lambda: synth_frost_eternal(),
+    # 뒤틀린 인형사 (D-049): 팩 없이 합성
+    'doll_snip': lambda: synth_doll_snip(),
+    'doll_xcut': lambda: synth_doll_xcut(),
+    'doll_summon': lambda: synth_doll_summon(),
+    'doll_burst': lambda: synth_doll_burst(),
+    'doll_strings': lambda: synth_doll_strings(),
     'chimera_phase2': [(CRE + 'roar_02.ogg', {}), (DIG + 'powerUp1.ogg', dict(gain=0.6))],
     'generic_slash': [(RPG + 'knifeSlice2.ogg', {})],
     # 실드

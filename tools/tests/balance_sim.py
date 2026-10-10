@@ -38,6 +38,9 @@ BUILDS = {
     # 서리의 무희 (D-046)
     'frost': ('head_frost', 'body_frost', 'arm_frost', 'leg_frost'),
     'frost_up': ('head_frost_up', 'body_frost_up', 'arm_frost_up', 'leg_frost_up'),
+    # 뒤틀린 인형사 (D-049)
+    'doll': ('head_doll', 'body_doll', 'arm_doll', 'leg_doll'),
+    'doll_up': ('head_doll_up', 'body_doll_up', 'arm_doll_up', 'leg_doll_up'),
 }
 ZONES = {1: ['1-1', '1-2', '1-3', '1-4', '1-5', '1-B'], 2: ['2-1', '2-2', '2-3', '2-4', '2-5', '2-B']}
 STAGE_IDS = ZONES[1]   # 스테이지를 안 고르면 구역 1

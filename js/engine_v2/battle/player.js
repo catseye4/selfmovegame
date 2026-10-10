@@ -137,7 +137,8 @@ export const PlayerMethods = {
 
     /** 진격 속도 배율 (기절·속박 0, 감속 0.5) */
     moveMul() {
-        return this.pStunT > 0 || this.pRootT > 0 ? 0 : this.pSlowT > 0 ? PLAYER_STATUS.slowMove : 1;
+        const base = this.pStunT > 0 || this.pRootT > 0 ? 0 : this.pSlowT > 0 ? PLAYER_STATUS.slowMove : 1;
+        return base * this.dollStride();   // 뒤틀린 인형사 다리 '실 걸음' (doll.js)
     },
 
     updatePlayerStatus() {

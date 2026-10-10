@@ -10,8 +10,9 @@ import { CHIMERA_VFX } from './chimeraVfx.js';
 import { DIVER_VFX } from './diverVfx.js';
 import { SAINT_VFX } from './saintVfx.js';
 import { FROST_VFX } from './frostVfx.js';
+import { DOLL_VFX } from './dollVfx.js';
 
-export { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX, DIVER_VFX, SAINT_VFX, FROST_VFX };
+export { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX, DIVER_VFX, SAINT_VFX, FROST_VFX, DOLL_VFX };
 
 // 리그가 없는 캐릭터(페이퍼돌)의 기본 베기
 export const GENERIC_VFX = {

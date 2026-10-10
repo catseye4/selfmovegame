@@ -84,7 +84,8 @@ const ART_FOOT_B = 58;     // 그림 적의 발 높이 (bottom px)
 // 세뇌 보병(타락 히어로 징집, D-020) = 경비병 그림 + 검보라(ui_v2.css), 합성괴인 졸개 = 졸개 그림(D-039)
 const ALLY_ART = {
     'v2-mind': { art: 'guard', filter: null },
-    'chimera-minion-v2': { art: 'minion', filter: 'drop-shadow(0 0 5px rgba(255, 150, 40, 0.5))' }
+    'chimera-minion-v2': { art: 'minion', filter: 'drop-shadow(0 0 5px rgba(255, 150, 40, 0.5))' },
+    'doll-rabbit-v2': { art: 'rabbit', filter: 'drop-shadow(0 0 4px rgba(90, 230, 240, 0.7))' }   // 뒤틀린 인형사 토끼 인형 (D-049)
 };
 // 봉합 성녀가 꿰매 일으킨 아군: 쓰러진 적 그림 그대로 + 붉은 실 빛 (battle/saint.js)
 const STITCH_FILTER = 'saturate(0.8) sepia(0.25) hue-rotate(-12deg) drop-shadow(0 0 4px rgba(235, 40, 70, 0.85))';

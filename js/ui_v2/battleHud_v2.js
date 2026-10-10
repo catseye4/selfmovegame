@@ -16,7 +16,7 @@ import { SLOT_KEYS } from '../engine_v2/skills_v2.js';
 import { sound } from '../engine_v2/audio/sound_v2.js';
 import { openSettings } from './settingsPanel_v2.js';
 
-const FACTION_COLOR = { mech: '#3ee6ff', kaiju: '#a0ff32', hero: '#c86eff', chimera: '#ff9628', diver: '#3fe0c8', saint: '#ff4d6d', frost: '#7fd4ff' };
+const FACTION_COLOR = { mech: '#3ee6ff', kaiju: '#a0ff32', hero: '#c86eff', chimera: '#ff9628', diver: '#3fe0c8', saint: '#ff4d6d', frost: '#7fd4ff', doll: '#5ae6f0' };
 // 진행도 표시: 스테이지 거리와 요새·최종 기지 위치 (stages_v2.js)
 const $ = id => document.getElementById(id);
 

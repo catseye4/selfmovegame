@@ -26,6 +26,11 @@
      - 스킬: 팔 초승달 참격 · 몸통 눈보라 춤 · 머리 영원한 안식 · 다리 빙판 걸음 (skills_v2.js)
      - 수치 1차 그대로 (밸런스 10차: 기본 Lv1 1-3까지·1-4 아슬아슬, 강화 Lv1 1-5·보스 빠듯), 해금(별)은 아직 없음
 
+   뒤틀린 인형사 파츠 8개 (새 캐릭터 4, D-049): 같은 규칙 (팩션 '뒤틀린 인형사 (버려진 가족)' → 리그 doll)
+     - 인형 가족으로 막고 꼭두각시로 교란하는 근접: 팔은 가위(attackType 'scissors', battle/doll.js) — 방어 일부 무시
+     - 스킬: 팔 가위 참격 X자 · 몸통 인형 가족(토끼 인형) · 머리 인형 실(꼭두각시) · 다리 실 걸음 (skills_v2.js)
+     - 수치: 밸런스 11차(2026-10-10) — 기본 Lv1 1-3까지·1-4 아슬아슬, 강화 Lv1 1-4·보스. 해금(별)은 아직 없음
+
    V2_STAT_OVERRIDES: 기존 파츠 능력치를 v2에서만 바꿈 (parts.js 원본은 그대로)
      - 기본 로봇 (2026-10-03, D-043): 풀강화(Lv5)해도 1-4를 못 깸 → 기본 다리 속도 20 → 70, 기본 팔 공격력 300 → 520
        · 속도: 기본 로봇 45로 다른 조합의 1/3 (속도는 강화로 안 오름) → 95. 걷는 동안 적이 쌓여 기절·과부하
@@ -38,6 +43,7 @@ import { PARTS_DB } from '../data/parts.js';
 export const DIVER_FACTION = '심연의 길잡이 (심해)';
 export const SAINT_FACTION = '봉합 성녀 (뒤틀린 구원)';
 export const FROST_FACTION = '서리의 무희 (얼어붙은 안식)';
+export const DOLL_FACTION = '뒤틀린 인형사 (버려진 가족)';
 /** 새 캐릭터 파츠: 그림은 그 캐릭터 리그의 부위 그림 (연구소 카드는 lab_v2.js THUMB) */
 const newPart = (faction, dir) => (id, name, cost, src, stats, extra = {}) => ({
     id, name, faction, cost, src: `assets/sprites/rig/${dir}/${src}`, animType: 'pivot', stats, ...extra
@@ -45,6 +51,7 @@ const newPart = (faction, dir) => (id, name, cost, src, stats, extra = {}) => ({
 const diverPart = newPart(DIVER_FACTION, 'diver');
 const saintPart = newPart(SAINT_FACTION, 'saint');
 const frostPart = newPart(FROST_FACTION, 'frost');
+const dollPart = newPart(DOLL_FACTION, 'doll');
 
 export const V2_PARTS = {
     head: [
@@ -59,7 +66,11 @@ export const V2_PARTS = {
         frostPart('head_frost', '눈꽃 머리 장식', 400, 'head.png', { hp: 550, dps: 80, range: 30, speed: 10 },
             { skillDesc: '영원한 안식: 적을 얼음에 가뒀다 깨뜨림' }),
         frostPart('head_frost_up', '얼음 결정 왕관', 950, 'head_up.png', { hp: 750, dps: 110, range: 40, speed: 10 },
-            { rigUpgrade: true, skillDesc: '영원한 안식 (강화 왕관: 얼음 결정)' })
+            { rigUpgrade: true, skillDesc: '영원한 안식 (강화 왕관: 얼음 결정)' }),
+        dollPart('head_doll', '꿰맨 천 얼굴', 400, 'head.png', { hp: 650, dps: 70, range: 10, speed: 10 },
+            { skillDesc: '인형 실: 적을 몇 초간 꼭두각시로' }),
+        dollPart('head_doll_up', '깨진 도자기 가면', 950, 'head_up.png', { hp: 850, dps: 100, range: 20, speed: 10 },
+            { rigUpgrade: true, skillDesc: '인형 실 (강화 가면: 청록 눈)' })
     ],
     body: [
         diverPart('body_diver', '잠수복', 450, 'torso.png', { hp: 1800, dps: 40, range: 0, speed: 0 },
@@ -73,7 +84,11 @@ export const V2_PARTS = {
         frostPart('body_frost', '서리 무희복', 450, 'torso.png', { hp: 1300, dps: 60, range: 0, speed: 10 },
             { skillDesc: '눈보라 춤: 둘레 눈보라로 냉기 + 받는 피해 감소' }),
         frostPart('body_frost_up', '얼음 하트 갑옷', 1000, 'torso_up.png', { hp: 1700, dps: 90, range: 0, speed: 10 },
-            { rigUpgrade: true, skillDesc: '눈보라 춤 (강화 갑옷: 얼음 하트 코어)' })
+            { rigUpgrade: true, skillDesc: '눈보라 춤 (강화 갑옷: 얼음 하트 코어)' }),
+        dollPart('body_doll', '앞치마·멜빵', 450, 'torso.png', { hp: 1500, dps: 50, range: 0, speed: 10 },
+            { skillDesc: '인형 가족: 토끼 인형 3기 소환' }),
+        dollPart('body_doll_up', '실패·톱니 몸통', 1000, 'torso_up.png', { hp: 1900, dps: 80, range: 0, speed: 10 },
+            { rigUpgrade: true, skillDesc: '인형 가족 (강화 몸통: 청록 실패)' })
     ],
     leg: [
         diverPart('leg_diver', '잠수화', 400, 'legF.png', { hp: 800, dps: 30, range: 0, speed: 90 },
@@ -87,7 +102,11 @@ export const V2_PARTS = {
         frostPart('leg_frost', '흰 하이힐 부츠', 400, 'legF.png', { hp: 550, dps: 40, range: 0, speed: 100 },
             { skillDesc: '빙판 걸음: 얼어 있는 적에게 피해 증가' }),
         frostPart('leg_frost_up', '얼음 결정 부츠', 950, 'legF_up.png', { hp: 750, dps: 60, range: 0, speed: 115 },
-            { rigUpgrade: true, skillDesc: '빙판 걸음 (강화): 더 크게 깨뜨림' })
+            { rigUpgrade: true, skillDesc: '빙판 걸음 (강화): 더 크게 깨뜨림' }),
+        dollPart('leg_doll', '나무 관절 다리', 400, 'legF.png', { hp: 650, dps: 40, range: 0, speed: 85 },
+            { skillDesc: '실 걸음: 토끼 인형이 많을수록 빨라짐' }),
+        dollPart('leg_doll_up', '실 감은 관절 다리', 950, 'legF_up.png', { hp: 850, dps: 60, range: 0, speed: 100 },
+            { rigUpgrade: true, skillDesc: '실 걸음 (강화): 더 빨라짐' })
     ],
     arm: [
         {
@@ -114,7 +133,11 @@ export const V2_PARTS = {
         frostPart('arm_frost', '얼음 부채', 500, 'armF.png', { hp: 300, dps: 420, range: 270, speed: 0 },
             { attackType: 'frost', skillDesc: '서리 부채: 얼음 칼날로 냉기 → 빙결 · 초승달 참격' }),
         frostPart('arm_frost_up', '얼음 칼날 부채', 1100, 'armF_up.png', { hp: 400, dps: 510, range: 300, speed: 0 },
-            { attackType: 'frost', rigUpgrade: true, skillDesc: '큰 얼음 칼날 부채 · 초승달 참격' })
+            { attackType: 'frost', rigUpgrade: true, skillDesc: '큰 얼음 칼날 부채 · 초승달 참격' }),
+        dollPart('arm_doll', '재단 가위', 500, 'armF.png', { hp: 400, dps: 430, range: 190, speed: 0 },
+            { attackType: 'scissors', skillDesc: '가위 참격: 두 번 자름, 방어 일부 무시 · X자' }),
+        dollPart('arm_doll_up', '가위 집게·대포 팔', 1100, 'armF_up.png', { hp: 500, dps: 520, range: 200, speed: 0 },
+            { attackType: 'scissors', rigUpgrade: true, skillDesc: '가위 칼날 집게 · 가위 참격 X자' })
     ]
 };
 
