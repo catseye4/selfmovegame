@@ -85,9 +85,9 @@ export class BattleFx {
         this.vfx.pulse(key);
     }
 
-    /** o: { x, b, range, color, speed, h, mist?(꼬리 연기 색), sfx?(발사음, 기본 어둠 파동), onPass(x0, x1) } */
+    /** o: { x, b, range, color, speed, h, mist?(꼬리 연기 색), sfx?(발사음, 기본 어둠 파동, null이면 소리 없음), onPass(x0, x1) } */
     launchWave(o) {
-        sound.play(o.sfx || 'hero_wave');
+        if (o.sfx !== null) sound.play(o.sfx || 'hero_wave');
         this.vfx.launchWave({ ...o, y: this.H - o.b, onMove: o.onPass });
     }
 

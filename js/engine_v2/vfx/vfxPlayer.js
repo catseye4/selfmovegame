@@ -19,6 +19,7 @@
        cracks  : 바닥 균열 {count, len}
        jet     : 기준점 → 목표 지점 물줄기 (출렁이는 굵은 줄기 + 흰 심 + 끝의 물보라) {w, spray}  (play 옵션 to 필요)
        hands   : 바닥에서 솟아 움켜쥐는 유령 손 {count, h, spread}
+       crystals: 바닥에서 솟는 얼음 결정 가시 (솟고 → 버티고 → 사라짐) {count, h, spread}
      type (입자)
        sparks  : 사방/부채꼴로 튀는 빛줄기 {count, speed, angle?, cone?}
        motes   : 떠오르는 빛가루 {count, spread, rise:[min,max], life:[min,max], size}
@@ -672,6 +673,43 @@ const DRAW = {
             ctx.ellipse(wx, wy, palm * 0.6, palm * 0.75, lean, 0, Math.PI * 2);
             ctx.fill();
         }
+    },
+    crystals(ctx, x, y, it, u, s) {
+        // 얼음 결정: 0~15% 바닥에서 솟음, 끝 25%에 금 가며 옅어짐. 가시마다 높이·기울기가 다름(정해진 무늬)
+        const n = it.count || 5;
+        const spread = (it.spread || 24) * s;
+        const H = (it.h || 60) * s;
+        const grow = easeOut(Math.min(1, u / 0.15));
+        const fade = tail(u, 0.75);
+        ctx.globalCompositeOperation = 'source-over';
+        for (let k = 0; k < n; k++) {
+            const f = n === 1 ? 0 : (k / (n - 1)) * 2 - 1;
+            const h = H * (0.55 + 0.45 * Math.cos(f * 1.3)) * (0.8 + 0.2 * ((k * 37) % 5) / 4) * grow;
+            const w = (7 + ((k * 13) % 3) * 2) * s;
+            const bx = x + f * spread;
+            const lean = f * 0.35;
+            const tx = bx + Math.sin(lean) * h, ty = y - Math.cos(lean) * h;
+            const g = ctx.createLinearGradient(bx, y, tx, ty);
+            g.addColorStop(0, `rgba(${it.color}, ${0.85 * fade})`);
+            g.addColorStop(1, `rgba(${WHITE}, ${0.95 * fade})`);
+            ctx.fillStyle = g;
+            ctx.strokeStyle = `rgba(30, 60, 100, ${0.8 * fade})`;
+            ctx.lineWidth = 1.2 * s;
+            ctx.beginPath();
+            ctx.moveTo(bx - w, y);
+            ctx.lineTo(tx, ty);
+            ctx.lineTo(bx + w, y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.strokeStyle = `rgba(${WHITE}, ${0.7 * fade})`;   // 결정 가운데 빛나는 선
+            ctx.beginPath();
+            ctx.moveTo(bx, y);
+            ctx.lineTo(tx, ty);
+            ctx.stroke();
+        }
+        ctx.globalCompositeOperation = 'lighter';
+        ellipseGlow(ctx, x, y, spread * 1.6, 8 * s, `rgba(${it.color}, ${0.5 * fade})`);
     },
     claw(ctx, x, y, it, u, s) {
         // 할퀸 자국: 빠르게 그어지고(0~25%) 서서히 사라짐. angle = 긁는 방향(라디안)

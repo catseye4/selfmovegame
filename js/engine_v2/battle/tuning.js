@@ -56,6 +56,22 @@ export const SAINT = {
     reviveMax: 3, allyMax: 8, allyHp: 0.7, allyHpMin: 300, allyHpMax: 1000, allyDps: 0.7,
     regen: { leg_saint: { base: 0.003, k: 0.017 }, leg_saint_up: { base: 0.004, k: 0.024 } }
 };
+// 서리의 무희 (새 캐릭터, D-046) — 효과는 battle/frost.js, 스킬은 skills_v2.js
+//   냉기: 맞을 때마다 쌓여 freezeAt이면 freezeSec초 빙결(보스는 안 얼음), chillSec초 안 맞으면 사라짐
+//   서리 부채(기본 공격): 앞의 적 fanTargets명까지, 두 번째부터 피해 × fanSecond, 냉기 1
+//   초승달 참격: 지나간 적 모두 피해(기본 1타 배수)·냉기 crescentChill
+//   눈보라 춤: blizzardSec초, 주인공 앞면 기준 blizzardZone px(중심 blizzardDx), 초당 피해·blizzardTick마다 냉기 1,
+//             그동안 무희가 받는 피해 × (1 - blizzardGuard)
+//   영원한 안식: 최대 restMax명을 restSec초 가뒀다 깨뜨림 — 피해 restDmg (거점·바리케이드 restBaseDmg)
+//   빙판 걸음(다리 패시브): 얼어 있는 적에게 주는 피해 × (1 + shatter)
+export const FROST = {
+    freezeAt: 4, freezeSec: 1.0, chillSec: 4,
+    fanTargets: 2, fanSecond: 0.5,
+    crescentDmg: 1.6, crescentChill: 2,
+    blizzardSec: 4, blizzardZone: [-120, 170], blizzardDx: 20, blizzardDps: 0.45, blizzardTick: 0.6, blizzardGuard: 0.3,
+    restMax: 8, restSec: 2.4, restDmg: 3, restBaseDmg: 2.5,
+    shatter: { leg_frost: 0.3, leg_frost_up: 0.45 }
+};
 // 근접 기본 공격 휩쓸기: 맞은 적 뒤 radius px 안의 적에게도 피해 × mul (거대 캐릭터가 무리를 쳐냄)
 export const MELEE_CLEAVE = { radius: 60, mul: 0.4 };
 

@@ -14,8 +14,9 @@ import { CHIMERA } from './chimeraRig.js';
 import { ENEMY_RIGS } from './enemyRigs.js';
 import { DIVER } from './diverRig.js';
 import { SAINT } from './saintRig.js';
+import { FROST } from './frostRig.js';
 
-export const RIG_CHARACTERS = { mech: MECH, kaiju: KAIJU, hero: HERO, chimera: CHIMERA, diver: DIVER, saint: SAINT };
+export const RIG_CHARACTERS = { mech: MECH, kaiju: KAIJU, hero: HERO, chimera: CHIMERA, diver: DIVER, saint: SAINT, frost: FROST };
 // 적 리그: 전투에서는 구운 스프라이트를 쓰고, 리그는 rig_test.html에서 동작 확인·굽기용 (D-017)
 export const RIG_ENEMIES = ENEMY_RIGS;
 // 새 캐릭터 (D-044): 게임에 연결하기 전 rig_test.html에서만 볼 때 여기에 (RIG_CHARACTERS에 넣으면 로딩 화면이 미리 받음)

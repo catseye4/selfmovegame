@@ -66,6 +66,14 @@ export const SFX = {
     saint_stitch: { vol: 0.24, gap: 0.06, voices: 3, pitch: 0.1 },
     saint_seal: { vol: 0.6 },
     saint_revive: { vol: 0.7, duck: 0.55 },
+    // 서리의 무희 (합성음)
+    frost_fan: { vol: 0.2, gap: 0.08, voices: 3, pitch: 0.08 },
+    frost_hit: { vol: 0.2, gap: 0.06, voices: 3, pitch: 0.12 },
+    frost_freeze: { vol: 0.32, gap: 0.12, pitch: 0.1 },
+    frost_shatter: { vol: 0.42, gap: 0.08, voices: 4, pitch: 0.1 },
+    frost_crescent: { vol: 0.55 },
+    frost_blizzard: { vol: 0.55 },
+    frost_eternal: { vol: 0.7, duck: 0.55 },
     chimera_phase2: { vol: 0.8, duck: 0.45 },
     generic_slash: { vol: 0.42, gap: 0.05, pitch: 0.08 },
     // 실드

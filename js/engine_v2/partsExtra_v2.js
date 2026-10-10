@@ -21,6 +21,11 @@
      - 스킬: 팔 봉합 주사 3연발 · 몸통 생명 봉인 · 머리 억지 부활 · 다리 자가 봉합 (skills_v2.js)
      - 수치: 밸런스 9차(2026-10-10) — 기본 Lv1 1-4까지, 강화 Lv1 1-4·보스. 해금(별)은 아직 없음
 
+   서리의 무희 파츠 8개 (새 캐릭터 3, D-046): 같은 규칙 (팩션 '서리의 무희 (얼어붙은 안식)' → 리그 frost)
+     - 얼리고 깨뜨리는 원거리: 팔은 서리 부채(attackType 'frost', battle/frost.js) — 냉기를 쌓아 빙결
+     - 스킬: 팔 초승달 참격 · 몸통 눈보라 춤 · 머리 영원한 안식 · 다리 빙판 걸음 (skills_v2.js)
+     - 수치 1차 그대로 (밸런스 10차: 기본 Lv1 1-3까지·1-4 아슬아슬, 강화 Lv1 1-5·보스 빠듯), 해금(별)은 아직 없음
+
    V2_STAT_OVERRIDES: 기존 파츠 능력치를 v2에서만 바꿈 (parts.js 원본은 그대로)
      - 기본 로봇 (2026-10-03, D-043): 풀강화(Lv5)해도 1-4를 못 깸 → 기본 다리 속도 20 → 70, 기본 팔 공격력 300 → 520
        · 속도: 기본 로봇 45로 다른 조합의 1/3 (속도는 강화로 안 오름) → 95. 걷는 동안 적이 쌓여 기절·과부하
@@ -32,12 +37,14 @@ import { PARTS_DB } from '../data/parts.js';
 
 export const DIVER_FACTION = '심연의 길잡이 (심해)';
 export const SAINT_FACTION = '봉합 성녀 (뒤틀린 구원)';
+export const FROST_FACTION = '서리의 무희 (얼어붙은 안식)';
 /** 새 캐릭터 파츠: 그림은 그 캐릭터 리그의 부위 그림 (연구소 카드는 lab_v2.js THUMB) */
 const newPart = (faction, dir) => (id, name, cost, src, stats, extra = {}) => ({
     id, name, faction, cost, src: `assets/sprites/rig/${dir}/${src}`, animType: 'pivot', stats, ...extra
 });
 const diverPart = newPart(DIVER_FACTION, 'diver');
 const saintPart = newPart(SAINT_FACTION, 'saint');
+const frostPart = newPart(FROST_FACTION, 'frost');
 
 export const V2_PARTS = {
     head: [
@@ -48,7 +55,11 @@ export const V2_PARTS = {
         saintPart('head_saint', '봉합 두건', 400, 'head.png', { hp: 600, dps: 70, range: 20, speed: 10 },
             { skillDesc: '억지 부활: 봉합된 시체를 아군으로' }),
         saintPart('head_saint_up', '금빛 후광 두건', 950, 'head_up.png', { hp: 800, dps: 100, range: 30, speed: 10 },
-            { rigUpgrade: true, skillDesc: '억지 부활 (강화 두건: 큰 금빛 후광)' })
+            { rigUpgrade: true, skillDesc: '억지 부활 (강화 두건: 큰 금빛 후광)' }),
+        frostPart('head_frost', '눈꽃 머리 장식', 400, 'head.png', { hp: 550, dps: 80, range: 30, speed: 10 },
+            { skillDesc: '영원한 안식: 적을 얼음에 가뒀다 깨뜨림' }),
+        frostPart('head_frost_up', '얼음 결정 왕관', 950, 'head_up.png', { hp: 750, dps: 110, range: 40, speed: 10 },
+            { rigUpgrade: true, skillDesc: '영원한 안식 (강화 왕관: 얼음 결정)' })
     ],
     body: [
         diverPart('body_diver', '잠수복', 450, 'torso.png', { hp: 1800, dps: 40, range: 0, speed: 0 },
@@ -58,7 +69,11 @@ export const V2_PARTS = {
         saintPart('body_saint', '봉합 수녀복', 450, 'torso.png', { hp: 1500, dps: 50, range: 0, speed: 10 },
             { skillDesc: '생명 봉인: 붉은 실 장판으로 적을 묶음' }),
         saintPart('body_saint_up', '수혈 부적 갑옷', 1000, 'torso_up.png', { hp: 1900, dps: 80, range: 0, speed: 10 },
-            { rigUpgrade: true, skillDesc: '생명 봉인 (강화 갑옷: 수혈 팩·부적)' })
+            { rigUpgrade: true, skillDesc: '생명 봉인 (강화 갑옷: 수혈 팩·부적)' }),
+        frostPart('body_frost', '서리 무희복', 450, 'torso.png', { hp: 1300, dps: 60, range: 0, speed: 10 },
+            { skillDesc: '눈보라 춤: 둘레 눈보라로 냉기 + 받는 피해 감소' }),
+        frostPart('body_frost_up', '얼음 하트 갑옷', 1000, 'torso_up.png', { hp: 1700, dps: 90, range: 0, speed: 10 },
+            { rigUpgrade: true, skillDesc: '눈보라 춤 (강화 갑옷: 얼음 하트 코어)' })
     ],
     leg: [
         diverPart('leg_diver', '잠수화', 400, 'legF.png', { hp: 800, dps: 30, range: 0, speed: 90 },
@@ -68,7 +83,11 @@ export const V2_PARTS = {
         saintPart('leg_saint', '흰 장화', 400, 'legF.png', { hp: 600, dps: 30, range: 0, speed: 90 },
             { skillDesc: '자가 봉합: 다칠수록 빨리 회복' }),
         saintPart('leg_saint_up', '금속 덧댄 장화', 950, 'legF_up.png', { hp: 800, dps: 50, range: 0, speed: 105 },
-            { rigUpgrade: true, skillDesc: '자가 봉합 (강화): 더 빨리 회복' })
+            { rigUpgrade: true, skillDesc: '자가 봉합 (강화): 더 빨리 회복' }),
+        frostPart('leg_frost', '흰 하이힐 부츠', 400, 'legF.png', { hp: 550, dps: 40, range: 0, speed: 100 },
+            { skillDesc: '빙판 걸음: 얼어 있는 적에게 피해 증가' }),
+        frostPart('leg_frost_up', '얼음 결정 부츠', 950, 'legF_up.png', { hp: 750, dps: 60, range: 0, speed: 115 },
+            { rigUpgrade: true, skillDesc: '빙판 걸음 (강화): 더 크게 깨뜨림' })
     ],
     arm: [
         {
@@ -91,7 +110,11 @@ export const V2_PARTS = {
         saintPart('arm_saint', '봉합 주사기', 500, 'armF.png', { hp: 300, dps: 430, range: 230, speed: 0 },
             { attackType: 'needle', skillDesc: '봉합 주사: 바늘이 꽂힌 적에 봉합 표식 · 3연발' }),
         saintPart('arm_saint_up', '이중 주사기·집게', 1100, 'armF_up.png', { hp: 400, dps: 520, range: 260, speed: 0 },
-            { attackType: 'needle', rigUpgrade: true, skillDesc: '이중 주사기 · 봉합 주사 3연발' })
+            { attackType: 'needle', rigUpgrade: true, skillDesc: '이중 주사기 · 봉합 주사 3연발' }),
+        frostPart('arm_frost', '얼음 부채', 500, 'armF.png', { hp: 300, dps: 420, range: 270, speed: 0 },
+            { attackType: 'frost', skillDesc: '서리 부채: 얼음 칼날로 냉기 → 빙결 · 초승달 참격' }),
+        frostPart('arm_frost_up', '얼음 칼날 부채', 1100, 'armF_up.png', { hp: 400, dps: 510, range: 300, speed: 0 },
+            { attackType: 'frost', rigUpgrade: true, skillDesc: '큰 얼음 칼날 부채 · 초승달 참격' })
     ]
 };
 

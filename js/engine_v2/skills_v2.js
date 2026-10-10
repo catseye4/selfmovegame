@@ -111,6 +111,13 @@ export const SKILLS = {
             monster.playCast(() => b.tripleNeedle(this.range), 'triple');
         }
     },
+    crescentSlash: {
+        name: '초승달 참격', slot: 'arm', cd: 9, icon: 'crescent', color: '#7fd4ff', target: 'enemy', range: 200,
+        desc: '큰 서리 초승달이 앞의 적을 모두 베고 냉기 2',
+        use(b) {
+            monster.playCast(() => b.crescentSlash(this.range), 'crescent');
+        }
+    },
     acidCharge: {
         name: '산성 돌진', slot: 'arm', cd: 9, icon: 'acid', color: '#a0ff32', target: 'enemy', range: 90,
         desc: '거체로 들이받아 큰 피해 + 주변 적을 밀쳐내고 산성 웅덩이로 부식 (거점에 강함)',
@@ -188,6 +195,14 @@ export const SKILLS = {
         }
     },
 
+    blizzardDance: {
+        name: '눈보라 춤', slot: 'body', cd: 15, icon: 'fan', color: '#a8e4ff', target: 'enemy', range: 140,
+        desc: '4초간 둘레 눈보라: 계속 피해 + 냉기, 받는 피해 30% 감소',
+        use(b) {
+            monster.playCast(() => b.blizzardDance(), 'spin');
+        }
+    },
+
     // ===== 머리 (필살기) =====
     droneSwarm: {
         name: '스웜 드론 총출격', slot: 'head', ult: true, icon: 'drone', color: '#d75aff', target: 'enemy', range: 400,
@@ -232,6 +247,13 @@ export const SKILLS = {
             monster.playCast(() => b.forcedRevive(this.range));
         }
     },
+    eternalRest: {
+        name: '영원한 안식', slot: 'head', ult: true, icon: 'icecage', color: '#9fe0ff', target: 'enemy', range: 350,
+        desc: '앞의 적을 얼음 결정에 가뒀다가 한꺼번에 깨뜨림',
+        use(b) {
+            monster.playCast(() => b.eternalRest(this.range));
+        }
+    },
     rampage: {
         name: '파괴 광란', slot: 'head', ult: true, icon: 'rampage', color: '#ff9628', target: 'self',
         desc: '즉시 2페이즈 변신. 이미 변신했다면 대형 충격파 + 1.5초 기절',
@@ -262,7 +284,10 @@ export const PART_SKILL = {
     head_diver: 'abyssHands', head_diver_up: 'abyssHands',
     // 봉합 성녀
     arm_saint: 'needleTriple', arm_saint_up: 'needleTriple', body_saint: 'lifeSeal', body_saint_up: 'lifeSeal',
-    head_saint: 'forcedRevive', head_saint_up: 'forcedRevive'
+    head_saint: 'forcedRevive', head_saint_up: 'forcedRevive',
+    // 서리의 무희
+    arm_frost: 'crescentSlash', arm_frost_up: 'crescentSlash', body_frost: 'blizzardDance', body_frost_up: 'blizzardDance',
+    head_frost: 'eternalRest', head_frost_up: 'eternalRest'
 };
 
 // 다리 패시브 (v2 기준 설명 — parts.js 설명은 구버전과 공용이라 여기서 덮어씀). 효과는 battle/player.js (수치는 battle/tuning.js LEG)
@@ -275,7 +300,9 @@ export const LEG_PASSIVES = {
     leg_diver: { name: '잠수화', desc: '밀려남 60% 감소, 감속·속박 시간 절반' },
     leg_diver_up: { name: '잠수화 (강화)', desc: '밀려남 80% 감소, 감속·속박 시간 70% 감소' },
     leg_saint: { name: '자가 봉합', desc: '잃은 내구도가 많을수록 빨리 회복 (최대 초당 2%)' },
-    leg_saint_up: { name: '자가 봉합 (강화)', desc: '잃은 내구도가 많을수록 빨리 회복 (최대 초당 2.8%)' }
+    leg_saint_up: { name: '자가 봉합 (강화)', desc: '잃은 내구도가 많을수록 빨리 회복 (최대 초당 2.8%)' },
+    leg_frost: { name: '빙판 걸음', desc: '얼어 있는 적에게 주는 피해 30% 증가' },
+    leg_frost_up: { name: '빙판 걸음 (강화)', desc: '얼어 있는 적에게 주는 피해 45% 증가' }
 };
 
 /** 다리 파츠 패시브 { name, desc } (없으면 null) */

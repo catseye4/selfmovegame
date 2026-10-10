@@ -14,7 +14,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import run_tests  # noqa: E402
 
-NAMES = ['test_menu_lab', 'test_battle', 'test_flow', 'test_sound', 'test_stages', 'test_bases', 'test_zone2', 'test_diver', 'test_saint']
+NAMES = ['test_menu_lab', 'test_battle', 'test_flow', 'test_sound', 'test_stages', 'test_bases', 'test_zone2', 'test_diver', 'test_saint', 'test_frost']
 
 
 def main():

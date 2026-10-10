@@ -163,6 +163,7 @@
                     <button data-char="scrapking">고철왕</button>
                     <button data-char="diver">심연의 길잡이 (새)</button>
                     <button data-char="saint">봉합 성녀 (새)</button>
+                    <button data-char="frost">서리의 무희 (새)</button>
                 </div>
             </div>
 
@@ -269,6 +270,15 @@
         팔 교체: 같은 뼈대에 파츠만 바꿔 끼움 · 동작 데이터는 <b>js/engine_v2/rig/mechRig.js</b>(게임과 공유), 파츠 분리는 <b>tools/rig/cut_mech_parts.py</b>
     </section>
 
+    <script>
+        // 파일을 바로 열면(file://) 모듈·그림을 못 불러와 "불러오는 중"에서 멈춤 → 여는 방법 안내
+        if (location.protocol === 'file:') {
+            document.getElementById('rig-loading').innerHTML =
+                '이 화면은 파일로 바로 열면 동작하지 않아요.<br>' +
+                '같은 폴더의 <b>open_rig_test.bat</b>을 더블클릭하세요.<br>' +
+                '<small>(또는 python serve.py 실행 후 http://localhost:8099/rig_test.html)</small>';
+        }
+    </script>
     <script type="module" src="js/rig_test/main.js"></script>
 </body>
 </html>

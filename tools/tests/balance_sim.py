@@ -35,6 +35,9 @@ BUILDS = {
     # 봉합 성녀 (D-046)
     'saint': ('head_saint', 'body_saint', 'arm_saint', 'leg_saint'),
     'saint_up': ('head_saint_up', 'body_saint_up', 'arm_saint_up', 'leg_saint_up'),
+    # 서리의 무희 (D-046)
+    'frost': ('head_frost', 'body_frost', 'arm_frost', 'leg_frost'),
+    'frost_up': ('head_frost_up', 'body_frost_up', 'arm_frost_up', 'leg_frost_up'),
 }
 ZONES = {1: ['1-1', '1-2', '1-3', '1-4', '1-5', '1-B'], 2: ['2-1', '2-2', '2-3', '2-4', '2-5', '2-B']}
 STAGE_IDS = ZONES[1]   # 스테이지를 안 고르면 구역 1

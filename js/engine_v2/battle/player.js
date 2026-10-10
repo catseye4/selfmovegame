@@ -9,13 +9,14 @@ import { monsterControllerV2 } from '../monster_v2.js';
 import { sound } from '../audio/sound_v2.js';
 import { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX } from '../vfx/vfxDefs.js';
 import { aimAt as aimOf } from '../bases_v2.js';
-import { PHASE2, HERO, PASSIVE, LEG, PLAYER_STATUS, OVERLOAD, FOOT_B } from './tuning.js';
+import { PHASE2, HERO, PASSIVE, LEG, PLAYER_STATUS, OVERLOAD, FOOT_B, FROST } from './tuning.js';
 
 export const PlayerMethods = {
     // 몬스터가 받는 피해: 실드가 있으면 먼저 흡수
     damagePlayer(amount, dt) {
         if (this.overloadT > 0) return;   // 과부하(긴급 수리) 중에는 피해 없음
         if (this.equippedLegId === 'leg_hero_hover') amount *= 1 - LEG.hoverReduce;   // 다리 패시브 '반중력 부양'
+        if (this.blizzard) amount *= 1 - FROST.blizzardGuard;                         // 서리의 무희 '눈보라 춤' 동안
         if (this.shieldHp > 0) {
             const absorbed = Math.min(this.shieldHp, amount);
             this.shieldHp -= absorbed;

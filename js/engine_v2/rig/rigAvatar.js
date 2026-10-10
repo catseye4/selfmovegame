@@ -182,7 +182,8 @@ const FACTION_RIG = [
     ['타락 히어로', 'hero'],
     ['합성괴인', 'chimera'],
     ['심연의 길잡이', 'diver'],
-    ['봉합 성녀', 'saint']
+    ['봉합 성녀', 'saint'],
+    ['서리의 무희', 'frost']
 ];
 
 /**
@@ -217,6 +218,8 @@ const SLOT_PARTS = {
     diver: { head: ['head', 'head_up'], body: ['torso', 'torso_up'], arm: ['armF', 'armB', 'armF_up', 'armB_up'],
         leg: ['legF', 'legB', 'legF_up', 'legB_up'] },
     saint: { head: ['head', 'head_up'], body: ['torso', 'torso_up'], arm: ['armF', 'armB', 'armF_up', 'armB_up'],
+        leg: ['legF', 'legB', 'legF_up', 'legB_up'] },
+    frost: { head: ['head', 'hair', 'head_up', 'hair_up'], body: ['torso', 'torso_up'], arm: ['armF', 'armB', 'armF_up', 'armB_up'],
         leg: ['legF', 'legB', 'legF_up', 'legB_up'] }
 };
 // 같은 팩션 안의 변형 파츠 색 (기본 파츠는 원래 색)
@@ -229,7 +232,7 @@ const PART_TINT = {
 };
 // 다른 팩션 파츠: 그 팩션 색 테두리 빛 / 비운 슬롯: 흐리게
 const FACTION_GLOW = { mech: '62, 230, 255', kaiju: '160, 255, 50', hero: '200, 110, 255', chimera: '255, 150, 40', diver: '60, 225, 200',
-    saint: '255, 77, 109' };
+    saint: '255, 77, 109', frost: '127, 212, 255' };
 const EMPTY_SLOT = 'grayscale(1) brightness(0.45) opacity(0.55)';
 
 function factionIdOf(part) {

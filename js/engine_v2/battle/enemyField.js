@@ -18,11 +18,13 @@ import { HERO, HIT_REACT, ACID, POPUP, FOOT_B, BASE_X } from './tuning.js';
 
 // 적 상태 외형 (우선순위: 기절 > 감속 > 저주) + 체력바 옆 상태 아이콘
 const ENEMY_TINT = {
+    frozen: 'saturate(0.35) brightness(1.3) hue-rotate(170deg) drop-shadow(0 0 6px #9fe0ff)',   // 서리의 무희 빙결
     stun: 'grayscale(0.7) brightness(1.15) drop-shadow(0 0 6px #ffe066)',
     slow: 'drop-shadow(0 0 6px #b050ff) saturate(0.55) brightness(0.9)',
     curse: 'brightness(0.72) saturate(0.7) drop-shadow(0 0 4px rgba(170, 80, 255, 0.9))'
 };
-const STATUS_ICON = { curse: 'curse', slow: 'slow', stun: 'stun', acid: 'acid', abyss: 'hand', stitch: 'stitch' };
+const STATUS_ICON = { curse: 'curse', slow: 'slow', stun: 'stun', acid: 'acid', abyss: 'hand', stitch: 'stitch',
+    frozen: 'snow', chill: 'snow' };
 const PUDDLE_STICK = 1.5;   // 늪을 밟은 뒤 감속이 남는 시간(초)
 
 export const EnemyMethods = {
@@ -72,6 +74,7 @@ export const EnemyMethods = {
     // react.dot: 지속 피해 — 피격 반응 없이 합산해 0.5초마다 숫자 표시
     dealDamageToEnemy(enemy, damage, isCrit, react = null) {
         if (enemy.armor && damage > 0) damage *= 1 - enemy.armor;   // 방패병·보스: 받는 피해 감소
+        if (enemy.frozenT > 0 && damage > 0) damage *= 1 + this.shatterBonus();   // 서리의 무희 다리 '빙판 걸음' (frost.js)
         enemy.hp -= damage;
         if (react && !react.dot && enemy.hp > 0) this.hitReact(enemy, react);
         if (react && react.dot) {
@@ -201,8 +204,8 @@ export const EnemyMethods = {
     // 적 외형 상태: 기절 > 감속 > 저주 순으로 색 (피격 섬광 중에는 섬광 우선) + 상태 아이콘
     updateEnemyFilter(e) {
         if (!e.dom) return;
-        const states = [e.stunT > 0 && 'stun', e.slowT > 0 && 'slow', e.cursed && 'curse', e.acidT > 0 && 'acid',
-            e.abyssT > 0 && 'abyss', e.stitchT > 0 && 'stitch'].filter(Boolean);
+        const states = [e.frozenT > 0 && 'frozen', e.stunT > 0 && !(e.frozenT > 0) && 'stun', e.slowT > 0 && 'slow', e.cursed && 'curse',
+            e.acidT > 0 && 'acid', e.abyssT > 0 && 'abyss', e.stitchT > 0 && 'stitch', e.chill > 0 && 'chill'].filter(Boolean);
         this.updateStatusIcons(e, states);
         if (e.flashing) return;
         // 종류 색조(enemies_v2.js baseFilter) + 상태 색

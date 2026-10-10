@@ -16,6 +16,7 @@ MAD OVERLORD // 게임 사운드 만들기 (v2)
   실행: python tools/audio/build_audio.py <SRC 폴더>
         python tools/audio/build_audio.py - sfx diver_   # 이름이 diver_로 시작하는 합성 효과음만 (팩 없이)
         python tools/audio/build_audio.py - sfx saint_   # 봉합 성녀 합성 효과음만
+        python tools/audio/build_audio.py - sfx frost_   # 서리의 무희 합성 효과음만
 
 효과음 이름은 이펙트 정의(sfx: '...')와 전투 연출(director.sfx)에서 부르는 이름과 같다.
 음량/겹침 제한 같은 재생 규칙은 js/engine_v2/audio/sound_v2.js 의 SFX 표에서 정한다.
@@ -321,6 +322,84 @@ def synth_saint_revive():
     return (beat + choir + shimmer).astype(np.float32)
 
 
+def _chimes(sec, count, t0=0.0, t1=None, f0=1800, f1=4200, decay=0.12, gain=0.4):
+    """얼음 방울 소리: 맑은 높은 사인(배음 하나)이 여러 번 울림"""
+    out = np.zeros(int(sec * SR), np.float32)
+    t1 = sec - decay if t1 is None else t1
+    for _ in range(count):
+        at = rng.uniform(t0, t1)
+        t = t_axis(decay * 3)
+        f = rng.uniform(f0, f1)
+        c = (np.sin(2 * np.pi * f * t) + 0.4 * np.sin(2 * np.pi * f * 2.76 * t)) * np.exp(-t / decay) * gain * rng.uniform(0.5, 1)
+        i = int(at * SR)
+        out[i:i + len(c)] += c[: len(out) - i]
+    return out
+
+
+def synth_frost_fan():
+    """서리 부채: 짧게 휙 + 얼음 방울 둘"""
+    sec = 0.32
+    return (synth_whoosh(sec, 900, 5000) * 0.9 + _chimes(sec, 2, 0.05, 0.2, 2500, 4500, 0.06, 0.3)).astype(np.float32)
+
+
+def synth_frost_hit():
+    """얼음 칼날이 맞음: 짧은 서걱 + 쨍"""
+    sec = 0.2
+    t = t_axis(sec)
+    crack = _band(rng.standard_normal(len(t)).astype(np.float32), 2500, 9000) * np.exp(-t / 0.015) * 1.5
+    return (crack + _chimes(sec, 1, 0.0, 0.02, 3000, 4000, 0.05, 0.35)).astype(np.float32)
+
+
+def synth_frost_freeze():
+    """얼어붙음: 바스락 얼음 끼는 소리가 빠르게 퍼짐 + 낮은 쿵"""
+    sec = 0.55
+    t = t_axis(sec)
+    crackle = np.zeros(len(t), np.float32)
+    for _ in range(40):
+        at = rng.uniform(0, 0.4) ** 1.5
+        i = int(at * SR)
+        n = int(0.004 * SR)
+        crackle[i:i + n] += rng.standard_normal(min(n, len(t) - i)).astype(np.float32) * rng.uniform(0.3, 1)
+    crackle = _band(crackle, 1500, 8000) * 1.8
+    thud = np.sin(2 * np.pi * 90 * t) * np.exp(-t / 0.05) * 0.5
+    return (crackle + thud + _chimes(sec, 3, 0.1, 0.4, 2200, 3800, 0.08, 0.25)).astype(np.float32)
+
+
+def synth_frost_shatter():
+    """얼음 결정이 깨짐: 쨍그랑 잡음 + 흩어지는 조각 소리"""
+    sec = 0.8
+    t = t_axis(sec)
+    burst = _band(rng.standard_normal(len(t)).astype(np.float32), 2000, 10000) * np.exp(-t / 0.05) * 1.8
+    return (burst + _chimes(sec, 14, 0.02, 0.6, 2000, 6000, 0.06, 0.35) + _clinks(sec, 10, 0.05, 0.5, 0.3)).astype(np.float32)
+
+
+def synth_frost_crescent():
+    """초승달 참격: 크게 휙 + 높게 울리는 얼음 화음"""
+    sec = 0.7
+    return (synth_whoosh(sec, 500, 4500) * 1.1 + _chord(sec, [1046.5, 1318.5, 1568.0], attack=0.03, vib=7) * 0.35
+            + _chimes(sec, 4, 0.1, 0.5, 2500, 5000, 0.08, 0.25)).astype(np.float32)
+
+
+def synth_frost_blizzard():
+    """눈보라: 휘몰아치는 바람(차단 주파수가 출렁이는 잡음) + 흩날리는 얼음 방울"""
+    sec = 1.3
+    t = t_axis(sec)
+    u = t / sec
+    wind = _band(rng.standard_normal(len(t)).astype(np.float32), 300, 1500 + 1200 * np.sin(2 * np.pi * 2.2 * t) ** 2)
+    env = np.sin(np.pi * np.clip(u, 0, 1)) ** 0.7
+    return (wind * 2.2 * env + _chimes(sec, 10, 0.1, 1.1, 2500, 5500, 0.07, 0.2)).astype(np.float32)
+
+
+def synth_frost_eternal():
+    """영원한 안식: 낮게 깔리는 차가운 화음 + 얼음이 자라는 바스락 + 맑은 종소리"""
+    sec = 1.5
+    choir = _chord(sec, [196.0, 233.1, 293.7, 392.0], attack=0.2, vib=3.5)
+    grow = np.zeros(int(sec * SR), np.float32)
+    fz = synth_frost_freeze()
+    grow[: len(fz)] += fz * 0.8
+    return (choir * 0.9 + grow + _chimes(sec, 8, 0.2, 1.2, 1500, 3500, 0.2, 0.3)).astype(np.float32)
+
+
 # ---------------------------------------------------------------------------
 # 효과음 조합: 이름 → [(파일, 옵션)] 또는 합성 함수
 SFX = {
@@ -370,6 +449,14 @@ SFX = {
     'saint_stitch': lambda: synth_saint_stitch(),
     'saint_seal': lambda: synth_saint_seal(),
     'saint_revive': lambda: synth_saint_revive(),
+    # 서리의 무희 (D-046): 팩 없이 합성
+    'frost_fan': lambda: synth_frost_fan(),
+    'frost_hit': lambda: synth_frost_hit(),
+    'frost_freeze': lambda: synth_frost_freeze(),
+    'frost_shatter': lambda: synth_frost_shatter(),
+    'frost_crescent': lambda: synth_frost_crescent(),
+    'frost_blizzard': lambda: synth_frost_blizzard(),
+    'frost_eternal': lambda: synth_frost_eternal(),
     'chimera_phase2': [(CRE + 'roar_02.ogg', {}), (DIG + 'powerUp1.ogg', dict(gain=0.6))],
     'generic_slash': [(RPG + 'knifeSlice2.ogg', {})],
     # 실드

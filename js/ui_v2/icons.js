@@ -39,6 +39,11 @@ const P = {
     sealring: '<circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12" cy="12" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 1.5v6M12 16.5v6M1.5 12h6M16.5 12h6" stroke="currentColor" stroke-width="2.2"/>',
     redcross: '<path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z"/><path d="M12 4.5v15M4.5 12h15" stroke="rgba(255,255,255,.55)" stroke-width="1.3" stroke-dasharray="2 2"/>',
     stitch: '<path d="M2 12h20" stroke="currentColor" stroke-width="2.4"/><path d="M5.5 6.5l2.5 11M11 6.5l2.5 11M16.5 6.5l2.5 11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+    // 서리의 무희: 부채 · 초승달 · 얼음 속 사람 · 눈꽃(냉기·빙결 상태)
+    fan: '<path d="M12 21L2.5 8.5A13 13 0 0 1 21.5 8.5z"/><path d="M12 21l-6.5-12M12 21L9.5 6M12 21l2.5-15M12 21l6.5-12" stroke="rgba(0,0,0,.35)" stroke-width="1.2"/><circle cx="12" cy="20.5" r="1.6"/>',
+    crescent: '<path d="M14 2.5a9.5 9.5 0 1 0 7.5 15.2A11 11 0 0 1 14 2.5z"/><path d="M20 3l1 2.2 2.2.8-2.2.8L20 9l-.8-2.2-2.2-.8 2.2-.8z"/>',
+    icecage: '<path d="M4 22L7 6l3 7 2-11 2 11 3-7 3 16z"/><circle cx="12" cy="15" r="2.4" fill="rgba(0,0,0,.45)"/><path d="M9.5 21c0-2.5 1.1-3.6 2.5-3.6s2.5 1.1 2.5 3.6" fill="rgba(0,0,0,.45)"/>',
+    snow: '<path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M9.5 3.5L12 6l2.5-2.5M9.5 20.5L12 18l2.5 2.5" fill="none" stroke="currentColor" stroke-width="1.8"/>',
     // ---- 상태 (적 체력바 옆) ----
     slow: '<path d="M4 4l8 7 8-7v5l-8 7-8-7z"/><path d="M4 12l8 7 8-7v4l-8 6-8-6z" opacity=".6"/>',
     net: '<path d="M3 5l18 14M21 5L3 19M3 12h18M8 4l-2 16M16 4l2 16" fill="none" stroke="currentColor" stroke-width="2"/>',

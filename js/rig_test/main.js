@@ -10,7 +10,8 @@ import { loadRigAssets, applyRigEvent, applyUpgrades, buildSkeleton, restBounds,
 import { RigEffects } from '../engine_v2/rig/rigEffects.js';
 import { VfxPlayer } from '../engine_v2/vfx/vfxPlayer.js';
 import { HERO_WAVE, HERO_ORB } from '../engine_v2/vfx/heroVfx.js';
-import { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX, DIVER_VFX, SAINT_VFX } from '../engine_v2/vfx/vfxDefs.js';
+import { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX, DIVER_VFX, SAINT_VFX, FROST_VFX } from '../engine_v2/vfx/vfxDefs.js';
+import { ICE, MIST } from '../engine_v2/vfx/frostVfx.js';
 import { BLOOD } from '../engine_v2/vfx/saintVfx.js';
 import { WATER, ABYSS } from '../engine_v2/vfx/diverVfx.js';
 
@@ -39,7 +40,7 @@ const vfx = new VfxPlayer();
 const VFX_SCALE = CHAR_SCALE / 0.235;            // 게임 전투 배율 대비 (캐릭터가 약 1.8배 큼)
 const GOBLIN_SRC = 'assets/sprites/enemy/goblin_walk_sheet.png';
 const dummies = [330, 440, 550].map(dx => ({ x: CHAR_X + dx * VFX_SCALE * 0.56, flash: 0, slow: 0 }));
-const skill = { curse: false, wave: false, seal: false, curseTimer: 0, castCb: null };
+const skill = { curse: false, wave: false, seal: false, blizzard: false, curseTimer: 0, castCb: null };
 let goblinImg = null;
 const giant = new ScaleTween();    // 2페이즈 거대화 배율
 let mainCtx, offCanvas, offCtx;
@@ -98,6 +99,7 @@ async function setCharacter(id) {
     vfx.clear();
     skill.curse = false;
     skill.seal = false;
+    skill.blizzard = false;
     skill.wave = false;
     buildPreviewButtons();
     buildSkillClipButtons();
@@ -375,6 +377,29 @@ function toggleSeal() {
     if (skill.seal) vfx.play(SAINT_VFX.sealOpen, CHAR_X + 150 * VFX_SCALE, GROUND_Y, { scale: VFX_SCALE });
 }
 
+// 서리의 무희: 서리 부채(앞 둘) · 초승달 참격(모두) · 눈보라(켜고 끄기) · 빙결 · 영원한 안식(가뒀다 깨뜨림)
+function previewFrostWave(h, range, hits) {
+    const m = toStage(skeleton.socketWorld('fanF', 'armF'));
+    const hit = new Set();
+    vfx.launchWave({
+        x: m[0], y: dummyCenterY(), range, speed: 760, h, color: ICE, mist: MIST, scale: VFX_SCALE,
+        onMove: (x0, x1) => dummies.forEach(d => {
+            if (d.x < x0 || d.x > x1 || hit.has(d) || hit.size >= hits) return;
+            hit.add(d);
+            vfx.play(h > 80 ? FROST_VFX.crescentHit : FROST_VFX.fanHit, d.x, dummyCenterY(), { scale: VFX_SCALE });
+            d.flash = 0.08;
+        })
+    });
+}
+
+function toggleBlizzard() {
+    skill.blizzard = !skill.blizzard;
+    opts.dummies = true;
+    vfx.setPersistent('blizzard', skill.blizzard ? FROST_VFX.blizzardField : null,
+        () => [CHAR_X + 60 * VFX_SCALE, GROUND_Y], VFX_SCALE);
+    if (skill.blizzard) vfx.play(FROST_VFX.blizzardOpen, CHAR_X + 60 * VFX_SCALE, GROUND_Y, { scale: VFX_SCALE });
+}
+
 const PREVIEWS = {
     mech: [
         ['레이저 포격', previewLaser],
@@ -416,6 +441,13 @@ const PREVIEWS = {
         ['생명 봉인 (켜기/끄기)', toggleSeal],
         ['시체 → 부활', () => vfxAtDummy(seq(SAINT_VFX.corpseStitch, SAINT_VFX.corpseRise, 0.9), 1, true)],
         ['억지 부활 발동', () => vfxAtSelf(SAINT_VFX.reviveCall)]
+    ],
+    frost: [
+        ['서리 부채', () => previewFrostWave(54, 480, 2)],
+        ['초승달 참격', () => { skill.castCb = () => previewFrostWave(130, 520, 9); playOnce('crescent'); }],
+        ['눈보라 (켜기/끄기)', toggleBlizzard],
+        ['빙결', () => vfxAtEachDummy(FROST_VFX.freeze)],
+        ['영원한 안식', () => { vfxAtSelf(FROST_VFX.eternalCall); vfxAtEachDummy(seq(FROST_VFX.encase, FROST_VFX.shatter, 2.4)); }]
     ]
 };
 

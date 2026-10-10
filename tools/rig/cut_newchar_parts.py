@@ -17,6 +17,7 @@
               위쪽 띠(HIP_BAND)는 몸통(골반) 뒤로 겹침, not_leg 사각형(등 뒤 밧줄 등)은 몸통
      'poly' : 다리 다각형 둘 — 치마·로브가 다리 위를 덮는 캐릭터. 다리는 몸통 뒤에 그리고, leg_cut_y 아래만 몸통에서 뺌
               (다리를 들면 윗부분이 치맛자락 밑으로 들어감)
+ - 뒷머리 (hair_poly, 있을 때만): 몸 뒤로 흘러내린 긴 머리를 따로 한 조각 → 몸통 뒤에 그려 스프링으로 살랑임
 """
 import os
 import sys
@@ -31,7 +32,7 @@ from cut_enemy_parts import keyed, arm_masks  # noqa: E402
 
 NECK_BAND = 14         # 몸통이 머리 가장자리를 더 가지는 띠(px)
 HIP_BAND = 32          # 'split' 다리가 골반(몸통) 아래로 더 올라가는 겹침(px)
-ORDER = ['legB', 'legF', 'torso', 'head', 'armB', 'armF']
+ORDER = ['hair', 'legB', 'legF', 'torso', 'head', 'armB', 'armF']   # 그리는 순서(뒤 → 앞), 없는 조각은 건너뜀
 
 CHARS = {
     # 심연의 길잡이 (마젠타): 앞팔 = 물대포(어깨부터), 뒷팔 = 앵커를 쥔 손(손목부터 — 위팔은 큰 어깨 갑옷 아래 몸통에 그려져 있음)
@@ -52,6 +53,27 @@ CHARS = {
     },
     # 봉합 성녀 (초록): 앞팔 = 큰 주사기(강화: 이중 주사기 대포), 뒷팔 = 작은 주사기(강화: 황동 집게)
     # 등 뒤 장대의 황동 상자·부적은 몸통. 떠 있는 부적과 머리 뒤 작은 후광은 머리. 로브가 다리를 덮어 다리는 다각형
+    # 서리의 무희 (초록): 앞팔 = 오른쪽 얼음 부채, 뒷팔 = 왼쪽 얼음 부채 (몸은 3/4 정면, 두 팔을 양옆으로)
+    # 몸 뒤로 흘러내린 긴 포니테일은 뒷머리 조각(hair). 치마가 허벅지를 덮어 다리는 다각형
+    'frost': {
+        'key': 'green',
+        'src': ('frost_1_gemini.png', 'frost_2_gemini.png', 'frost_3_gemini.png', 'frost_4_gemini.png'),
+        'head_poly': [(285, 88), (560, 88), (672, 138), (702, 240), (692, 340), (662, 420), (602, 446), (530, 452),
+                      (480, 442), (455, 400), (440, 330), (400, 280), (330, 245), (285, 215)],
+        'hair_poly': [(170, 170), (285, 215), (330, 245), (400, 280), (440, 330), (450, 400), (440, 440), (432, 520),
+                      (410, 565), (380, 605), (340, 650), (280, 668), (220, 660), (175, 615), (160, 520)],
+        'arm': {'arms': 'two', 'close': 9, 'head_y': 440, 'arm_top': 380},
+        'legs': 'poly', 'leg_cut_y': 735,
+        'leg_b_poly': [(418, 690), (506, 690), (508, 760), (492, 830), (478, 934), (392, 934), (398, 870), (418, 830)],
+        'leg_f_poly': [(512, 690), (580, 690), (598, 760), (600, 840), (648, 878), (648, 934), (518, 934), (518, 840),
+                       (510, 760)],
+        'pivots': {'root': (533, 925), 'torso': (530, 650), 'head': (540, 442), 'hair': (420, 290),
+                   'armF': (602, 455), 'armB': (455, 452), 'legB': (455, 700), 'legF': (548, 700)},
+        'sockets': {'fanF': (795, 590), 'fanFUp': (812, 580),           # 앞 부채 가운데 (강화 부채가 조금 더 큼)
+                    'fanB': (212, 545), 'crown': (615, 175),            # 뒤 부채 가운데, 머리 장식
+                    'chest': (530, 470), 'hairTip': (250, 620),         # 가슴(강화 하트 코어), 뒷머리 끝
+                    'footB': (445, 920), 'footF': (585, 920)},
+    },
     'saint': {
         'key': 'green',
         'src': ('saint_1_gemini.png', 'saint_2_gemini.png', 'saint_3_gemini.png', 'saint_4_clean.png'),
@@ -96,13 +118,19 @@ def masks_for(cfg, full, armless):
         leg_b = largest(poly_mask(full.shape, cfg['leg_b_poly']) & op2)
         leg_f = largest(poly_mask(full.shape, cfg['leg_f_poly']) & op2)
         cut_y = cfg['leg_cut_y']
-    torso = op2 & ~(head & ~near_body) & ~((leg_b | leg_f) & (rows >= cut_y))
-    return {'legB': leg_b, 'legF': leg_f, 'torso': torso, 'head': head, 'armB': arm_b, 'armF': arm_f}
+    hair = np.zeros_like(op2)
+    if 'hair_poly' in cfg:
+        hair = largest(poly_mask(full.shape, cfg['hair_poly']) & op2 & ~head)
+    torso = op2 & ~(head & ~near_body) & ~hair & ~((leg_b | leg_f) & (rows >= cut_y))
+    masks = {'legB': leg_b, 'legF': leg_f, 'torso': torso, 'head': head, 'armB': arm_b, 'armF': arm_f}
+    if hair.any():
+        masks['hair'] = hair
+    return masks
 
 
 def preview(cfg, masks, full, path):
     colors = {'legB': (80, 80, 255), 'legF': (60, 200, 255), 'armB': (255, 160, 40), 'armF': (255, 60, 60),
-              'head': (80, 230, 80)}
+              'head': (80, 230, 80), 'hair': (230, 80, 230)}
     vis = (full[..., :3] * 0.45).astype(np.uint8)
     for k, m in masks.items():
         if k in colors:
@@ -110,6 +138,8 @@ def preview(cfg, masks, full, path):
     im = Image.fromarray(vis)
     d = ImageDraw.Draw(im)
     d.polygon(cfg['head_poly'], outline=(80, 255, 80))
+    if 'hair_poly' in cfg:
+        d.polygon(cfg['hair_poly'], outline=(255, 120, 255))
     if cfg['legs'] == 'split':
         hip, c, sl = cfg['hip_y'], cfg['crotch'], cfg['slope']
         d.line([(0, hip), (1024, hip)], fill=(80, 160, 255))
@@ -155,7 +185,7 @@ def main():
     write_layout(out_dir, layout)
     print('parts:', list(parts))
     for suffix, full in sheets:
-        rest_check(out_dir, layout, [k + suffix for k in ORDER], full,
+        rest_check(out_dir, layout, [k + suffix for k in ORDER if k + suffix in layout['parts']], full,
                    os.path.join(HERE, f'_rest_check_{cid}{suffix}.png'))
 
 

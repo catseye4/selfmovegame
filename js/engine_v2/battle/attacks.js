@@ -1,6 +1,6 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // 전투 — 주인공 공격과 스킬 (v2)
-   기본 공격(근접 휩쓸기·레이저·어둠 파동·유도 미사일·물줄기·주사 바늘), 스킬 공용 기능(사거리 안의 적, 예약 실행,
+   기본 공격(근접 휩쓸기·레이저·어둠 파동·유도 미사일·물줄기·주사 바늘·서리 부채), 스킬 공용 기능(사거리 안의 적, 예약 실행,
    쿨다운·필살기 게이지·자동 사용), 스킬이 쓰는 효과(드론, 실드). 스킬 정의는 skills_v2.js.
    battle_v2.js의 BattleEngine에 메서드로 붙는다 (this = 전투 엔진).
    ========================================================================== */
@@ -48,6 +48,10 @@ export const AttackMethods = {
         else if (this.attackType === 'needle') {
             // 봉합 주사 (봉합 성녀): 바늘이 꽂힌 적에 봉합 표식 (battle/saint.js)
             this.fireNeedle(targetEnemy, finalDmg, isCrit, { link: true });
+        }
+        else if (this.attackType === 'frost') {
+            // 서리 부채 (서리의 무희): 작은 서리 초승달, 냉기 (battle/frost.js)
+            this.fireFrostFan(targetEnemy, finalDmg, isCrit);
         }
         else if (this.attackType === 'missile') {
             // 유도 미사일: 포물선으로 날아가 폭발 (목표가 먼저 쓰러지면 마지막 위치에 떨어짐)
