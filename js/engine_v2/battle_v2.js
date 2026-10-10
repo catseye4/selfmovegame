@@ -13,6 +13,8 @@
      battle/attacks.js    주인공 공격·스킬 공용 (기본 공격, 미사일·파동·드론, 쿨다운·게이지·자동 사용)
      battle/enemyField.js 전장의 적과 거점: 소환·피해·처치·상태 외형·거점·EMP 포격
      battle/allies.js     아군: 세뇌 보병·새끼 괴수·졸개
+     battle/diver.js      심연의 길잡이(새 캐릭터): 고압 방수포·앵커 견인·고압 분사·심연의 손·잠수화
+     battle/saint.js      봉합 성녀(새 캐릭터): 봉합 주사·3연발·생명 봉인·억지 부활·자가 봉합, 시체
    스테이지는 stages_v2.js, 적 종류와 행동은 enemies_v2.js, 화면 연출은 ui_v2/battleDirector_v2.js
    ========================================================================== */
 
@@ -33,6 +35,8 @@ import { PlayerMethods } from './battle/player.js';
 import { AttackMethods, SKILL_AUTO_KEY } from './battle/attacks.js';
 import { EnemyMethods } from './battle/enemyField.js';
 import { AllyMethods } from './battle/allies.js';
+import { DiverMethods } from './battle/diver.js';
+import { SaintMethods } from './battle/saint.js';
 
 export class BattleEngine {
     constructor() {
@@ -167,6 +171,10 @@ export class BattleEngine {
         this.shieldHp = 0;
         this.shieldHitCd = 0;
         this.pendingEggs = 0;
+        this.corpses = [];        // 봉합 성녀: 봉합된 채 쓰러진 적의 시체 (억지 부활로 아군)
+        this.seal = null;         // 봉합 성녀: 생명 봉인 장판
+        this.stitchHealT = 0;
+        this.stitchHealAcc = 0;
         this.shieldTimer = Infinity;
         this.timers = [];
         this.skillCd = { arm: 0, body: 0 };
@@ -396,6 +404,8 @@ export class BattleEngine {
         }
         this.checkOverload(dt);          // player.js
         this.tickAcid(dt);               // enemyField.js
+        this.tickDiver(dt);              // diver.js (끌려오는 적, 심연의 손 지속 피해)
+        this.tickSaint(dt);              // saint.js (봉합 표식, 생명 봉인 장판, 시체, 자가 봉합)
         this.tickHazards(dt);            // enemyField.js (늪 장판)
         this.updateBaseArt();            // enemyField.js
         this.tickPlayerStatus(dt);       // player.js
@@ -460,6 +470,7 @@ export class BattleEngine {
             monsterControllerV2.setState('walking');
             this.scrollRuins(dt);
             if (this.moveMul() > 0) this.scrollHazards(dt);
+            if (this.moveMul() > 0 && this.corpses.length) this.scrollCorpses(dt);   // saint.js
 
             if (this.monsterX > 150) {
                 this.monsterX = Math.max(150, this.monsterX - 120 * dt);
@@ -493,7 +504,9 @@ attachMethods(BattleEngine.prototype, {
     'battle/player.js': PlayerMethods,
     'battle/attacks.js': AttackMethods,
     'battle/enemyField.js': EnemyMethods,
-    'battle/allies.js': AllyMethods
+    'battle/allies.js': AllyMethods,
+    'battle/diver.js': DiverMethods,
+    'battle/saint.js': SaintMethods
 });
 
 export const battleEngineV2 = new BattleEngine();

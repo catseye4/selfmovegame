@@ -4,13 +4,15 @@
    ========================================================================== */
 
 import { Animator, Spring, Mat } from '../engine_v2/rig/rig.js';
-import { RIG_CHARACTERS, RIG_ENEMIES, attackClipOf, hitSocketOf } from '../engine_v2/rig/characters.js';
-import { loadRigAssets, applyRigEvent, buildSkeleton, restBounds, shieldGeom, ScaleTween, PHASE2_SCALE }
+import { RIG_CHARACTERS, RIG_ENEMIES, RIG_NEW, attackClipOf, hitSocketOf } from '../engine_v2/rig/characters.js';
+import { loadRigAssets, applyRigEvent, applyUpgrades, buildSkeleton, restBounds, shieldGeom, ScaleTween, PHASE2_SCALE }
     from '../engine_v2/rig/rigAvatar.js';
 import { RigEffects } from '../engine_v2/rig/rigEffects.js';
 import { VfxPlayer } from '../engine_v2/vfx/vfxPlayer.js';
 import { HERO_WAVE, HERO_ORB } from '../engine_v2/vfx/heroVfx.js';
-import { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX } from '../engine_v2/vfx/vfxDefs.js';
+import { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX, DIVER_VFX, SAINT_VFX } from '../engine_v2/vfx/vfxDefs.js';
+import { BLOOD } from '../engine_v2/vfx/saintVfx.js';
+import { WATER, ABYSS } from '../engine_v2/vfx/diverVfx.js';
 
 const STAGE_W = 960;
 const STAGE_H = 600;
@@ -26,7 +28,8 @@ const FADE_SEC = 0.18;
 // bg/fx: 배경·HUD와 이펙트 그리기 (스프라이트 굽기용으로 끌 수 있음, tools/rig/bake_sprite.py)
 const opts = { crossfade: true, springs: true, pixel: false, stepped: false, bones: false, scroll: true, speed: 1,
     bg: true, fx: true, dummies: false };
-const state = { char: 'mech', mode: 'idle', arm: 'cannon', paused: false };
+const state = { char: 'mech', mode: 'idle', arm: 'cannon', paused: false,
+    upgrades: { head: false, body: false, arm: false, leg: false } };   // 새 캐릭터 강화 그림 (D-044)
 
 let character, skeleton, animator, effects, springs, bounds;
 let onceClip = null;               // 점프/변신처럼 한 번 재생 중인 클립
@@ -36,7 +39,7 @@ const vfx = new VfxPlayer();
 const VFX_SCALE = CHAR_SCALE / 0.235;            // 게임 전투 배율 대비 (캐릭터가 약 1.8배 큼)
 const GOBLIN_SRC = 'assets/sprites/enemy/goblin_walk_sheet.png';
 const dummies = [330, 440, 550].map(dx => ({ x: CHAR_X + dx * VFX_SCALE * 0.56, flash: 0, slow: 0 }));
-const skill = { curse: false, wave: false, curseTimer: 0, castCb: null };
+const skill = { curse: false, wave: false, seal: false, curseTimer: 0, castCb: null };
 let goblinImg = null;
 const giant = new ScaleTween();    // 2페이즈 거대화 배율
 let mainCtx, offCanvas, offCtx;
@@ -73,12 +76,13 @@ async function init() {
 
 /** 캐릭터 교체: 에셋 로드 후 뼈대/스프링/애니메이터를 새로 구성하고 현재 상태 동작을 이어서 재생 */
 async function setCharacter(id) {
-    const next = RIG_CHARACTERS[id] || RIG_ENEMIES[id];
+    const next = RIG_CHARACTERS[id] || RIG_ENEMIES[id] || RIG_NEW[id];
     const { layout, images } = await loadRigAssets(next);
     character = next;
     state.char = id;
     if (character.arms && !character.arms[state.arm]) state.arm = character.defaultArm;
     skeleton = buildSkeleton(character, layout, images, state.arm);
+    applyUpgrades(skeleton, character, state.upgrades);
     bounds = restBounds(layout);
     springs = character.springs.map(s => new Spring(s));
     effects.clear();
@@ -93,8 +97,10 @@ async function setCharacter(id) {
     animator.play(clipFor(state.mode), 0);
     vfx.clear();
     skill.curse = false;
+    skill.seal = false;
     skill.wave = false;
     buildPreviewButtons();
+    buildSkillClipButtons();
     tick(0);
     syncButtons();
     dirty = true;
@@ -317,6 +323,58 @@ function previewMissiles() {
     }));
 }
 
+// 심연의 길잡이: 물줄기(더미 셋 관통) · 앵커 사슬(가장 먼 더미) · 물살 · 심연의 손
+function previewJet() {
+    const m = muzzlePoint();
+    const far = dummies[dummies.length - 1];
+    vfx.play(DIVER_VFX.jet, m[0], m[1], { scale: VFX_SCALE, to: [far.x, dummyCenterY()] });
+    dummies.forEach(d => { vfx.play(DIVER_VFX.jetHit, d.x, dummyCenterY(), { scale: VFX_SCALE }); d.flash = 0.08; });
+}
+
+function previewAnchor() {
+    const d = dummies[dummies.length - 1];
+    const hand = () => toStage(skeleton.socketWorld('hand', 'armB'));
+    skill.castCb = () => vfx.launchChain({      // 앵커 동작의 'cast' 순간(손을 떠남)에 던짐
+        from: hand, to: () => [d.x, dummyCenterY()], scale: VFX_SCALE, color: ABYSS,
+        onHook: (x, y) => { vfx.play(DIVER_VFX.anchorHook, x, y, { scale: VFX_SCALE }); d.flash = 0.08; }
+    });
+    playOnce('anchor');
+}
+
+function previewSurge() {
+    const m = muzzlePoint();
+    vfx.play(DIVER_VFX.surgeBurst, m[0], m[1], { scale: VFX_SCALE });
+    const hit = new Set();
+    vfx.launchWave({
+        x: m[0], y: dummyCenterY(), range: 480, speed: 620, h: 120, color: WATER, mist: '40, 110, 130', scale: VFX_SCALE,
+        onMove: (x0, x1) => dummies.forEach(d => {
+            if (d.x < x0 || d.x > x1 || hit.has(d)) return;
+            hit.add(d);
+            vfx.play(DIVER_VFX.surgeHit, d.x, dummyCenterY(), { scale: VFX_SCALE });
+            d.flash = 0.08;
+            d.slow = 2.5;
+        })
+    });
+}
+
+// 봉합 성녀: 바늘(더미에 꽂힘) · 3연발 · 생명 봉인 장판(켜고 끄기) · 시체 → 부활
+function previewNeedles(n) {
+    const m = muzzlePoint();
+    dummies.slice(0, n).forEach((d, i) => vfx.launchNeedle({
+        from: m, to: () => [d.x, dummyCenterY()], dur: 0.16 + i * 0.07, color: BLOOD, scale: VFX_SCALE,
+        onArrive: (x, y) => { vfx.play(SAINT_VFX.needleHit, x, y, { scale: VFX_SCALE }); d.flash = 0.08; }
+    }));
+}
+
+function toggleSeal() {
+    skill.seal = !skill.seal;
+    opts.dummies = true;
+    vfx.setPersistent('seal', skill.seal ? SAINT_VFX.sealField : null,
+        () => [CHAR_X + 150 * VFX_SCALE, GROUND_Y], VFX_SCALE,
+        { targets: () => dummies.map((d, i) => ({ key: `dummy${i}`, x: dummyCenterX(d), y: GROUND_Y, w: 14 })) });
+    if (skill.seal) vfx.play(SAINT_VFX.sealOpen, CHAR_X + 150 * VFX_SCALE, GROUND_Y, { scale: VFX_SCALE });
+}
+
 const PREVIEWS = {
     mech: [
         ['레이저 포격', previewLaser],
@@ -344,6 +402,20 @@ const PREVIEWS = {
         ['졸개 소환', () => vfxAtDummy(CHIMERA_VFX.summon, 1, true)],
         ['지진 분쇄', () => vfxAtEachDummy(CHIMERA_VFX.quakeTick)],
         ['2페이즈 충격파', () => vfxAtSelf(CHIMERA_VFX.phase2Burst)]
+    ],
+    diver: [
+        ['고압 방수포', previewJet],
+        ['앵커 견인', previewAnchor],
+        ['고압 분사', previewSurge],
+        ['심연의 손', () => { vfxAtSelf(DIVER_VFX.abyssCall); vfxAtEachDummy(DIVER_VFX.hands); }],
+        ['끌려와 착지', () => vfxAtDummy(DIVER_VFX.anchorLand, 0, true)]
+    ],
+    saint: [
+        ['봉합 주사', () => previewNeedles(1)],
+        ['3연발', () => { skill.castCb = () => previewNeedles(3); playOnce('triple'); }],
+        ['생명 봉인 (켜기/끄기)', toggleSeal],
+        ['시체 → 부활', () => vfxAtDummy(seq(SAINT_VFX.corpseStitch, SAINT_VFX.corpseRise, 0.9), 1, true)],
+        ['억지 부활 발동', () => vfxAtSelf(SAINT_VFX.reviveCall)]
     ]
 };
 
@@ -354,6 +426,19 @@ function previewVfx(i) {
     list[i][1]();
     syncButtons();
     dirty = true;
+}
+
+/** 새 캐릭터 동작 버튼 (캐릭터 정의의 skillClips: [[이름, 클립]]) */
+function buildSkillClipButtons() {
+    const row = document.getElementById('newchar-skill-row');
+    if (!row) return;
+    row.innerHTML = '';
+    (character.skillClips || []).forEach(([label, clip]) => {
+        const btn = document.createElement('button');
+        btn.textContent = label;
+        btn.addEventListener('click', () => playOnce(clip));
+        row.appendChild(btn);
+    });
 }
 
 function buildPreviewButtons() {
@@ -390,6 +475,17 @@ function setArm(id) {
         effects.stopCharge();
         animator.play(clipFor('attack'), opts.crossfade ? FADE_SEC : 0);
     }
+    syncButtons();
+    dirty = true;
+}
+
+/** 강화 그림 바꿔 끼우기: 'all' | 'none' | 슬롯 하나 켜고 끄기, 또는 { head, body, arm, leg } */
+function setUpgrades(which) {
+    const u = state.upgrades;
+    if (typeof which === 'object') Object.assign(u, which);
+    else if (which === 'all' || which === 'none') Object.keys(u).forEach(k => { u[k] = which === 'all'; });
+    else u[which] = !u[which];
+    applyUpgrades(skeleton, character, u);
     syncButtons();
     dirty = true;
 }
@@ -543,6 +639,8 @@ function bindUI() {
         btn.addEventListener('click', () => specials[btn.dataset.special]()));
     document.querySelectorAll('[data-arm]').forEach(btn =>
         btn.addEventListener('click', () => setArm(btn.dataset.arm)));
+    document.querySelectorAll('[data-upgrade]').forEach(btn =>
+        btn.addEventListener('click', () => setUpgrades(btn.dataset.upgrade)));
     document.querySelectorAll('[data-opt]').forEach(input =>
         input.addEventListener('change', () => setOption(input.dataset.opt, input.checked)));
 
@@ -574,8 +672,13 @@ function syncButtons() {
     document.querySelectorAll('[data-special="wave"]').forEach(b => b.classList.toggle('active', skill.wave));
     const heroGroup = document.getElementById('hero-skill-group');
     if (heroGroup && character) heroGroup.hidden = character.id !== 'hero';
+    const newGroup = document.getElementById('newchar-skill-group');
+    if (newGroup && character) newGroup.hidden = !character.skillClips;
     const armGroup = document.getElementById('arm-group');
     if (armGroup && character) armGroup.hidden = !character.arms;
+    document.querySelectorAll('[data-upgrade]').forEach(b => b.classList.toggle('active', !!state.upgrades[b.dataset.upgrade]));
+    const upGroup = document.getElementById('upgrade-group');
+    if (upGroup && character) upGroup.hidden = !character.upgrade;
     const pause = document.getElementById('btn-pause');
     if (pause) pause.textContent = state.paused ? '▶ 재생' : '❚❚ 일시정지';
 }
@@ -596,6 +699,7 @@ window.rigTest = {
     setCharacter,
     setMode,
     setArm,
+    setUpgrades,
     setOption,
     playOnce,
     clipDuration: name => character.clips[name].duration,

@@ -30,6 +30,15 @@ const P = {
     shield: '<path d="M12 2l8 3v6.5c0 5-3.5 8.8-8 10.5-4.5-1.7-8-5.5-8-10.5V5z"/><path d="M12 6l3.5 2v4l-3.5 2-3.5-2V8z" fill="rgba(0,0,0,.35)"/>',
     minions: '<circle cx="8" cy="7" r="3"/><circle cx="16.5" cy="8" r="2.5"/><path d="M2.5 20a5.5 5.5 0 0 1 11 0zM12.5 20a4.3 4.3 0 0 1 8.5 0z"/><path d="M6 4.5l-1-2.5M10 4.5l1-2.5" stroke="currentColor" stroke-width="1.6"/>',
     egg: '<path d="M12 2c4 0 6.8 6.5 6.8 11A6.8 6.8 0 0 1 5.2 13C5.2 8.5 8 2 12 2z"/><circle cx="10" cy="10" r="1.4" fill="rgba(0,0,0,.35)"/><circle cx="14" cy="14.5" r="1.8" fill="rgba(0,0,0,.35)"/><circle cx="9.5" cy="16" r="1.1" fill="rgba(0,0,0,.35)"/>',
+    // 심연의 길잡이: 앵커 · 물살 · 유령 손
+    anchor: '<circle cx="12" cy="4.5" r="2.3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v13M7.5 10.5h9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M3.5 13.5c.5 4.5 4 7 8.5 7s8-2.5 8.5-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M2 15.5l1.5-3 3 1.6M22 15.5l-1.5-3-3 1.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+    surge: '<path d="M2 9c2.5-3 5-3 7.5 0s5 3 7.5 0 3.5-3 5 0v4c-1.5-3-3.5-3-5 0s-5 3-7.5 0-5-3-7.5 0z"/><path d="M2 16c2.5-3 5-3 7.5 0s5 3 7.5 0 3.5-3 5 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".7"/><circle cx="19" cy="4.5" r="1.5"/><circle cx="15" cy="3.5" r="1"/>',
+    hand: '<path d="M7 22v-7.5L4.2 10a1.6 1.6 0 0 1 2.7-1.7L8.5 11V4.5a1.5 1.5 0 0 1 3 0V10V3a1.5 1.5 0 0 1 3 0v7V4.5a1.5 1.5 0 0 1 3 0V11V7a1.5 1.5 0 0 1 3 0v8c0 3.5-2 7-5 7z"/><path d="M3 22h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".6"/>',
+    // 봉합 성녀: 주사기 · 조준 원(생명 봉인) · 붉은 십자(억지 부활) · 봉합 표식
+    syringe: '<path d="M14.5 2.5l7 7-1.7 1.7-1.3-1.3-7.6 7.6-3 .6.6-3 7.6-7.6-1.3-1.3z"/><path d="M5.6 15.4l3 3L3 24l-1-1-1-1z"/><path d="M10.5 9.5l1.4 1.4M12.6 7.4L14 8.8" stroke="rgba(0,0,0,.45)" stroke-width="1.3"/>',
+    sealring: '<circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12" cy="12" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 1.5v6M12 16.5v6M1.5 12h6M16.5 12h6" stroke="currentColor" stroke-width="2.2"/>',
+    redcross: '<path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z"/><path d="M12 4.5v15M4.5 12h15" stroke="rgba(255,255,255,.55)" stroke-width="1.3" stroke-dasharray="2 2"/>',
+    stitch: '<path d="M2 12h20" stroke="currentColor" stroke-width="2.4"/><path d="M5.5 6.5l2.5 11M11 6.5l2.5 11M16.5 6.5l2.5 11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
     // ---- 상태 (적 체력바 옆) ----
     slow: '<path d="M4 4l8 7 8-7v5l-8 7-8-7z"/><path d="M4 12l8 7 8-7v4l-8 6-8-6z" opacity=".6"/>',
     net: '<path d="M3 5l18 14M21 5L3 19M3 12h18M8 4l-2 16M16 4l2 16" fill="none" stroke="currentColor" stroke-width="2"/>',

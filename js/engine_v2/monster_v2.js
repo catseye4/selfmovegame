@@ -19,7 +19,8 @@ const BATTLE_RIG = {
     scale: 0.235                 // 원본 약 940px → 약 220px
 };
 // 캐릭터별 전투 배율 (히어로는 사람 크기라 조금 작게)
-const BATTLE_RIG_SCALE = { mech: 0.235, kaiju: 0.235, hero: 0.215, chimera: 0.235 };
+// 심연의 길잡이: 사람 크기(그림 약 780px) → 히어로보다 조금 큰 약 195px / 봉합 성녀: 1.6m(그림 약 650px) → 약 155px
+const BATTLE_RIG_SCALE = { mech: 0.235, kaiju: 0.235, hero: 0.215, chimera: 0.235, diver: 0.25, saint: 0.235 };
 const HP_BAR = { width: 80, gap: 16 };  // 머리 위 체력바 (index.css .monster-hp-container 폭)
 // 메뉴(메인 화면 대기실): 캐릭터마다 캔버스 안에 들어오도록 배율/위치 자동 맞춤 (최대 0.34)
 // (좌우에 부위 설명이 붙으므로 가로 여백을 넉넉히)
@@ -175,6 +176,8 @@ export class MonsterController {
             // 파츠별 색 (같은 팩션 변형 / 다른 팩션 파츠 / 비운 슬롯)
             this.rigBattle.setPartFilters(config.filters);
             if (this.rigMenu) this.rigMenu.setPartFilters(config.filters);
+            this.rigBattle.setUpgrades(config.upgrades);                    // 새 캐릭터 강화 부위 그림
+            if (this.rigMenu) this.rigMenu.setUpgrades(config.upgrades);
             if (config.arm) {
                 this.rigBattle.setArm(config.arm);
                 if (this.rigMenu) this.rigMenu.setArm(config.arm);
@@ -374,9 +377,9 @@ export class MonsterController {
         if (this.useRig) this.rigBattle.enterPhase2();
     }
 
-    /** 스킬 시전 동작(cast 클립)을 재생하고 해방 순간 onRelease 호출. 시전 동작이 없거나 시전 중이면 즉시 호출 */
-    playCast(onRelease) {
-        if (this.useRig && !this._castCb && this.rigBattle.playOnce('cast')) {
+    /** 스킬 시전 동작(clip, 기본 cast)을 재생하고 클립의 'cast' 이벤트 순간 onRelease 호출. 그 동작이 없거나 시전 중이면 즉시 호출 */
+    playCast(onRelease, clip = 'cast') {
+        if (this.useRig && !this._castCb && this.rigBattle.playOnce(clip)) {
             this._castCb = onRelease;
         } else {
             onRelease();

@@ -10,6 +10,7 @@
   https://opengameart.org/content/80-cc0-creature-sfx (CC0)
 - trazzz123 — CC0 Deep Monster Roar
   https://opengameart.org/content/cc0-deep-monster-roar (CC0)
+- `diver_*.ogg` (심연의 길잡이: 물줄기·앵커·물살·심연의 손), `saint_*.ogg` (봉합 성녀: 바늘·꽂힘·생명 봉인·억지 부활) — 외부 소리 없이 코드로 합성 (`tools/audio/build_audio.py`)
 
 ## 배경음 (assets/audio/bgm)
 - `battle.ogg` — Juhani Junkala (SubspaceAudio), "Level 1" from 5 Chiptunes (Action)

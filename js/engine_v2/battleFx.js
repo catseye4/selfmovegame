@@ -85,9 +85,9 @@ export class BattleFx {
         this.vfx.pulse(key);
     }
 
-    /** o: { x, b, range, color, speed, h, onPass(x0, x1) } */
+    /** o: { x, b, range, color, speed, h, mist?(꼬리 연기 색), sfx?(발사음, 기본 어둠 파동), onPass(x0, x1) } */
     launchWave(o) {
-        sound.play('hero_wave');
+        sound.play(o.sfx || 'hero_wave');
         this.vfx.launchWave({ ...o, y: this.H - o.b, onMove: o.onPass });
     }
 
@@ -107,6 +107,22 @@ export class BattleFx {
             from: [from.x, this.H - from.bottom], to: () => { const t = to(); return [t.x, this.H - t.b]; },
             onArrive, ...opts
         });
+    }
+
+    /** 주사 바늘: from {x, bottom}, to() → {x, b}, onArrive(). o: { dur, color, sfx } */
+    launchNeedle(from, to, onArrive, o = {}) {
+        if (o.sfx !== null) sound.play(o.sfx || 'saint_needle');
+        this.vfx.launchNeedle({
+            from: [from.x, this.H - from.bottom], to: () => { const t = to(); return [t.x, this.H - t.b]; },
+            onArrive, ...o
+        });
+    }
+
+    /** 앵커 사슬: from() / to() → {x, b}. o: { out, back, color, onHook(), onDone() } (vfxPlayer.launchChain) */
+    launchChain(from, to, o = {}) {
+        sound.play('diver_anchor_throw');
+        const conv = f => () => { const p = f(); return [p.x, this.H - p.b]; };
+        this.vfx.launchChain({ ...o, from: conv(from), to: conv(to) });
     }
 
     reset() {

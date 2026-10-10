@@ -86,6 +86,8 @@ const ALLY_ART = {
     'v2-mind': { art: 'guard', filter: null },
     'chimera-minion-v2': { art: 'minion', filter: 'drop-shadow(0 0 5px rgba(255, 150, 40, 0.5))' }
 };
+// 봉합 성녀가 꿰매 일으킨 아군: 쓰러진 적 그림 그대로 + 붉은 실 빛 (battle/saint.js)
+const STITCH_FILTER = 'saturate(0.8) sepia(0.25) hue-rotate(-12deg) drop-shadow(0 0 4px rgba(235, 40, 70, 0.85))';
 const CREEP = 0.3;       // 원거리·치유형이 제자리에서도 조금씩 다가오는 속도 배율 (사거리가 짧은 캐릭터도 닿게)
 // 근접: STOP까지 다가가 멈추고, REACH 안이면 공격 (주인공 공격에 조금 밀려나도 계속 공격)
 const MELEE = { stop: 30, reach: 55 };
@@ -146,6 +148,20 @@ export function ensureEnemyStyles() {
         #screen-battle-v2 .ally-minion.${cls}.is-attacking {
             background-image: url('${m.attack.src}');
             animation: v2-${art}-attack ${m.attack.duration}s steps(${m.attack.frames}) infinite;
+        }`);
+    }
+    for (const [id, m] of Object.entries(ENEMY_ART)) {
+        if (!m.attack) continue;
+        css.push(`
+        #screen-battle-v2 .ally-minion.v2-stitch-${id} {
+            width: ${m.frameWidth}px; height: ${m.frameHeight}px; bottom: ${ART_FOOT_B}px;
+            background-image: url('${m.walk.src}'); background-size: auto 100%;
+            animation: v2-${id}-walk ${m.walk.duration}s steps(${m.walk.frames}) infinite;
+            filter: ${STITCH_FILTER};
+        }
+        #screen-battle-v2 .ally-minion.v2-stitch-${id}.is-attacking {
+            background-image: url('${m.attack.src}');
+            animation: v2-${id}-attack ${m.attack.duration}s steps(${m.attack.frames}) infinite;
         }`);
     }
     const style = document.createElement('style');

@@ -15,17 +15,19 @@ export const AllyMethods = {
     // [세뇌 스마트 구속구]: 적 보병 소멸 시 아군 미니언 징집 소환
     // kind 'baby_kaiju': 거대괴수 산란으로 부화한 새끼 괴수 (리그에서 구운 스프라이트)
     //      'chimera': 합성괴인 몸통의 졸개 소환 (소환진 이펙트)
-    spawnAllyMinion(startX, kind = 'mind') {
+    //      'stitch': 봉합 성녀가 꿰매 일으킨 적 — opts { art(적 종류 그림), hp, dps } (battle/saint.js)
+    spawnAllyMinion(startX, kind = 'mind', opts = {}) {
         if (!this.domEnemies) return;
         ensureEnemyStyles();   // 세뇌 보병·졸개 그림 CSS (적보다 먼저 나올 수 있음 — 합성괴인 졸개는 출격 직후)
         const baby = kind === 'baby_kaiju';
-        const maxHp = baby ? BABY.hp : 350;
-        const dps = baby ? BABY.dps : 17.5; // 세뇌 미니언은 적 보병 데미지의 절반
+        const maxHp = opts.hp ?? (baby ? BABY.hp : 350);
+        const dps = opts.dps ?? (baby ? BABY.dps : 17.5); // 세뇌 미니언은 적 보병 데미지의 절반
         const allyId = `ally_${Date.now()}_${Math.random()}`;
 
         const el = document.createElement('div');
         // 외형: 새끼 괴수 / 합성괴인 졸개(미니 괴인 스프라이트) / 세뇌 보병(적 보병 + 검보라 세뇌 표식)
-        el.className = `ally-minion ${baby ? 'baby-kaiju-v2' : kind === 'chimera' ? 'chimera-minion-v2' : 'v2-mind'}`;
+        el.className = `ally-minion ${baby ? 'baby-kaiju-v2' : kind === 'chimera' ? 'chimera-minion-v2'
+            : kind === 'stitch' ? `v2-stitch v2-stitch-${opts.art || 'guard'}` : 'v2-mind'}`;
         el.style.left = `${startX}px`;
 
         const hpBar = document.createElement('div');
@@ -37,6 +39,9 @@ export const AllyMethods = {
         } else if (kind === 'chimera') {
             hpBar.style.background = '#ff9628';
             hpBar.style.boxShadow = '0 0 6px #ff9628';
+        } else if (kind === 'stitch') {
+            hpBar.style.background = '#ff4d6d';
+            hpBar.style.boxShadow = '0 0 6px #ff4d6d';
         }
         el.appendChild(hpBar);
 
@@ -55,7 +60,7 @@ export const AllyMethods = {
         });
 
         if (kind === 'chimera') this.fx.play(CHIMERA_VFX.summon, startX + 38, FOOT_B);
-        const label = { baby_kaiju: '🥚 새끼 괴수 부화!', chimera: '👹 졸개 소환!' }[kind] || '★ 세뇌 징집! (MIND CONTROL)';
+        const label = { baby_kaiju: '🥚 새끼 괴수 부화!', chimera: '👹 졸개 소환!', stitch: '✚ 봉합 부활!' }[kind] || '★ 세뇌 징집! (MIND CONTROL)';
         this.createDamagePopup(startX, 180, label, false);
     },
 

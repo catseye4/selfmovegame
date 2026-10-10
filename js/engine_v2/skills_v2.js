@@ -96,6 +96,21 @@ export const SKILLS = {
             }
         }
     },
+    anchorPull: {
+        name: '앵커 견인', slot: 'arm', cd: 10, icon: 'anchor', color: '#3fe0c8', target: 'enemy', range: 420,
+        desc: '먼 적(사수·의무병 먼저)을 발 앞으로 끌어와 기절',
+        use(b) {
+            const t = b.anchorTarget(this.range);
+            if (t) monster.playCast(() => b.throwAnchor(t, this.range), 'anchor');
+        }
+    },
+    needleTriple: {
+        name: '봉합 주사 3연발', slot: 'arm', cd: 9, icon: 'syringe', color: '#ff4d6d', target: 'enemy', range: 120,
+        desc: '바늘 셋을 연달아 쏴 피해 + 잠깐 묶고 봉합 표식',
+        use(b) {
+            monster.playCast(() => b.tripleNeedle(this.range), 'triple');
+        }
+    },
     acidCharge: {
         name: '산성 돌진', slot: 'arm', cd: 9, icon: 'acid', color: '#a0ff32', target: 'enemy', range: 90,
         desc: '거체로 들이받아 큰 피해 + 주변 적을 밀쳐내고 산성 웅덩이로 부식 (거점에 강함)',
@@ -157,6 +172,22 @@ export const SKILLS = {
         }
     },
 
+    pressureSurge: {
+        name: '고압 분사', slot: 'body', cd: 14, icon: 'surge', color: '#5ae1eb', target: 'enemy', range: 160,
+        desc: '물살로 앞의 적을 모두 밀어내고 감속',
+        use(b) {
+            monster.playCast(() => b.pressureSurge(this.range));
+        }
+    },
+
+    lifeSeal: {
+        name: '생명 봉인', slot: 'body', cd: 15, icon: 'sealring', color: '#ff5a78', target: 'enemy', range: 200,
+        desc: '앞에 붉은 실 장판 4초: 안의 적을 묶고 계속 피해',
+        use(b) {
+            monster.playCast(() => b.lifeSeal());
+        }
+    },
+
     // ===== 머리 (필살기) =====
     droneSwarm: {
         name: '스웜 드론 총출격', slot: 'head', ult: true, icon: 'drone', color: '#d75aff', target: 'enemy', range: 400,
@@ -187,6 +218,20 @@ export const SKILLS = {
             monster.playCast(() => targets.forEach((e, i) => b.schedule(i * 0.12, () => b.convertEnemy(e))));
         }
     },
+    abyssHands: {
+        name: '심연의 손', slot: 'head', ult: true, icon: 'hand', color: '#28dcbe', target: 'enemy', range: 320,
+        desc: '유령 손이 적 6명까지 묶고 지속 피해 (거점도)',
+        use(b) {
+            monster.playCast(() => b.abyssHands(this.range));
+        }
+    },
+    forcedRevive: {
+        name: '억지 부활', slot: 'head', ult: true, icon: 'redcross', color: '#ff3355', target: 'enemy', range: 400,
+        desc: '봉합된 시체(없으면 약한 적)를 3명까지 아군으로',
+        use(b) {
+            monster.playCast(() => b.forcedRevive(this.range));
+        }
+    },
     rampage: {
         name: '파괴 광란', slot: 'head', ult: true, icon: 'rampage', color: '#ff9628', target: 'self',
         desc: '즉시 2페이즈 변신. 이미 변신했다면 대형 충격파 + 1.5초 기절',
@@ -211,7 +256,13 @@ export const PART_SKILL = {
     body_red_robot: 'reflectShield', body_mech: 'reflectShield', body_chimera: 'callMinions',
     body_mutant: 'layEggs', body_hero: 'curseBurst',
     head_red_robot: 'droneSwarm', head_mech: 'droneSwarm', head_mutant: 'earthRoar',
-    head_hero: 'massMind', head_chimera: 'rampage'
+    head_hero: 'massMind', head_chimera: 'rampage',
+    // 심연의 길잡이 (기본·강화 파츠가 같은 스킬 — 강화는 능력치와 그림)
+    arm_diver: 'anchorPull', arm_diver_up: 'anchorPull', body_diver: 'pressureSurge', body_diver_up: 'pressureSurge',
+    head_diver: 'abyssHands', head_diver_up: 'abyssHands',
+    // 봉합 성녀
+    arm_saint: 'needleTriple', arm_saint_up: 'needleTriple', body_saint: 'lifeSeal', body_saint_up: 'lifeSeal',
+    head_saint: 'forcedRevive', head_saint_up: 'forcedRevive'
 };
 
 // 다리 패시브 (v2 기준 설명 — parts.js 설명은 구버전과 공용이라 여기서 덮어씀). 효과는 battle/player.js (수치는 battle/tuning.js LEG)
@@ -220,7 +271,11 @@ export const LEG_PASSIVES = {
     leg_chimera: { name: '지진 분쇄', desc: '전방 적에게 계속 지진 피해 (초당 30)' },
     leg_mutant: { name: '독성 점액', desc: '전방 적을 감속시키고 계속 독 피해 (초당 30)' },
     leg_mech_wheel: { name: '궤도 돌진', desc: '처음 부딪힌 적에게 돌진 피해를 주고 밀쳐내며 잠깐 기절 (적마다 4초에 한 번)' },
-    leg_hero_hover: { name: '반중력 부양', desc: '근접 피해 30% 감소, 감속에 걸리지 않음' }
+    leg_hero_hover: { name: '반중력 부양', desc: '근접 피해 30% 감소, 감속에 걸리지 않음' },
+    leg_diver: { name: '잠수화', desc: '밀려남 60% 감소, 감속·속박 시간 절반' },
+    leg_diver_up: { name: '잠수화 (강화)', desc: '밀려남 80% 감소, 감속·속박 시간 70% 감소' },
+    leg_saint: { name: '자가 봉합', desc: '잃은 내구도가 많을수록 빨리 회복 (최대 초당 2%)' },
+    leg_saint_up: { name: '자가 봉합 (강화)', desc: '잃은 내구도가 많을수록 빨리 회복 (최대 초당 2.8%)' }
 };
 
 /** 다리 파츠 패시브 { name, desc } (없으면 null) */

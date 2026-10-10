@@ -29,6 +29,12 @@ BUILDS = {
     'mech_missile': ('head_mech', 'body_mech', 'arm_mech_missile', 'leg_mech_wheel'),
     'kaiju': ('head_mutant', 'body_mutant', 'arm_mutant', 'leg_mutant'),
     'hero': ('head_hero', 'body_hero', 'arm_hero_wave', 'leg_hero_hover'),
+    # 심연의 길잡이 (새 캐릭터, D-044): 기본 4부위 / 강화 4부위
+    'diver': ('head_diver', 'body_diver', 'arm_diver', 'leg_diver'),
+    'diver_up': ('head_diver_up', 'body_diver_up', 'arm_diver_up', 'leg_diver_up'),
+    # 봉합 성녀 (D-046)
+    'saint': ('head_saint', 'body_saint', 'arm_saint', 'leg_saint'),
+    'saint_up': ('head_saint_up', 'body_saint_up', 'arm_saint_up', 'leg_saint_up'),
 }
 ZONES = {1: ['1-1', '1-2', '1-3', '1-4', '1-5', '1-B'], 2: ['2-1', '2-2', '2-3', '2-4', '2-5', '2-B']}
 STAGE_IDS = ZONES[1]   # 스테이지를 안 고르면 구역 1

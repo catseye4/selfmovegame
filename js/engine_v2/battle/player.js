@@ -1,6 +1,6 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // 전투 — 주인공 (v2)
-   내구도·실드·과부하(D-028), 상태 이상(감속·기절·속박), 다리 패시브(궤도 돌진·반중력 부양),
+   내구도·실드·과부하(D-028), 상태 이상(감속·기절·속박), 다리 패시브(궤도 돌진·반중력 부양·잠수화),
    팩션 패시브(괴수 재생, 히어로 흑마법 장판, 괴수 포자, 합성괴인 지진·2페이즈).
    battle_v2.js의 BattleEngine에 메서드로 붙는다 (this = 전투 엔진).
    ========================================================================== */
@@ -97,6 +97,7 @@ export const PlayerMethods = {
             if (!quiet) this.createDamagePopup(this.monsterX + 40, 190, '감속 무효', false);
             return;
         }
+        sec *= 1 - this.bootsCut('slow');                // 다리 패시브 '잠수화' (diver.js)
         if (this.pSlowT <= 0) this.createDamagePopup(this.monsterX + 40, 190, '❄ 감속!', false);
         this.pSlowT = Math.max(this.pSlowT, sec);
         this.updatePlayerStatus();
@@ -110,6 +111,7 @@ export const PlayerMethods = {
 
     /** 속박 (그물): 진격 불가, 공격·스킬은 가능 (구역 2 그물총 사수) */
     applyPlayerRoot(sec) {
+        sec *= 1 - this.bootsCut('slow');                // 잠수화
         if (this.pRootT <= 0) this.createDamagePopup(this.monsterX + 40, 200, '🕸 그물에 묶임!', false);
         this.pRootT = Math.max(this.pRootT, sec);
         this.updatePlayerStatus();
@@ -117,6 +119,11 @@ export const PlayerMethods = {
 
     /** 뒤로 밀려남 (고철왕 자석): 거점을 향해 다시 걸어야 해서 시간 손실 */
     knockPlayerBack(px, label) {
+        const cut = this.bootsCut('push');               // 잠수화: 덜 밀려남
+        if (cut) {
+            px *= 1 - cut;
+            label = '⚓ 잠수화 — 버팀';
+        }
         this.monsterX = Math.max(80, this.monsterX - px);
         monsterControllerV2.setMonsterPosition(this.monsterX);
         if (label) this.createDamagePopup(this.monsterX + 30, 210, label, false);

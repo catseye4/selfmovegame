@@ -17,12 +17,15 @@
        claw    : 할퀸/베인 자국 {count, len, gap, angle, width?(색 번짐 굵기), bend?(휜 정도)}
        bite    : 위아래 턱이 닫히는 물기 자국 {r}
        cracks  : 바닥 균열 {count, len}
+       jet     : 기준점 → 목표 지점 물줄기 (출렁이는 굵은 줄기 + 흰 심 + 끝의 물보라) {w, spray}  (play 옵션 to 필요)
+       hands   : 바닥에서 솟아 움켜쥐는 유령 손 {count, h, spread}
      type (입자)
        sparks  : 사방/부채꼴로 튀는 빛줄기 {count, speed, angle?, cone?}
        motes   : 떠오르는 빛가루 {count, spread, rise:[min,max], life:[min,max], size}
        smoke   : 퍼지며 흩어지는 연기 {count, spread, spreadY, size, life:[min,max], rise}
        debris  : 중력으로 떨어지는 파편 {count, speed, size, angle?, cone?}
        chevrons: 가라앉는 ▼ 표식 (디버프) {count, spread, fall, life:[min,max], size}
+       drops   : 위로 튀었다 떨어지는 둥근 물방울 {count, speed, size, angle?, cone?}
    크기 단위: 게임 전장 px. play(..., {scale})로 배율 지정 (테스트 화면은 캐릭터가 커서 배율 ↑)
    좌표: 화면 좌표(y 아래로 증가). 바닥 이펙트는 발 높이 y 기준.
 
@@ -32,7 +35,7 @@
        layer.kind 'field': 저주 장판 — 어두운 웅덩이 + 일렁이는 테두리 + 피어오르는 기운 + 틱마다 앞으로 쓸리는 파문
                           {rx, flat, dy, color, dark, haze, wisps(초당), origin(발밑 근원 위치), rune?}
                           targets() → [{key, x, y, w}]: 장판 안 대상의 발 위치 → 발목을 휘감는 촉수
-     launchWave / launchOrb / launchMissile: 이동하는 투사체
+     launchWave / launchOrb / launchMissile / launchChain / launchNeedle: 이동하는 투사체
      onSfx(name): 효과음 연결 지점 (지금은 비어 있음 — 효과 확정 후 사운드 매니저를 연결)
    ========================================================================== */
 
@@ -108,6 +111,23 @@ export class VfxPlayer {
     launchMissile(o) {
         this.projectiles.push({ kind: 'missile', t: 0, dur: 0.55, apex: 70, scale: 1, trailAcc: 0,
             color: '255, 170, 60', ...o, x: o.from[0], y: o.from[1], angle: 0 });
+    }
+
+    /**
+     * 앵커 사슬: 손(from)에서 앵커가 목표로 날아가 박힘 → onHook → 사슬을 감아 손으로 돌아옴 → onDone
+     * o: { from: () => [x, y], to: () => [x, y], out(초), back(초), color, scale, onHook(x, y), onDone }
+     * 감는 동안 앵커 머리는 back초에 걸쳐 박힌 자리에서 손으로 (끌려오는 적은 전투 엔진이 같은 시간에 옮김)
+     */
+    launchChain(o) {
+        const [x, y] = o.from();
+        this.projectiles.push({ kind: 'chain', t: 0, out: 0.28, back: 0.35, scale: 1, color: '60, 225, 200', ...o,
+            phase: 'out', x, y, hx: x, hy: y, angle: 0 });
+    }
+
+    /** 주사 바늘: from에서 to로 곧게 빠르게 날아가 onArrive(x, y). o: { from:[x,y], to: () => [x,y], dur, color, scale, onArrive } */
+    launchNeedle(o) {
+        this.projectiles.push({ kind: 'needle', t: 0, dur: 0.16, scale: 1, color: '235, 40, 70', ...o,
+            x: o.from[0], y: o.from[1], angle: 0 });
     }
 
     // ------------------------------------------------------------------
@@ -217,6 +237,23 @@ export class VfxPlayer {
                     dur: 0.55 + this.rand() * 0.35, g: 950 * s, rot: this.rand() * 6, vr: (this.rand() - 0.5) * 16,
                     color: it.color, r: (it.size || 4) * s * (0.6 + this.rand() * 0.8) });
             }
+        } else if (it.type === 'drops') {
+            for (let i = 0; i < (it.count || 10); i++) {
+                const a = this._cone({ angle: -Math.PI / 2, cone: 2.2, ...it });
+                const v = (it.speed || 240) * s * (0.4 + this.rand() * 0.8);
+                this.parts.push({ kind: 'drop', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0,
+                    dur: 0.45 + this.rand() * 0.35, g: 900 * s, color: it.color, r: (it.size || 3) * s * (0.6 + this.rand() * 0.7) });
+            }
+        } else if (it.type === 'jet' && it.to) {
+            // 물줄기 옆으로 흩날리는 물방울
+            const [tx, ty] = it.to;
+            for (let i = 0; i < (it.spray ?? 8); i++) {
+                const f = this.rand();
+                const v = 120 * s * (0.5 + this.rand());
+                const a = -Math.PI / 2 + (this.rand() - 0.5) * 2.4;
+                this.parts.push({ kind: 'drop', x: x + (tx - x) * f, y: y + (ty - y) * f, vx: Math.cos(a) * v, vy: Math.sin(a) * v,
+                    t: 0, dur: 0.35 + this.rand() * 0.25, g: 900 * s, color: it.color, r: (1.5 + this.rand() * 1.8) * s });
+            }
         } else if (it.type === 'chevrons') {
             // 위아래로 겹친 ▼ 표식이 천천히 가라앉음 (능력치 감소 느낌)
             for (let i = 0; i < (it.count || 2); i++) {
@@ -256,7 +293,7 @@ export class VfxPlayer {
                 pr.trailAcc -= 0.035;
                 const s = pr.scale;
                 this.parts.push({ kind: 'smoke', x: pr.x - pr.dir * 10 * s, y: pr.y + (this.rand() - 0.5) * pr.h * 0.6 * s,
-                    vx: -pr.dir * 30 * s, vy: -10 * s, t: 0, dur: 0.5, drag: 2, color: '60, 15, 95', r: 14 * s, layer: 'front' });
+                    vx: -pr.dir * 30 * s, vy: -10 * s, t: 0, dur: 0.5, drag: 2, color: pr.mist || '60, 15, 95', r: 14 * s, layer: 'front' });
                 this.parts.push({ kind: 'mote', x: pr.x, y: pr.y + (this.rand() - 0.5) * pr.h * 0.7 * s,
                     vx: -pr.dir * 60 * s, vy: -30 * s, t: 0, dur: 0.4, color: pr.color, r: 2.2 * s, phase: 0 });
             }
@@ -264,7 +301,7 @@ export class VfxPlayer {
                 pr.done = true;
                 this.play({ layers: [
                     { type: 'flash', at: 0, dur: 0.15, r: 26, color: pr.color },
-                    { type: 'smoke', at: 0, count: 5, spread: 12, spreadY: pr.h * 0.4, size: 16, life: [0.4, 0.7], color: '60, 15, 95' }
+                    { type: 'smoke', at: 0, count: 5, spread: 12, spreadY: pr.h * 0.4, size: 16, life: [0.4, 0.7], color: pr.mist || '60, 15, 95' }
                 ] }, pr.x, pr.y, { scale: pr.scale });
                 if (pr.onEnd) pr.onEnd();
             }
@@ -280,6 +317,44 @@ export class VfxPlayer {
             if (u >= 1) {
                 pr.done = true;
                 if (pr.onArrive) pr.onArrive(tx, ty);
+            }
+        } else if (pr.kind === 'needle') {
+            const u = Math.min(1, pr.t / pr.dur);
+            const [tx, ty] = pr.to();
+            const [fx, fy] = pr.from;
+            pr.x = fx + (tx - fx) * u;
+            pr.y = fy + (ty - fy) * u;
+            pr.angle = Math.atan2(ty - fy, tx - fx);
+            if (u >= 1) {
+                pr.done = true;
+                if (pr.onArrive) pr.onArrive(tx, ty);
+            }
+        } else if (pr.kind === 'chain') {
+            const [fx, fy] = pr.from();
+            pr.x = fx;
+            pr.y = fy;
+            if (pr.phase === 'out') {
+                const u = Math.min(1, pr.t / pr.out);
+                const [tx, ty] = pr.to();
+                const e = 1 - (1 - u) * (1 - u);
+                pr.hx = fx + (tx - fx) * e;
+                pr.hy = fy + (ty - fy) * e - Math.sin(u * Math.PI) * 26 * pr.scale;
+                pr.angle = Math.atan2(ty - fy, tx - fx);
+                if (u >= 1) {
+                    pr.phase = 'back';
+                    pr.t = 0;
+                    pr.bx = pr.hx;
+                    pr.by = pr.hy;
+                    if (pr.onHook) pr.onHook(pr.hx, pr.hy);
+                }
+            } else {
+                const u = Math.min(1, pr.t / pr.back);
+                pr.hx = pr.bx + (fx - pr.bx) * u;
+                pr.hy = pr.by + (fy - pr.by) * u;
+                if (u >= 1) {
+                    pr.done = true;
+                    if (pr.onDone) pr.onDone();
+                }
             }
         } else if (pr.kind === 'missile') {
             const u = Math.min(1, pr.t / pr.dur);
@@ -334,6 +409,8 @@ export class VfxPlayer {
                 if (pr.kind === 'wave') drawWave(ctx, pr);
                 else if (pr.kind === 'orb') drawOrb(ctx, pr, this.time);
                 else if (pr.kind === 'missile') drawMissile(ctx, pr, this.time);
+                else if (pr.kind === 'chain') drawChain(ctx, pr, this.time);
+                else if (pr.kind === 'needle') drawNeedle(ctx, pr);
             }
         }
         ctx.restore();
@@ -381,6 +458,11 @@ export class VfxPlayer {
                     ctx.lineTo(p.x + r, p.y - r * 0.55);
                     ctx.stroke();
                 }
+            } else if (p.kind === 'drop') {
+                const a = u > 0.6 ? 1 - (u - 0.6) / 0.4 : 1;
+                ctx.globalCompositeOperation = 'lighter';
+                glow(ctx, p.x, p.y, p.r * 2.2, `rgba(${p.color}, ${0.5 * a})`);
+                glow(ctx, p.x, p.y, p.r * 0.8, `rgba(${WHITE}, ${0.9 * a})`);
             } else if (p.kind === 'debris') {
                 const a = u > 0.7 ? 1 - (u - 0.7) / 0.3 : 1;
                 ctx.globalCompositeOperation = 'source-over';
@@ -516,6 +598,80 @@ const DRAW = {
         }
         glow(ctx, x, y, w * 2.4, `rgba(${it.color}, ${0.6 * fade})`);
         glow(ctx, tx, ty, w * 3, `rgba(${it.color}, ${0.7 * fade})`);
+    },
+    jet(ctx, x, y, it, u, s, time) {
+        // 물줄기: 0~15% 뻗어 나감, 굵기가 출렁이고 줄기가 살짝 물결침. 끝에 물보라
+        if (!it.to) return;
+        const [tx, ty] = it.to;
+        const reach = easeOut(Math.min(1, u / 0.15));
+        const fade = tail(u, 0.5);
+        const ex = x + (tx - x) * reach, ey = y + (ty - y) * reach;
+        const len = Math.hypot(ex - x, ey - y) || 1;
+        const nx = -(ey - y) / len, ny = (ex - x) / len;
+        const w = it.w * s * (0.6 + 0.4 * fade);
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        for (const [mul, color, alpha, amp] of [[2.4, it.color, 0.25, 1], [1, it.color, 0.75, 0.6], [0.32, WHITE, 0.9, 0.3]]) {
+            ctx.strokeStyle = `rgba(${color}, ${alpha * fade})`;
+            ctx.lineWidth = Math.max(0.5, w * mul);
+            ctx.beginPath();
+            for (let i = 0; i <= 12; i++) {
+                const f = i / 12;
+                const wob = Math.sin(f * 9 - time * 40) * w * 0.35 * amp * f;
+                const px = x + (ex - x) * f + nx * wob, py = y + (ey - y) * f + ny * wob;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+        }
+        glow(ctx, x, y, w * 2, `rgba(${it.color}, ${0.6 * fade})`);
+        glow(ctx, ex, ey, w * 3.2 * (0.8 + 0.2 * Math.sin(time * 50)), `rgba(${it.color}, ${0.65 * fade})`);
+        glow(ctx, ex, ey, w * 1.2, `rgba(${WHITE}, ${0.8 * fade})`);
+    },
+    hands(ctx, x, y, it, u, s, time) {
+        // 유령 손: 0~25% 바닥에서 솟아 손가락을 벌림 → 25~45% 움켜쥠 → 쥔 채 흔들리다 가라앉음
+        const n = it.count || 3;
+        const spread = (it.spread || 22) * s;
+        const H = (it.h || 46) * s;
+        const rise = easeOut(Math.min(1, u / 0.25));
+        const grip = easeOut(Math.min(1, Math.max(0, (u - 0.25) / 0.2)));
+        const sink = u > 0.75 ? (u - 0.75) / 0.25 : 0;
+        const a = Math.min(1, u / 0.1) * (1 - sink);
+        ctx.globalCompositeOperation = 'lighter';
+        ellipseGlow(ctx, x, y, spread * 1.6, 7 * s, `rgba(${it.color}, ${0.45 * a})`);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        for (let k = 0; k < n; k++) {
+            const side = n === 1 ? 0 : (k / (n - 1)) * 2 - 1;
+            const bx = x + side * spread;
+            const h = H * (0.75 + 0.125 * ((k * 7) % 3)) * rise * (1 - sink * 0.6);
+            const lean = -side * 0.18 + Math.sin(time * 5 + k * 2) * 0.06;   // 가운데(대상) 쪽으로 살짝 기울어짐
+            const wx = bx + Math.sin(lean) * h, wy = y - Math.cos(lean) * h;  // 손목
+            const palm = 8.5 * s;
+            for (const [lw, color, al] of [[9, it.color, 0.35], [4.2, it.color, 0.8], [1.4, WHITE, 0.85]]) {
+                ctx.strokeStyle = `rgba(${color}, ${al * a})`;
+                ctx.lineWidth = lw * s;
+                ctx.beginPath();
+                ctx.moveTo(bx, y);
+                ctx.quadraticCurveTo(bx + Math.sin(lean) * h * 0.3, y - h * 0.55, wx, wy);   // 팔뚝
+                for (let f = 0; f < 4; f++) {   // 손가락: 벌렸다가(grip 0) 안쪽으로 굽힘(grip 1)
+                    const spreadA = lean + (f - 1.5) * 0.38 * (1 - grip * 0.55);
+                    const fl = palm * (1.5 - Math.abs(f - 1.5) * 0.18);
+                    const mx = wx + Math.sin(spreadA) * fl, my = wy - Math.cos(spreadA) * fl;
+                    const curl = spreadA + (side <= 0 ? 1 : -1) * 1.7 * grip;
+                    ctx.moveTo(wx, wy);
+                    ctx.lineTo(mx, my);
+                    ctx.lineTo(mx + Math.sin(curl) * fl * 0.7, my - Math.cos(curl) * fl * 0.7);
+                }
+                ctx.stroke();
+            }
+            glow(ctx, wx, wy, palm * 1.8, `rgba(${it.color}, ${0.5 * a})`);
+            ctx.fillStyle = `rgba(${it.color}, ${0.75 * a})`;   // 손바닥
+            ctx.beginPath();
+            ctx.ellipse(wx, wy, palm * 0.6, palm * 0.75, lean, 0, Math.PI * 2);
+            ctx.fill();
+        }
     },
     claw(ctx, x, y, it, u, s) {
         // 할퀸 자국: 빠르게 그어지고(0~25%) 서서히 사라짐. angle = 긁는 방향(라디안)
@@ -812,6 +968,76 @@ function drawOrb(ctx, pr, time) {
     });
     glow(ctx, pr.x, pr.y, 22 * s, `rgba(${pr.color}, 0.6)`);
     glow(ctx, pr.x, pr.y, 8 * s, `rgba(${WHITE}, 0.95)`);
+    ctx.restore();
+}
+
+// 주사 바늘: 진행 방향으로 붉은 빛 꼬리 + 흰 바늘
+function drawNeedle(ctx, pr) {
+    const s = pr.scale;
+    ctx.save();
+    ctx.translate(pr.x, pr.y);
+    ctx.rotate(pr.angle);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    for (const [w, color, a, len] of [[6, pr.color, 0.35, 26], [2.6, pr.color, 0.9, 20], [1.1, WHITE, 0.95, 12]]) {
+        ctx.strokeStyle = `rgba(${color}, ${a})`;
+        ctx.lineWidth = w * s;
+        ctx.beginPath();
+        ctx.moveTo(-len * s, 0);
+        ctx.lineTo(4 * s, 0);
+        ctx.stroke();
+    }
+    glow(ctx, 2 * s, 0, 7 * s, `rgba(${pr.color}, 0.7)`);
+    ctx.restore();
+}
+
+// 앵커 사슬: 손에서 앵커 머리까지 고리 사슬 + 청록 유령 빛, 머리는 갈고리 두 개 달린 앵커
+function drawChain(ctx, pr, time) {
+    const s = pr.scale;
+    const dx = pr.hx - pr.x, dy = pr.hy - pr.y;
+    const len = Math.hypot(dx, dy);
+    const ang = Math.atan2(dy, dx);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = `rgba(${pr.color}, 0.35)`;
+    ctx.lineWidth = 6 * s;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(pr.x, pr.y);
+    ctx.lineTo(pr.hx, pr.hy);
+    ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+    const links = Math.max(1, Math.floor(len / (7 * s)));
+    for (let i = 0; i < links; i++) {   // 사슬 고리: 넓은 고리와 좁은 고리를 번갈아
+        const f = (i + 0.5) / links;
+        ctx.save();
+        ctx.translate(pr.x + dx * f, pr.y + dy * f);
+        ctx.rotate(ang);
+        ctx.strokeStyle = i % 2 ? '#8a96a0' : '#5e6872';
+        ctx.lineWidth = 1.6 * s;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 4 * s, (i % 2 ? 1.2 : 2.4) * s, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    }
+    // 앵커 머리 (날아갈 때는 목표 쪽, 감길 때는 손 쪽으로 갈고리)
+    ctx.translate(pr.hx, pr.hy);
+    ctx.rotate(pr.phase === 'out' ? pr.angle : ang + Math.PI);
+    ctx.globalCompositeOperation = 'lighter';
+    glow(ctx, 0, 0, 16 * s * (0.85 + 0.15 * Math.sin(time * 30)), `rgba(${pr.color}, 0.55)`);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = '#c8d2d8';
+    ctx.lineWidth = 2.6 * s;
+    ctx.beginPath();
+    ctx.moveTo(-8 * s, 0);           // 자루
+    ctx.lineTo(7 * s, 0);
+    ctx.moveTo(-4 * s, -5 * s);      // 가로대
+    ctx.lineTo(-4 * s, 5 * s);
+    ctx.moveTo(7 * s, 0);            // 갈고리 두 개
+    ctx.quadraticCurveTo(7 * s, -8 * s, 1 * s, -9 * s);
+    ctx.moveTo(7 * s, 0);
+    ctx.quadraticCurveTo(7 * s, 8 * s, 1 * s, 9 * s);
+    ctx.stroke();
     ctx.restore();
 }
 

@@ -55,6 +55,17 @@ export const SFX = {
     chimera_summon: { vol: 0.5, gap: 0.2 },
     chimera_quake: { vol: 0.18, gap: 0.3 },
     chimera_slam: { vol: 0.75 },
+    // 심연의 길잡이 (합성음, tools/audio/build_audio.py)
+    diver_jet: { vol: 0.2, gap: 0.08, voices: 3, pitch: 0.1 },
+    diver_anchor_throw: { vol: 0.45, gap: 0.2 },
+    diver_anchor_hit: { vol: 0.5, gap: 0.1, pitch: 0.05 },
+    diver_surge: { vol: 0.6 },
+    diver_hands: { vol: 0.65, duck: 0.6 },
+    // 봉합 성녀 (합성음)
+    saint_needle: { vol: 0.2, gap: 0.06, voices: 3, pitch: 0.08 },
+    saint_stitch: { vol: 0.24, gap: 0.06, voices: 3, pitch: 0.1 },
+    saint_seal: { vol: 0.6 },
+    saint_revive: { vol: 0.7, duck: 0.55 },
     chimera_phase2: { vol: 0.8, duck: 0.45 },
     generic_slash: { vol: 0.42, gap: 0.05, pitch: 0.08 },
     // 실드

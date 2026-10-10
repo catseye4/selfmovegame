@@ -924,6 +924,25 @@
     transition: opacity 0.4s;
 }
 #screen-battle-v2 .v2-puddle.is-fading { opacity: 0; }
+/* 봉합 성녀: 봉합된 채 쓰러진 적의 시체 — 바닥의 붉은 실 매듭 (battle/saint.js, 억지 부활로 아군) */
+#screen-battle-v2 .v2-corpse {
+    position: absolute;
+    bottom: 52px;
+    width: 48px;
+    height: 16px;
+    border-radius: 50%;
+    background:
+        linear-gradient(20deg, transparent 44%, rgba(255, 90, 110, 0.95) 46% 54%, transparent 56%),
+        linear-gradient(-20deg, transparent 44%, rgba(255, 90, 110, 0.95) 46% 54%, transparent 56%),
+        radial-gradient(ellipse at center, rgba(120, 10, 30, 0.75), rgba(60, 6, 18, 0.2) 70%, transparent 72%);
+    box-shadow: 0 0 10px rgba(235, 40, 70, 0.55);
+    pointer-events: none;
+    transition: opacity 0.4s;
+    animation: v2-corpse-in 0.3s ease-out, v2-corpse-pulse 1.4s ease-in-out infinite alternate;
+}
+#screen-battle-v2 .v2-corpse.is-fading { opacity: 0; }
+@keyframes v2-corpse-in { from { transform: scale(0.3); opacity: 0; } }
+@keyframes v2-corpse-pulse { to { filter: brightness(1.35); } }
 @keyframes v2-puddle-in { from { transform: scaleX(0.2); opacity: 0; } }
 @keyframes v2-puddle-bubble { to { filter: brightness(1.18); transform: scaleY(1.15); } }
 /* 속박 (그물총 사수): 그물에 묶여 갈색 테두리 + 살짝 떨림 */
@@ -1476,6 +1495,7 @@ div.v2-settings__row > span { flex: 1; }
     height: 522px;
     display: grid;
     grid-template-columns: 380px 330px 1fr;
+    grid-template-rows: minmax(0, 1fr);   /* 스킬 설명이 길어도 줄이 늘어 미리보기가 밀려나지 않게 */
     gap: 14px;
 }
 .v2-lab__stage {

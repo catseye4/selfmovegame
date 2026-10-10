@@ -26,6 +26,36 @@ export const PLAYER_STATUS = { slowMove: 0.5, slowAnim: 0.55 };
 export const OVERLOAD = { sec: 4, restore: 0.5 };
 // 산성 발톱 팔(arm_mutant, D-030): 물린 적·거점 부식 — 초당 피해 = 주인공 DPS × dpsMul (거점 × baseMul)
 export const ACID = { dpsMul: 0.14, baseMul: 2, sec: 3 };
+// 심연의 길잡이 (새 캐릭터, D-044) — 효과는 battle/diver.js, 스킬은 skills_v2.js
+//   기본 공격 고압 방수포: 사거리 안 적을 모두 꿰뚫음, 두 번째 적부터 피해 × jetPierce (적마다 곱해짐), 작은 넉백
+//   앵커 견인: 피해(기본 1타 배수)·기절(초), 끌려와 멈추는 자리 = 주인공 앞면 + pullGap, 감는 시간 = pullSec
+//   고압 분사: 물결이 지나간 적 피해·밀어냄(넉백 배율, 10px 단위)·감속, 거점은 피해만
+//   심연의 손: 최대 handsMax명, 첫 피해·붙잡기(기절 초)·지속 피해(주인공 DPS 배율, 거점 × handsBaseMul, handsSec초)
+//   잠수화(다리 패시브): 밀려남(넉백) 감소율 push, 감속·속박 시간 감소율 slow
+export const DIVER = {
+    jetPierce: 0.6, jetKnock: 0.4,
+    anchorDmg: 1.5, anchorStun: 1.6, pullGap: 30, pullSec: 0.35,
+    surgeDmg: 1.2, surgeKnock: 7, surgeRange: 160,
+    handsMax: 6, handsDmg: 1.5, handsHold: 2.5, handsSec: 4, handsDps: 0.35, handsBaseMul: 2,
+    boots: { leg_diver: { push: 0.6, slow: 0.5 }, leg_diver_up: { push: 0.8, slow: 0.7 } }
+};
+// 봉합 성녀 (새 캐릭터, D-046) — 효과는 battle/saint.js, 스킬은 skills_v2.js
+//   봉합 표식: 바늘·장판에 맞은 병사에 markSec초 — 표식이 남은 채 쓰러지면 바닥에 시체(corpseSec초, 최대 corpseMax)
+//   봉합 실(기본 공격): 바늘이 꽂힌 적에서 radius px 안 다른 적 linkN명까지 실이 이어져 피해 × linkMul + 표식
+//     (바늘 한 줄로는 계속 나오는 병사를 못 따라잡아 요새 앞에서 멈췄음 — 밸런스 1차 측정)
+//   3연발: 바늘 셋 tripleGap초 간격, 피해(기본 1타 배수)·묶음(초)
+//   생명 봉인: sealSec초, 장판 = 주인공 앞면 기준 sealZone px(중심 sealDx), 초당 피해(기본 1타 배수), sealTick마다 다시 묶음
+//   억지 부활: 최대 reviveMax명(시체 먼저, 모자라면 체력이 가장 낮은 병사), 아군 상한 allyMax,
+//             아군 체력 = 원래 최대 체력 × allyHp (allyHpMin~allyHpMax), 공격력 = 원래 × allyDps
+//   자가 봉합(다리 패시브): 초당 회복 = 최대 내구도 × (base + k × 잃은 비율)
+export const SAINT = {
+    markSec: 5, corpseSec: 14, corpseMax: 8,
+    linkN: 2, linkRadius: 140, linkMul: 0.5,
+    tripleGap: 0.18, tripleDmg: 1.2, tripleStun: 0.9,
+    sealSec: 4, sealZone: [-30, 230], sealDx: 100, sealDps: 0.5, sealTick: 0.5,
+    reviveMax: 3, allyMax: 8, allyHp: 0.7, allyHpMin: 300, allyHpMax: 1000, allyDps: 0.7,
+    regen: { leg_saint: { base: 0.003, k: 0.017 }, leg_saint_up: { base: 0.004, k: 0.024 } }
+};
 // 근접 기본 공격 휩쓸기: 맞은 적 뒤 radius px 안의 적에게도 피해 × mul (거대 캐릭터가 무리를 쳐냄)
 export const MELEE_CLEAVE = { radius: 60, mul: 0.4 };
 
