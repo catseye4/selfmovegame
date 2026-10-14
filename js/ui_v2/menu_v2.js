@@ -1,6 +1,6 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // 메인 화면: 전술 그리드 (v2, 가로 1280x720)
-   ① 오버로드 대기실: 장착 파츠로 조립된 캐릭터(리그 idle) + 부위별 파츠·스킬 설명 + 능력치 + MUTATION LAB
+   ① 오버로드 대기실: 장착 파츠로 조립된 캐릭터(리그 idle) + 부위별 파츠·스킬 설명 + 능력치 + CHARACTER(선택창) · MUTATION LAB
    ② 전술 레이더: 챕터 스테이지 점(누르면 선택), 선택한 스테이지 정보 (STORY / SPECIAL 전환 — SPECIAL은 준비 중)
    ③ ATTACK / SORTIE 출격 버튼 + 상태 줄(보유 DM, 장착 스킬)
    ④ 우상단: 재화, 설정(톱니바퀴)
@@ -10,6 +10,7 @@ import { gameState } from '../engine/state.js';
 import { monsterControllerV2 } from '../engine_v2/monster_v2.js';
 import { skillsForParts, legPassiveOf } from '../engine_v2/skills_v2.js';
 import { progress } from '../engine_v2/progress_v2.js';
+import { rosterOf } from '../engine_v2/roster_v2.js';
 import { CHAPTERS, stageById, isUnlocked, defaultStage, chapterOf, chapterUnlocked, defaultStageIn } from '../engine_v2/stages_v2.js';
 import { ENEMY_TYPES } from '../engine_v2/enemies_v2.js';
 import { sound } from '../engine_v2/audio/sound_v2.js';
@@ -40,12 +41,18 @@ export class MenuController {
     }
 
     initEvents() {
+        $('btn-to-select-v2')?.addEventListener('click', () => this.switchScreen('select'));
         $('btn-to-lab-v2')?.addEventListener('click', () => {
             gameState.resetCartToEquipped();
             this.switchScreen('lab');
         });
         $('btn-to-battle-v2')?.addEventListener('click', () => {
             if (this.map !== 'story') return;
+            if (!progress.isReady()) {   // 몸통을 아직 안 산 캐릭터 (D-051)
+                sound.play('ui_error');
+                $('menu-map-foot-v2').innerHTML = '<b>출격 불가</b> — 몸통 파츠가 없습니다. MUTATION LAB에서 파츠를 구매하세요';
+                return;
+            }
             this.switchScreen('battle');
         });
         $('btn-menu-settings-v2')?.addEventListener('click', () => openSettings());
@@ -134,20 +141,26 @@ export class MenuController {
         $('menu-map-foot-v2').innerHTML = `<b>${cur.id} ${cur.name}</b> <span class="v2-stars">${stars}</span>`
             + `<span class="v2-radar__time">⏱ 제한 ${clock(cur.timeLimit)} · ★ ${cur.starTime}초 안에${best ? ` · 최고 ${clock(best)}` : ''}</span>`
             + `<small>${cur.desc} · 적: ${enemies}${cur.boss ? ' · 보스' : ''}</small>`;
-        $('menu-sortie-sub-v2').textContent = `STAGE ${cur.id} ${cur.name} 출격`;
+        $('menu-sortie-sub-v2').textContent = progress.isReady() ? `STAGE ${cur.id} ${cur.name} 출격` : '몸통 파츠 필요 — 연구소에서 구매';
     }
 
     /** 메인 화면이 보일 때마다: 장착 상태로 캐릭터/설명/능력치/상태 줄 갱신, 레이더 시작 */
     updateDisplay() {
         if (this.domDmCount) this.domDmCount.textContent = gameState.darkMatter.toLocaleString();
         const equipped = gameState.getEquippedObjects();
-        monsterControllerV2.renderVisuals(equipped);
+        monsterControllerV2.renderVisuals(equipped, progress.character);
 
-        // 캐릭터 이름/팩션 (캐릭터는 몸통 팩션으로 정해짐)
+        // 캐릭터 이름/팩션 (캐릭터는 선택창에서 고름 — 몸통을 아직 안 샀으면 흐린 모습)
         const portrait = monsterControllerV2.getPortrait();
         const body = equipped.body && equipped.body.id !== 'none' ? equipped.body : null;
+        const ros = rosterOf(progress.character);
         $('menu-unit-name-v2').textContent = portrait ? portrait.name : 'OVERLORD';
-        if (this.domFactionName) this.domFactionName.textContent = body ? body.faction : '몸통 파츠 없음 — 연구소에서 장착';
+        if (this.domFactionName) this.domFactionName.textContent = body ? body.faction : `${ros ? ros.faction : ''} · 몸통 파츠 없음 — 연구소에서 구매`;
+        const tag = $('menu-unit-tag-v2');
+        if (tag) {
+            tag.textContent = body ? 'UNIT READY' : 'NO BODY';
+            tag.classList.toggle('is-warn', !body);
+        }
 
         this.renderCallouts(equipped);
         this.renderStats();

@@ -88,11 +88,18 @@ def run(ctx):
     ctx.check(st['stun'] and st['minions'] == 0 and st['silence'], 'EMP 포격: 주인공 기절 + 적 보병 전멸 + 소환 중단', str(st))
     g.shot('stage_boss', '#screen-battle-v2')
 
-    # 파츠 색: 같은 팩션 변형 / 다른 팩션 파츠 / 소환 유닛 외형
-    g.battle(('head_chimera', 'body_mech', 'arm_mech_laser', 'leg_mech_wheel'), wait_ms=1200)
+    # 파츠 색: 같은 캐릭터 변형 파츠 / 안 산 부위 흐리게 / 소환 유닛 외형
+    # (다른 캐릭터 파츠 테두리 빛은 연구소가 고른 캐릭터 파츠만 보여 주면서 없앰, D-051)
+    g.battle(('head_mech', 'body_mech', 'arm_mech_laser', 'leg_mech_wheel'), wait_ms=1200)
     f = g.js("return m.rigBattle.partFilters || {};")
-    ctx.check('body' in f and 'armR_cannon' in f, '파츠 색: 아다만티움 몸통·레이저 팔 변형 색', str(list(f)))
-    ctx.check('drop-shadow' in f.get('head', ''), '파츠 색: 다른 팩션 머리(합성괴인) 테두리 빛', f.get('head', ''))
+    ctx.check('body' in f and 'armR_cannon' in f and 'head' in f, '파츠 색: 바이저 머리·아다만티움 몸통·레이저 팔 변형 색', str(list(f)))
+    ctx.check(not any('drop-shadow' in v for v in f.values()), '파츠 색: 다른 캐릭터 테두리 빛 없음', str(f))
+    st = g.js("""const { rigConfigFor } = await import('/js/engine_v2/rig/rigAvatar.js');
+        const none = gameState.getPartById('head', 'none');
+        const c = rigConfigFor({ head: none, body: none, arm: none, leg: none }, 'hero');
+        return { ch: c && c.character, torso: c && c.filters.torso, noFallback: rigConfigFor({ head: none, body: none, arm: none, leg: none }) };""")
+    ctx.check(st['ch'] == 'hero' and 'grayscale' in (st['torso'] or '') and st['noFallback'] is None,
+              '파츠 색: 몸통이 없으면 고른 캐릭터를 흐리게 (고른 캐릭터가 없으면 그림 없음)', str(st))
     g.js("b.spawnAllyMinion(b.monsterX + 60, 'chimera'); b.spawnAllyMinion(b.monsterX + 90, 'mind');")
     cls = g.js("return b.allies.map(a => a.dom.className);")
     ctx.check(any('chimera-minion-v2' in c for c in cls) and any('v2-mind' in c for c in cls), '소환 유닛: 미니 괴인 / 세뇌 보병 외형', str(cls))

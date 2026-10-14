@@ -12,6 +12,8 @@
    7. 설정 창
    8. 메인 화면: 전술 그리드 (격납고 배경, 대기실, 레이더, 출격 버튼)
    9. 연구소: 미리보기, 능력치 비교, 스킬 구성, 파츠 카드, 비용·확정
+   10. 스테이지·적
+   11. 캐릭터 선택창: 캐릭터 카드, 하단 정보·결정
    ========================================================================== */
 
 /* ---------- 1. 토큰 ---------- */
@@ -1353,6 +1355,13 @@ div.v2-settings__row > span { flex: 1; }
 .v2-hazard-btn:hover { filter: brightness(1.12) drop-shadow(0 0 12px rgba(255, 176, 32, 0.7)); }
 .v2-hazard-btn:active { transform: translateY(2px) scale(0.99); }
 .v2-hazard-btn:disabled { cursor: not-allowed; filter: grayscale(1) brightness(0.6); }
+/* 대기실 아래 버튼 줄: CHARACTER(선택창, 청록) + MUTATION LAB — 버튼이 좁아 줄무늬·글자를 줄임 */
+.v2-showroom__actions { display: grid; grid-template-columns: 1fr 1.3fr; gap: 10px; }
+.v2-showroom__actions .v2-hazard-btn { background-size: 30px 100%, 30px 100%, auto; }
+.v2-showroom__actions .v2-hazard-btn strong { font-size: 18px; letter-spacing: 1px; }
+.v2-frame__tag.is-warn { color: var(--v2-amber); border-color: var(--v2-amber); animation: v2-warn-blink 1.2s steps(2) infinite; }
+.v2-hazard-btn--alt { --hz: var(--v2-cyan); }
+.v2-hazard-btn--alt:hover { filter: brightness(1.12) drop-shadow(0 0 12px rgba(62, 230, 255, 0.6)); }
 
 /* ② 전술 레이더 */
 .v2-radar__screen {
@@ -1836,3 +1845,110 @@ body.v2-fit .screen-v2.landscape {
 .v2-progress__timer.is-star { color: var(--v2-gold); }
 .v2-radar__foot .v2-radar__time { font-family: var(--v2-font-num); font-size: 11px; color: var(--v2-amber); }
 
+/* ---------- 11. 캐릭터 선택창 (js/ui_v2/select_v2.js, D-051) ---------- */
+.v2-select .v2-brand h1 { font-family: var(--v2-font); letter-spacing: 1px; }
+.v2-select__grid {
+    position: absolute;
+    top: 92px;
+    left: 24px;
+    right: 24px;
+    height: 522px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+}
+.v2-charcard {
+    --cc: var(--v2-amber);
+    position: relative;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    cursor: pointer;
+    outline: none;
+    background: linear-gradient(180deg, rgba(22, 25, 34, 0.9), rgba(9, 10, 14, 0.94));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 3px solid var(--cc);
+    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+    transition: transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.v2-charcard:hover, .v2-charcard:focus-visible { transform: translateY(-3px); border-color: color-mix(in srgb, var(--cc) 60%, transparent); }
+.v2-charcard.is-selected {
+    border-color: var(--cc);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--cc) 16%, rgba(22, 25, 34, 0.92)), rgba(9, 10, 14, 0.94) 60%);
+    box-shadow: inset 0 0 0 1px var(--cc), inset 0 0 40px color-mix(in srgb, var(--cc) 18%, transparent);
+}
+.v2-charcard__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+.v2-charcard__head small { display: block; font-family: var(--v2-font-num); font-size: 10px; font-weight: 800; letter-spacing: 2px; color: var(--cc); }
+.v2-charcard__head h2 { margin: 2px 0 0; font-size: 20px; font-weight: 900; color: #fff; }
+.v2-charcard__badge {
+    visibility: hidden;
+    padding: 2px 7px;
+    font-family: var(--v2-font-num);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    color: #0b0d12;
+    background: var(--cc);
+}
+.v2-charcard.is-selected .v2-charcard__badge { visibility: visible; }
+.v2-charcard__stage { position: relative; height: 236px; display: flex; align-items: flex-end; justify-content: center; }
+.v2-charcard__stage .v2-showroom__floor {
+    width: 220px;
+    height: 38px;
+    background: radial-gradient(ellipse at center, color-mix(in srgb, var(--cc) 30%, transparent), transparent 70%);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--cc) 22%, transparent);
+}
+.v2-charcard__stage .v2-showroom__floor::after { border-color: color-mix(in srgb, var(--cc) 40%, transparent); }
+.v2-charcard canvas { position: relative; width: 260px; height: 236px; max-width: 100%; object-fit: contain; }
+.v2-charcard:not(.is-selected) canvas { filter: saturate(0.75) brightness(0.85); }
+.v2-charcard__desc { margin: 0; min-height: 30px; font-size: 11px; line-height: 1.4; color: var(--v2-dim); }
+.v2-charcard__stats { margin: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.v2-charcard__stats > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 3px 0;
+    background: rgba(255, 255, 255, 0.03);
+    border-top: 1px solid color-mix(in srgb, var(--cc) 35%, transparent);
+}
+.v2-charcard__stats dt { font-family: var(--v2-font-num); font-size: 8px; letter-spacing: 2px; color: var(--v2-dim); }
+.v2-charcard__stats dd { margin: 0; font-family: var(--v2-font-num); font-size: 14px; font-weight: 900; color: #fff; }
+.v2-charcard__skills { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
+.v2-charcard__skills li { display: flex; align-items: center; gap: 4px; min-width: 0; font-size: 11px; color: var(--sk, var(--v2-dim)); }
+.v2-charcard__skills li span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v2-charcard__skills li .v2-icon { flex: 0 0 auto; }
+.v2-charcard__skills li.is-off { color: #4a5262; }
+.v2-charcard__foot {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 6px;
+    font-size: 11px;
+    color: var(--v2-dim);
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+.v2-charcard__foot b { font-family: var(--v2-font-num); color: #fff; }
+.v2-charcard__foot em { font-style: normal; font-weight: 800; }
+.v2-charcard__foot .is-ready { color: var(--v2-green); }
+.v2-charcard__foot .is-need { color: var(--v2-amber); }
+.v2-select__foot {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    bottom: 18px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 0 0 18px;
+    background: linear-gradient(90deg, rgba(22, 25, 34, 0.9), rgba(9, 10, 14, 0.6));
+    border-top: 1px solid rgba(255, 176, 32, 0.3);
+}
+.v2-select__info { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 22px; font-size: 13px; color: var(--v2-dim); }
+.v2-select__info b { font-size: 18px; color: #fff; margin: 0 2px; }
+.v2-select__info small { flex-basis: 100%; font-size: 11px; }
+.v2-select__foot .v2-btn { min-width: 130px; }
+.v2-select__foot .v2-btn.is-hint { --btn-c: var(--v2-amber); color: #16120a; animation: v2-warn-blink 1.2s steps(2) 3; }

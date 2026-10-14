@@ -120,7 +120,8 @@ export class MonsterController {
     }
 
     // 부위별 파츠 데이터로 모든 렌더링 화면(도트 전장 + Live2D 메뉴/연구소) 업데이트
-    renderVisuals(partsObj) {
+    // character: 몸통이 비었을 때 그릴 캐릭터 (메인 화면의 선택창 캐릭터, D-051)
+    renderVisuals(partsObj, character = null) {
         for (const slot in partsObj) {
             const part = partsObj[slot];
             if (!part) continue;
@@ -160,8 +161,8 @@ export class MonsterController {
             }
         }
 
-        // 5. 몸통 팩션이 리그 캐릭터면 뼈대 리그로 전환, 아니면(파츠 해제 등) 기존 페이퍼돌 유지
-        this.applyRigMode(rigConfigFor(partsObj));
+        // 5. 몸통 캐릭터(없으면 character)가 리그 캐릭터면 뼈대 리그로 전환, 아니면 기존 페이퍼돌 유지
+        this.applyRigMode(rigConfigFor(partsObj, character));
     }
 
     // 메뉴/전투 캔버스를 리그 ↔ 페이퍼돌로 전환
@@ -172,7 +173,7 @@ export class MonsterController {
             const id = config.character;
             this.rigBattle.setCharacter(id, BATTLE_RIG_SCALE[id]);
             if (this.rigMenu) this.rigMenu.setCharacter(id);
-            // 파츠별 색 (같은 팩션 변형 / 다른 팩션 파츠 / 비운 슬롯)
+            // 파츠별 색 (같은 캐릭터 변형 파츠 / 비운 부위)
             this.rigBattle.setPartFilters(config.filters);
             if (this.rigMenu) this.rigMenu.setPartFilters(config.filters);
             if (config.arm) {

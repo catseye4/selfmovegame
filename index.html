@@ -248,7 +248,7 @@
 
         <!-- ===================================================
              4. 가로형 (LANDSCAPE) v2 메인 화면: 전술 그리드 (MD/화면UI.MD)
-                좌: 오버로드 대기실(캐릭터 + MUTATION LAB) / 우: 전술 레이더 / 하단: ATTACK·SORTIE / 우상단: 재화·설정
+                좌: 오버로드 대기실(캐릭터 + CHARACTER·MUTATION LAB) / 우: 전술 레이더 / 하단: ATTACK·SORTIE / 우상단: 재화·설정
                 (ui_v2.css 8장, js/ui_v2/menu_v2.js, js/ui_v2/radar_v2.js)
              =================================================== -->
         <section id="screen-menu-v2" class="screen-v2 landscape">
@@ -276,7 +276,7 @@
                                 <h2 id="menu-unit-name-v2">OVERLORD</h2>
                                 <small id="menu-faction-name-v2"></small>
                             </div>
-                            <span class="v2-frame__tag">UNIT READY</span>
+                            <span class="v2-frame__tag" id="menu-unit-tag-v2">UNIT READY</span>
                         </div>
                         <div class="v2-showroom__stage">
                             <div class="v2-showroom__floor"></div>
@@ -284,10 +284,16 @@
                             <ul class="v2-callouts" id="menu-callouts-v2"></ul>
                         </div>
                         <dl class="v2-showroom__stats" id="menu-stats-v2"></dl>
-                        <button id="btn-to-lab-v2" class="v2-hazard-btn">
-                            <strong>MUTATION LAB</strong>
-                            <small>연구소 · 파츠 개조</small>
-                        </button>
+                        <div class="v2-showroom__actions">
+                            <button id="btn-to-select-v2" class="v2-hazard-btn v2-hazard-btn--alt">
+                                <strong>CHARACTER</strong>
+                                <small>캐릭터 선택</small>
+                            </button>
+                            <button id="btn-to-lab-v2" class="v2-hazard-btn">
+                                <strong>MUTATION LAB</strong>
+                                <small>연구소 · 파츠 개조</small>
+                            </button>
+                        </div>
                     </section>
 
                     <!-- ② 전술 레이더 -->
@@ -323,6 +329,41 @@
                         <small id="menu-sortie-sub-v2">READY FOR ENGAGEMENT</small>
                     </button>
                     <div class="v2-statusbar" id="menu-statusbar-v2"></div>
+                </footer>
+            </div>
+        </section>
+
+        <!-- ===================================================
+             4-1. 가로형 (LANDSCAPE) v2 캐릭터 선택창 (D-051)
+                캐릭터 카드(리그 idle·소개·능력치·스킬·보유 파츠) — 누르면 그 캐릭터로 바뀜 / 하단: 연구소·결정
+                (ui_v2.css 11장, js/ui_v2/select_v2.js)
+             =================================================== -->
+        <section id="screen-select-v2" class="screen-v2 landscape">
+            <div class="v2-select v2-hangar">
+                <header class="v2-topbar">
+                    <div class="v2-brand">
+                        <button id="btn-select-back-v2" class="v2-iconbtn v2-iconbtn--lg v2-backbtn" title="메인 화면">‹</button>
+                        <div>
+                            <small>CHARACTER SELECT // OVERLORD ROSTER</small>
+                            <h1>캐릭터 선택</h1>
+                            <span>카드를 누르면 그 캐릭터로 바뀝니다 · 장착한 파츠는 캐릭터마다 따로 기억합니다</span>
+                        </div>
+                    </div>
+                    <div class="v2-topbar__right">
+                        <div class="v2-chip v2-chip--dm"><strong id="select-dm-count-v2">0</strong><small>DM</small></div>
+                        <button class="v2-iconbtn v2-iconbtn--lg" id="btn-select-settings-v2" title="설정" data-icon="gear"></button>
+                    </div>
+                </header>
+
+                <main class="v2-select__grid" id="select-grid-v2"></main>
+
+                <footer class="v2-select__foot">
+                    <div class="v2-select__info" id="select-info-v2"></div>
+                    <button id="btn-select-lab-v2" class="v2-btn v2-btn--ghost">연구소</button>
+                    <button id="btn-select-confirm-v2" class="v2-hazard-btn v2-hazard-btn--confirm">
+                        <strong>결정</strong>
+                        <small>메인 화면으로</small>
+                    </button>
                 </footer>
             </div>
         </section>
@@ -379,7 +420,7 @@
                     <section class="v2-lab__parts v2-frame">
                         <div class="v2-slottabs">
                             <button class="tab-btn-v2 v2-slottab active" data-slot="head"><b>머리</b><small>필살기</small></button>
-                            <button class="tab-btn-v2 v2-slottab" data-slot="body"><b>몸통</b><small>캐릭터 · 스킬 2</small></button>
+                            <button class="tab-btn-v2 v2-slottab" data-slot="body"><b>몸통</b><small>스킬 2 · 출격 필수</small></button>
                             <button class="tab-btn-v2 v2-slottab" data-slot="arm"><b>팔</b><small>스킬 1</small></button>
                             <button class="tab-btn-v2 v2-slottab" data-slot="leg"><b>다리</b><small>패시브</small></button>
                         </div>

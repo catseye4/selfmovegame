@@ -6,6 +6,7 @@ import { gameState } from './engine/state.js';
 import { battleEngineV2 } from './engine_v2/battle_v2.js';
 import { MenuController } from './ui_v2/menu_v2.js';
 import { LabController } from './ui_v2/lab_v2.js';
+import { SelectController } from './ui_v2/select_v2.js';
 import { sound } from './engine_v2/audio/sound_v2.js';
 import { progress } from './engine_v2/progress_v2.js';
 import { registerV2Parts } from './engine_v2/partsExtra_v2.js';
@@ -23,6 +24,7 @@ class GameRouterV2 {
         
         this.menuController = new MenuController(switchFn);
         this.labController = new LabController(switchFn);
+        this.selectController = new SelectController(switchFn);
 
         this.init();
     }
@@ -30,9 +32,9 @@ class GameRouterV2 {
     init() {
         // 사운드: 첫 입력에서 켜짐 (모드 선택 클릭으로 들어왔으면 바로)
         sound.listenForUnlock();
-        // 메뉴/연구소 버튼 클릭음 (연구소 장착 확정은 성공/실패음을 따로 냄)
+        // 메뉴/연구소/선택창 버튼 클릭음 (연구소 장착 확정·캐릭터 카드는 소리를 따로 냄)
         document.addEventListener('click', e => {
-            const t = e.target.closest('#screen-menu-v2 button, #screen-lab-v2 button, #screen-lab-v2 .part-card');
+            const t = e.target.closest('#screen-menu-v2 button, #screen-lab-v2 button, #screen-lab-v2 .part-card, #screen-select-v2 button');
             if (!t || t.id === 'btn-equip-confirm-v2') return;
             sound.play(t.matches('.tab-btn-v2, .part-card') ? 'ui_tab' : 'ui_click');
         });
@@ -91,6 +93,7 @@ class GameRouterV2 {
         // 떠나는 화면의 애니메이션 루프 정지 (메인 레이더, 연구소 미리보기)
         if (this.currentScreen === 'menu' && screenName !== 'menu') this.menuController.onLeave();
         if (this.currentScreen === 'lab' && screenName !== 'lab') this.labController.onLeave();
+        if (this.currentScreen === 'select' && screenName !== 'select') this.selectController.onLeave();
 
         const screens = document.querySelectorAll('.screen-v2');
         screens.forEach(s => {
@@ -110,9 +113,11 @@ class GameRouterV2 {
         gameState.currentScreen = screenName;
 
         // 화면 전환 시 각 화면별 데이터 리프레시
-        if (screenName === 'menu' || screenName === 'lab') sound.playBgm('menu');
+        if (screenName === 'menu' || screenName === 'lab' || screenName === 'select') sound.playBgm('menu');
         if (screenName === 'menu') {
             this.menuController.updateDisplay();
+        } else if (screenName === 'select') {
+            this.selectController.render();
         } else if (screenName === 'lab') {
             this.labController.renderPartsGrid();
             this.labController.updateMvvmFeedback();

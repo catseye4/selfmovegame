@@ -14,6 +14,7 @@ import { Animator, Skeleton, Spring, Mat } from './rig.js';
 import { RIG_CHARACTERS, attackClipOf, hitSocketOf } from './characters.js';
 import { RigEffects } from './rigEffects.js';
 import { gameTime } from '../gameTime.js';
+import { characterOfPart } from '../roster_v2.js';
 
 const FIXED_DT = 1 / 120;
 const FADE_SEC = 0.18;
@@ -161,31 +162,22 @@ export function applyRigEvent(name, data, env) {
     }
 }
 
-// 몸통 파츠 팩션 → 리그 캐릭터 (js/data/parts.js 의 faction 문자열)
-const FACTION_RIG = [
-    ['거대로봇', 'mech'],
-    ['거대괴수', 'kaiju'],
-    ['타락 히어로', 'hero'],
-    ['합성괴인', 'chimera']
-];
-
 /**
- * 장착 파츠 조합을 어떤 리그 캐릭터로 그릴지 판정 (몸통 팩션 기준).
+ * 장착 파츠 조합을 어떤 리그 캐릭터로 그릴지 판정 (몸통 파츠의 캐릭터, 몸통이 비었으면 fallback 캐릭터).
+ * fallback: 선택창에서 고른 캐릭터 — 몸통을 아직 안 산 캐릭터도 흐린 모습으로 보여 줌 (D-051)
  * 거대로봇은 원거리 팔(laser/missile)이면 캐논, 그 외는 주먹.
  * @returns {{character: string, arm?: 'cannon'|'fist'} | null}  null이면 기존 페이퍼돌
  */
-export function rigConfigFor(partsObj) {
-    const faction = String((partsObj && partsObj.body && partsObj.body.faction) || '');
-    const match = FACTION_RIG.find(([name]) => faction.includes(name));
-    if (!match) return null;
-    const character = match[1];
+export function rigConfigFor(partsObj, fallback = null) {
+    const character = characterOfPart(partsObj && partsObj.body) || fallback;
+    if (!character) return null;
     const filters = partFiltersFor(partsObj, character);
     if (character !== 'mech') return { character, filters };
     const type = partsObj.arm && partsObj.arm.attackType;
     return { character, arm: type === 'laser' || type === 'missile' ? 'cannon' : 'fist', filters };
 }
 
-// ---- 파츠 외형 차이 (로드맵 B): 캐릭터 그림은 몸통 팩션 것을 쓰므로, 머리·팔·다리 파츠를 색으로 구분 ----
+// ---- 파츠 외형 차이 (로드맵 B): 같은 캐릭터 안의 변형 파츠를 색으로 구분 ----
 // 슬롯 → 캐릭터별 리그 부위 그림 키
 const SLOT_PARTS = {
     mech: { head: ['head'], body: ['body', 'canister'], arm: ['armR_cannon', 'armR_fist', 'armL'], leg: ['legR', 'legL'] },
@@ -201,15 +193,8 @@ const PART_TINT = {
     arm_mech_missile: 'sepia(0.45) hue-rotate(-15deg) saturate(1.6)',  // 미사일 포드: 주황
     leg_mech_wheel: 'brightness(0.8) contrast(1.25) saturate(0.7)'     // 무한궤도: 어두운 강철
 };
-// 다른 팩션 파츠: 그 팩션 색 테두리 빛 / 비운 슬롯: 흐리게
-const FACTION_GLOW = { mech: '62, 230, 255', kaiju: '160, 255, 50', hero: '200, 110, 255', chimera: '255, 150, 40' };
+// 비운 부위(아직 안 산 파츠): 흐리게. 다른 캐릭터 파츠 테두리 빛은 연구소가 고른 캐릭터 파츠만 보여 주면서 없앰 (D-051)
 const EMPTY_SLOT = 'grayscale(1) brightness(0.45) opacity(0.55)';
-
-function factionIdOf(part) {
-    const f = String((part && part.faction) || '');
-    const m = FACTION_RIG.find(([name]) => f.includes(name));
-    return m ? m[1] : null;
-}
 
 /** 파츠 조합 → { 리그 부위키: CSS filter } */
 export function partFiltersFor(partsObj, character) {
@@ -219,8 +204,7 @@ export function partFiltersFor(partsObj, character) {
     for (const slot of ['head', 'body', 'arm', 'leg']) {
         const part = partsObj[slot];
         let f = null;
-        if (!part || part.id === 'none') f = slot === 'body' ? null : EMPTY_SLOT;
-        else if (factionIdOf(part) && factionIdOf(part) !== character) f = `drop-shadow(0 0 4px rgba(${FACTION_GLOW[factionIdOf(part)]}, 0.95))`;
+        if (!part || part.id === 'none') f = EMPTY_SLOT;
         else if (PART_TINT[part.id]) f = PART_TINT[part.id];
         if (f) slots[slot].forEach(key => { map[key] = f; });
     }

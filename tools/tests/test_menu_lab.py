@@ -1,4 +1,5 @@
-"""메인 화면·연구소·저장: 로딩 화면, 화면 크기 맞춤, 파츠 구매(소유)·재장착 무료·강화, 새로고침 후 유지"""
+"""메인 화면·연구소·선택창·저장: 로딩 화면, 화면 크기 맞춤, 파츠 구매(소유)·재장착 무료·강화,
+캐릭터 선택창(연구소는 고른 캐릭터 파츠만, 캐릭터별 장착 기억, 몸통 없으면 출격 막힘), 새로고침 후 유지, 예전 저장 바꾸기"""
 
 
 def run(ctx):
@@ -18,24 +19,33 @@ def run(ctx):
     ctx.check(st['speed'] == 95 and st['dps'] == 690, 'v2 능력치 덮어쓰기: 기본 로봇 속도 95·공격력 690', str(st))
     g.shot('menu_main', '#screen-menu-v2')
 
-    # 연구소: 타락 히어로 몸통 구매 (800 DM)
+    # 연구소: 고른 캐릭터(거대로봇) 파츠만, [파츠제거] 없음 (D-051)
     g.page.click('#btn-to-lab-v2')
     g.wait(900)
-    g.page.click('.v2-slottab[data-slot="body"]')
-    g.page.locator('.v2-partcard', has_text='흑마법 룬 갑옷').click()
+    names = []
+    for slot in ('head', 'body', 'arm', 'leg'):
+        g.page.click(f'.v2-slottab[data-slot="{slot}"]')
+        g.wait(100)
+        names += g.js("return [...document.querySelectorAll('#parts-grid-v2 .v2-partcard__name')].map(e => e.textContent);")
+    ctx.check(len(names) == 9 and '[파츠제거]' not in names and '흑마법 룬 갑옷' not in names and '산성 발톱 팔' not in names,
+              '연구소: 거대로봇 파츠만 9개 ([파츠제거]·다른 캐릭터 없음)', str(names))
+
+    # 머리 구매: 타겟팅 레이저 바이저 (500 DM)
+    g.page.click('.v2-slottab[data-slot="head"]')
+    g.page.locator('.v2-partcard', has_text='타겟팅 레이저 바이저').click()
     g.wait(300)
     before = g.js('return gameState.darkMatter;')
     g.page.click('#btn-equip-confirm-v2')
     g.wait(300)
-    st = g.js("return { dm: gameState.darkMatter, body: gameState.equippedParts.body, owned: progress.isOwned('body_hero') };")
-    ctx.check(st['body'] == 'body_hero' and st['owned'], '연구소: 파츠 구매 후 장착·보유')
-    ctx.check(before - st['dm'] == 800, '연구소: 구매 비용 800 DM 차감', f"{before} → {st['dm']}")
+    st = g.js("return { dm: gameState.darkMatter, head: gameState.equippedParts.head, owned: progress.isOwned('head_mech') };")
+    ctx.check(st['head'] == 'head_mech' and st['owned'], '연구소: 파츠 구매 후 장착·보유')
+    ctx.check(before - st['dm'] == 500, '연구소: 구매 비용 500 DM 차감', f"{before} → {st['dm']}")
 
-    # 기본 몸통으로 바꿨다가 다시 히어로 몸통 → 보유 중이라 무료
-    g.page.locator('.v2-partcard', has_text='기본 가슴').click()
+    # 기본 머리로 바꿨다가 다시 바이저 → 보유 중이라 무료
+    g.page.locator('.v2-partcard', has_text='기본 머리').click()
     g.page.click('#btn-equip-confirm-v2')
     g.wait(200)
-    g.page.locator('.v2-partcard', has_text='흑마법 룬 갑옷').click()
+    g.page.locator('.v2-partcard', has_text='타겟팅 레이저 바이저').click()
     cost = g.js('return progress.cartCost();')
     ctx.check(cost == 0, '보유 파츠 다시 장착은 무료', str(cost))
     g.page.click('#btn-equip-confirm-v2')
@@ -44,23 +54,80 @@ def run(ctx):
     # 강화: Lv1 → Lv2, 비용 차감, 능력치 상승
     hp1 = g.js('return progress.equippedStats().hp;')
     dm1 = g.js('return gameState.darkMatter;')
-    up_cost = g.js("return progress.upgradeCost('body_hero');")
+    up_cost = g.js("return progress.upgradeCost('head_mech');")
     g.page.click('#btn-upgrade-v2')
     g.wait(300)
-    st = g.js("return { lv: progress.levelOf('body_hero'), hp: progress.equippedStats().hp, dm: gameState.darkMatter };")
+    st = g.js("return { lv: progress.levelOf('head_mech'), hp: progress.equippedStats().hp, dm: gameState.darkMatter };")
     ctx.check(st['lv'] == 2, '강화: Lv1 → Lv2', str(st['lv']))
     ctx.check(dm1 - st['dm'] == up_cost, '강화: 비용 차감', f'{up_cost}')
     ctx.check(st['hp'] > hp1, '강화: 능력치 상승 (HP)', f"{hp1} → {st['hp']}")
     g.shot('lab_upgrade', '#screen-lab-v2')
 
+    # 캐릭터 선택창 (D-051): 카드 4장, 지금 캐릭터 표시
+    g.page.click('#btn-lab-back-v2')
+    g.wait(400)
+    g.page.click('#btn-to-select-v2')
+    g.wait(1200)
+    st = g.js("""return { cards: document.querySelectorAll('.v2-charcard').length,
+        sel: document.querySelector('.v2-charcard.is-selected')?.dataset.char };""")
+    ctx.check(st['cards'] == 4 and st['sel'] == 'mech', '선택창: 카드 4장, 지금 캐릭터 = 거대로봇', str(st))
+
+    # 합성괴인 (파츠 무료·보유) → 바로 그 캐릭터 파츠로
+    g.page.click('.v2-charcard[data-char="chimera"]')
+    g.wait(300)
+    st = g.js("return { ch: progress.character, eq: gameState.equippedParts, ready: progress.isReady() };")
+    ctx.check(st['ch'] == 'chimera' and st['eq']['body'] == 'body_chimera' and st['eq']['arm'] == 'arm_chimera' and st['ready'],
+              '선택창: 합성괴인 → 가진 합성괴인 파츠로 장착', str(st))
+
+    # 타락 히어로 (파츠 없음) → 빈 장착, 흐린 모습, 출격 막힘
+    g.page.click('.v2-charcard[data-char="hero"]')
+    g.wait(800)
+    g.shot('select_hero', '#screen-select-v2')
+    st = g.js("return { ch: progress.character, eq: gameState.equippedParts, ready: progress.isReady() };")
+    ctx.check(st['ch'] == 'hero' and set(st['eq'].values()) == {'none'} and not st['ready'],
+              '선택창: 안 산 캐릭터 → 부위가 빈 장착, 출격 불가', str(st))
+    g.page.click('#btn-select-confirm-v2')
+    g.wait(500)
+    g.page.click('#btn-to-battle-v2')
+    g.wait(300)
+    st = g.js("""return { scr: gameState.currentScreen, name: document.getElementById('menu-unit-name-v2').textContent,
+        foot: document.getElementById('menu-map-foot-v2').textContent };""")
+    ctx.check(st['scr'] == 'menu' and st['name'] == '타락 히어로' and '출격 불가' in st['foot'],
+              '메인: 몸통 없으면 출격 버튼이 막힘 (흐린 타락 히어로)', str(st))
+
+    # 연구소: 히어로 파츠만 → 몸통 구매하면 출격 가능
+    g.page.click('#btn-to-lab-v2')
+    g.wait(800)
+    g.page.click('.v2-slottab[data-slot="body"]')
+    names = g.js("return [...document.querySelectorAll('#parts-grid-v2 .v2-partcard__name')].map(e => e.textContent);")
+    ctx.check(names == ['흑마법 룬 갑옷'], '연구소: 타락 히어로 몸통만 표시', str(names))
+    g.page.locator('.v2-partcard', has_text='흑마법 룬 갑옷').click()
+    g.page.click('#btn-equip-confirm-v2')
+    g.wait(300)
+    ctx.check(g.js('return progress.isReady();'), '연구소: 몸통 구매 → 출격 가능')
+
+    # 거대로봇으로 돌아가면 아까 장착(바이저) 그대로
+    g.page.click('#btn-lab-back-v2')
+    g.wait(300)
+    g.page.click('#btn-to-select-v2')
+    g.wait(500)
+    g.page.click('.v2-charcard[data-char="mech"]')
+    g.wait(300)
+    st = g.js("return gameState.equippedParts;")
+    ctx.check(st['head'] == 'head_mech' and st['body'] == 'body_red_robot', '캐릭터별 장착 기억: 거대로봇 = 바이저 장착 그대로', str(st))
+    g.page.click('#btn-select-confirm-v2')
+    g.wait(300)
+
     # 새로고침 후에도 유지
     saved = g.js('return { dm: gameState.darkMatter };')
     g.reload_v2()
-    st = g.js("return { dm: gameState.darkMatter, body: gameState.equippedParts.body, owned: progress.isOwned('body_hero'), lv: progress.levelOf('body_hero') };")
+    st = g.js("""return { dm: gameState.darkMatter, ch: progress.character, head: gameState.equippedParts.head,
+        lv: progress.levelOf('head_mech'), hero: progress.loadouts.hero, heroOwned: progress.isOwned('body_hero') };""")
     ctx.check(st['dm'] == saved['dm'], '저장: DM 유지', f"{saved['dm']} / {st['dm']}")
-    ctx.check(st['body'] == 'body_hero' and st['owned'] and st['lv'] == 2, '저장: 장착·보유·강화 레벨 유지', str(st))
+    ctx.check(st['ch'] == 'mech' and st['head'] == 'head_mech' and st['lv'] == 2, '저장: 캐릭터·장착·강화 레벨 유지', str(st))
+    ctx.check(st['heroOwned'] and st['hero'] and st['hero']['body'] == 'body_hero', '저장: 다른 캐릭터 장착 기억 유지 (히어로 몸통)', str(st['hero']))
     name = g.js("return document.getElementById('menu-unit-name-v2').textContent;")
-    ctx.check(name == '타락 히어로', '저장: 새로고침 후 메인 캐릭터 = 타락 히어로', name)
+    ctx.check(name == '거대로봇', '저장: 새로고침 후 메인 캐릭터 = 거대로봇', name)
 
     # 전투 능력치에 강화 반영
     g.battle(None, wait_ms=500)
@@ -72,3 +139,18 @@ def run(ctx):
     g.wait(300)
     k = float(g.js("return getComputedStyle(document.documentElement).getPropertyValue('--v2-scale');"))
     ctx.check(1.4 < k < 1.5, '창 1920x1080 → 약 1.48배 확대', f'{k:.3f}')
+
+    # 예전 저장(v1, 다른 캐릭터 파츠를 섞어 낌) → 몸통 캐릭터로 바꿈, 다른 캐릭터 부위는 그 캐릭터 파츠를 줌 (D-051)
+    g2 = ctx.game(fresh=True)
+    g2.page.evaluate("""() => localStorage.setItem('mo_v2_save', JSON.stringify({ v: 1, dm: 1234,
+        equipped: { head: 'head_red_robot', body: 'body_hero', arm: 'arm_mech_laser', leg: 'leg_hero_hover' },
+        owned: ['body_hero', 'arm_mech_laser', 'leg_hero_hover'], levels: { arm_mech_laser: 3 }, stages: {} }))""")
+    g2.page.reload()
+    g2.enter_v2()
+    st = g2.js("""return { ch: progress.character, eq: gameState.equippedParts, dm: gameState.darkMatter,
+        wand: progress.isOwned('arm_hero_wave'), laser: progress.isOwned('arm_mech_laser'), lv: progress.levelOf('arm_mech_laser'),
+        name: document.getElementById('menu-unit-name-v2').textContent };""")
+    ctx.check(st['ch'] == 'hero' and st['name'] == '타락 히어로', '예전 저장: 몸통 캐릭터(타락 히어로)로', str(st))
+    ctx.check(st['eq'] == {'head': 'head_hero', 'body': 'body_hero', 'arm': 'arm_hero_wave', 'leg': 'leg_hero_hover'} and st['wand'],
+              '예전 저장: 다른 캐릭터 부위 → 히어로 파츠로 바꿔 줌', str(st['eq']))
+    ctx.check(st['laser'] and st['lv'] == 3 and st['dm'] == 1234, '예전 저장: 산 파츠·강화 레벨·DM 그대로', str(st))

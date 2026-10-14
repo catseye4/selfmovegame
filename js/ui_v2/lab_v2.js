@@ -1,27 +1,26 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // 연구소: 파츠 개조·강화 (v2, 가로 1280x720)
-   - 왼쪽: 개조 미리보기 — 장바구니(선택 중인) 파츠로 조립한 리그 캐릭터 (몸통 팩션이 캐릭터를 정함)
+   - 왼쪽: 개조 미리보기 — 장바구니(선택 중인) 파츠로 조립한 리그 캐릭터 (캐릭터는 선택창에서 고름, 안 산 부위는 흐리게)
    - 가운데: 능력치 비교(현재 → 개조 후, 강화 레벨 반영) + 스킬 구성(팔 1 / 몸통 2 / 머리 필살기 / 다리 패시브)
-   - 오른쪽: 부위 탭 + 파츠 카드(리그 부위 그림, 팩션 색, 레벨, 능력치, 부여 스킬, 장착·보유·가격) + 선택 파츠 강화
+   - 오른쪽: 부위 탭 + 파츠 카드(리그 부위 그림, 캐릭터 색, 세트, 레벨, 능력치, 부여 스킬, 장착·보유·가격) + 선택 파츠 강화
+     카드는 고른 캐릭터의 파츠만, [파츠제거]는 없음 — 부위마다 하나는 꼭 낌 (D-051)
    - 아래: 변경 수, 구매 비용, 개조 후 잔액, 되돌리기, 개조 확정
-   파츠 소유·강화·저장은 js/engine_v2/progress_v2.js (D-015). 파츠 데이터는 js/data/parts.js (구버전과 공용, 읽기만)
+   파츠 소유·강화·저장은 js/engine_v2/progress_v2.js (D-015). 파츠 데이터는 js/data/parts.js (구버전과 공용, 읽기만), 캐릭터별 목록은 roster_v2.js
    ========================================================================== */
 
 import { gameState } from '../engine/state.js';
-import { PARTS_DB } from '../data/parts.js';
 import { PART_SKILL, SKILLS, skillsForParts, legPassiveOf } from '../engine_v2/skills_v2.js';
 import { progress, MAX_LEVEL, LEVEL_BONUS } from '../engine_v2/progress_v2.js';
 import { RigAvatar, rigConfigFor } from '../engine_v2/rig/rigAvatar.js';
 import { RIG_CHARACTERS } from '../engine_v2/rig/characters.js';
+import { rosterOf, characterOfPart, partsOfCharacter, partSetLabel } from '../engine_v2/roster_v2.js';
 import { sound } from '../engine_v2/audio/sound_v2.js';
 import { icon, fillIcons } from './icons.js';
 import { openSettings } from './settingsPanel_v2.js';
 
 const $ = id => document.getElementById(id);
 const ROLE = { arm: { tag: '1', label: '스킬 1' }, body: { tag: '2', label: '스킬 2' }, head: { tag: 'ULT', label: '필살기' }, leg: { tag: 'P', label: '패시브' } };
-// 팩션 문자열(parts.js) → 리그 캐릭터 / 표시 색
-const FACTIONS = [['거대로봇', 'mech', '#3ee6ff'], ['거대괴수', 'kaiju', '#a0ff32'], ['타락 히어로', 'hero', '#c86eff'], ['합성괴인', 'chimera', '#ff9628']];
-// 카드 그림: 같은 팩션 리그 캐릭터의 해당 부위 그림
+// 카드 그림: 그 캐릭터 리그의 해당 부위 그림
 const THUMB = {
     mech: { head: 'head.png', body: 'body.png', arm: p => (p.attackType === 'laser' || p.attackType === 'missile' ? 'armR_cannon.png' : 'armR_fist.png'), leg: 'legR.png' },
     kaiju: { head: 'head.png', body: 'body.png', arm: 'armF.png', leg: 'legF.png' },
@@ -30,16 +29,11 @@ const THUMB = {
 };
 const LAB_RIG = { width: 350, height: 400, rootX: 175, rootY: 384, scale: 0.36, fit: { x: 22, y: 16 }, shadow: true };
 
-export function factionOf(part) {
-    const f = FACTIONS.find(([name]) => String(part && part.faction).includes(name));
-    return f ? { id: f[1], color: f[2] } : null;
-}
-
 function thumbOf(slot, part) {
-    const f = factionOf(part);
-    if (!f || !THUMB[f.id]) return null;
-    const file = THUMB[f.id][slot];
-    return `assets/sprites/rig/${f.id}/${typeof file === 'function' ? file(part) : file}`;
+    const c = characterOfPart(part);
+    if (!c || !THUMB[c]) return null;
+    const file = THUMB[c][slot];
+    return `assets/sprites/rig/${c}/${typeof file === 'function' ? file(part) : file}`;
 }
 
 function skillOf(slot, part) {
@@ -132,13 +126,13 @@ export class LabController {
     renderPartsGrid() {
         if (!this.domPartsGrid) return;
         const slot = this.activeSlot;
-        const list = PARTS_DB[slot] || [];
+        const list = partsOfCharacter(progress.character, slot);   // 고른 캐릭터의 파츠만 (D-051)
         const cartId = gameState.cartParts[slot];
         const equippedId = gameState.equippedParts[slot];
 
         this.domPartsGrid.innerHTML = '';
+        const color = (rosterOf(progress.character) || {}).color || '#5a6272';
         list.forEach(part => {
-            const f = factionOf(part);
             const sk = skillOf(slot, part);
             const thumb = thumbOf(slot, part);
             const owned = progress.isOwned(part.id);
@@ -149,7 +143,7 @@ export class LabController {
             const lv = progress.levelOf(part.id);
             const card = document.createElement('div');
             card.className = `part-card v2-partcard${part.id === cartId ? ' is-selected' : ''}`;
-            card.style.setProperty('--fc', f ? f.color : '#5a6272');
+            card.style.setProperty('--fc', color);
             card.innerHTML = `
                 <div class="v2-partcard__side">
                     <div class="v2-partcard__thumb">${thumb ? `<img src="${thumb}" alt="">` : icon('retreat', 30)}</div>
@@ -157,7 +151,7 @@ export class LabController {
                 </div>
                 <div class="v2-partcard__body">
                     <div class="v2-partcard__name">${part.name}${part.id !== 'none' && lv > 1 ? `<span class="v2-partcard__lv">Lv${lv}</span>` : ''}</div>
-                    <div class="v2-partcard__faction">${part.id === 'none' ? '장착 해제' : part.faction}</div>
+                    <div class="v2-partcard__faction">세트 · ${partSetLabel(part)}</div>
                     <div class="v2-partcard__stats">HP +${st.hp} · DPS +${st.dps}${st.range ? ` · RNG +${st.range}` : ''}</div>
                     ${sk ? `<div class="v2-partcard__skill" style="--sk:${sk.color}"><em>${ROLE[slot].tag}</em>${icon(sk.icon, 13)}${sk.name}</div>` : '<div class="v2-partcard__skill">스킬 없음</div>'}
                 </div>`;
@@ -250,10 +244,10 @@ export class LabController {
 
     renderPreview() {
         const cart = gameState.getCartObjects();
-        const config = rigConfigFor(cart);
+        const config = rigConfigFor(cart, progress.character);
         const body = cart.body && cart.body.id !== 'none' ? cart.body : null;
         $('lab-unit-name-v2').textContent = config ? RIG_CHARACTERS[config.character].name : '미완성 기체';
-        $('lab-faction-v2').textContent = body ? body.faction : '몸통 파츠를 골라 주세요';
+        $('lab-faction-v2').textContent = body ? body.faction : '흐린 부위는 아직 없는 파츠예요';
         $('lab-preview-tag-v2').textContent = progress.cartChanges() ? 'MODIFIED' : 'CURRENT';
         $('lab-empty-v2').hidden = !!config;
         if (!this.rig) return;

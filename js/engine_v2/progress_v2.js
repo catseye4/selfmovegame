@@ -9,13 +9,16 @@
      owned     보유 파츠 id 목록 (가격 0인 파츠와 [파츠제거]는 처음부터 보유)
      levels    파츠 강화 레벨 { id: 1~5 }  (결정 D-015)
      stages    스테이지 기록 { '1-1': { stars: [요새, 기지, 체력50%], cleared, bestTime } }  (D-016)
+     character 선택창에서 고른 캐릭터 id (D-051)
+     loadouts  캐릭터별 마지막 장착 { mech: { head, body, arm, leg }, ... } — 다시 고르면 그대로
+   v1 저장(캐릭터 없음, 다른 캐릭터 파츠를 섞어 낌)은 처음 읽을 때 몸통 캐릭터로 바꾼다 (fixMixed)
    ========================================================================== */
 
 import { gameState } from '../engine/state.js';
 import { PARTS_DB } from '../data/parts.js';
+import { SLOTS, DEFAULT_CHARACTER, rosterOf, characterOfPart, partsOfCharacter } from './roster_v2.js';
 
 const KEY = 'mo_v2_save';
-const SLOTS = ['head', 'body', 'arm', 'leg'];
 export const MAX_LEVEL = 5;
 export const LEVEL_BONUS = 0.12;      // 강화 1레벨마다 그 파츠의 HP·DPS +12%
 export const STAR_BONUS_DM = 300;     // 새로 얻은 별 하나마다 보너스
@@ -34,6 +37,8 @@ class Progress {
         this.levels = {};
         this.stages = {};
         this.selectedStage = null;   // 메인 화면에서 고른 스테이지 (저장)
+        this.character = DEFAULT_CHARACTER;   // 선택창에서 고른 캐릭터 (저장)
+        this.loadouts = {};                   // 캐릭터별 마지막 장착 (저장)
         this.loaded = false;
         this.saveTimer = null;
     }
@@ -57,8 +62,14 @@ class Progress {
             this.levels = { ...(data.levels || {}) };
             this.stages = { ...(data.stages || {}) };
             this.selectedStage = data.selectedStage || null;
+            this.loadouts = { ...(data.loadouts || {}) };
         }
         SLOTS.forEach(slot => this.owned.add(gameState.equippedParts[slot]));   // 장착 중인 파츠는 보유
+        // 고른 캐릭터: 저장에 있으면 그것, v1 저장이면 몸통 캐릭터
+        const saved = data && rosterOf(data.character) ? data.character : null;
+        this.character = saved || characterOfPart(partOf('body', gameState.equippedParts.body)) || DEFAULT_CHARACTER;
+        this.fixMixed(!saved);
+        this.rememberLoadout();
         gameState.cartParts = { ...gameState.equippedParts };
         gameState.subscribe(() => this.saveSoon());
         this.save();
@@ -70,14 +81,20 @@ class Progress {
     }
 
     save() {
+        // 장착이 바깥(검사 도구 등)에서 바뀌었으면 몸통 캐릭터를 따라감
+        const bodyChar = characterOfPart(partOf('body', gameState.equippedParts.body));
+        if (bodyChar) this.character = bodyChar;
+        this.rememberLoadout();
         const data = {
-            v: 1,
+            v: 2,
             dm: gameState.darkMatter,
             equipped: { ...gameState.equippedParts },
             owned: [...this.owned],
             levels: this.levels,
             stages: this.stages,
-            selectedStage: this.selectedStage
+            selectedStage: this.selectedStage,
+            character: this.character,
+            loadouts: this.loadouts
         };
         try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* 저장 불가 환경: 이번 실행에서만 유지 */ }
     }
@@ -86,6 +103,70 @@ class Progress {
     resetAll() {
         try { localStorage.removeItem(KEY); } catch (e) { /* 무시 */ }
         location.reload();
+    }
+
+    // ---- 캐릭터 선택 (D-051) ----
+    /**
+     * 장착 중인 다른 캐릭터 파츠를 고른 캐릭터 파츠로 바꿈 (v1 저장 변환).
+     * 그 부위에 가진 파츠가 있으면 그것, 없으면 가장 싼 파츠 — grant면 그 파츠를 줌 (예전에 끼우던 부위를 비우지 않게)
+     */
+    fixMixed(grant) {
+        for (const slot of SLOTS) {
+            const id = gameState.equippedParts[slot];
+            if (id === 'none' || characterOfPart(partOf(slot, id)) === this.character) continue;
+            const list = partsOfCharacter(this.character, slot);
+            const pick = list.find(p => this.owned.has(p.id))
+                || (grant ? [...list].sort((a, b) => (a.cost || 0) - (b.cost || 0))[0] : null);
+            if (pick) this.owned.add(pick.id);
+            gameState.equippedParts[slot] = pick ? pick.id : 'none';
+        }
+    }
+
+    /** 지금 장착을 고른 캐릭터의 장착으로 기억 (다른 캐릭터 파츠가 섞여 있으면 기억하지 않음) */
+    rememberLoadout() {
+        const eq = gameState.equippedParts;
+        const mine = SLOTS.every(s => eq[s] === 'none' || characterOfPart(partOf(s, eq[s])) === this.character);
+        if (mine) this.loadouts[this.character] = { ...eq };
+    }
+
+    /**
+     * 캐릭터의 장착 파츠 id {head, body, arm, leg}: 기억해 둔 장착 → 없으면 부위마다 가진 파츠 중 첫 번째.
+     * 그 부위 파츠를 하나도 안 가졌으면 'none' (연구소에서 구매)
+     */
+    loadoutFor(character) {
+        if (character === this.character) return { ...gameState.equippedParts };
+        const saved = this.loadouts[character] || {};
+        const out = {};
+        for (const slot of SLOTS) {
+            const id = saved[slot];
+            const keep = id && this.owned.has(id) && characterOfPart(partOf(slot, id)) === character;
+            out[slot] = keep ? id : (partsOfCharacter(character, slot).find(p => this.owned.has(p.id)) || { id: 'none' }).id;
+        }
+        return out;
+    }
+
+    /** 캐릭터 바꾸기: 지금 장착을 기억하고 그 캐릭터의 장착으로 */
+    selectCharacter(id) {
+        if (!rosterOf(id)) return false;
+        if (id === this.character) return true;
+        this.rememberLoadout();
+        const next = this.loadoutFor(id);
+        this.character = id;
+        gameState.equippedParts = next;
+        gameState.cartParts = { ...next };
+        gameState.notify();
+        return true;
+    }
+
+    /** 캐릭터 파츠 보유 수 { owned, total } */
+    ownedCountOf(character) {
+        const all = SLOTS.flatMap(s => partsOfCharacter(character, s));
+        return { owned: all.filter(p => this.owned.has(p.id)).length, total: all.length };
+    }
+
+    /** 출격 가능: 몸통 파츠를 끼웠을 때 */
+    isReady() {
+        return gameState.equippedParts.body !== 'none';
     }
 
     // ---- 파츠 소유 ----
@@ -113,6 +194,7 @@ class Progress {
         SLOTS.forEach(slot => this.owned.add(gameState.cartParts[slot]));
         gameState.darkMatter -= cost;
         gameState.equippedParts = { ...gameState.cartParts };
+        this.rememberLoadout();
         gameState.notify();
         return { success: true, cost };
     }
