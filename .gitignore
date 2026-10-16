@@ -16,5 +16,8 @@ tools/tests/__pycache__/
 # Codex에게 맡긴 작업 기록 (tools/ai/codex_task.py)
 tools/ai/_runs/
 
+# 파츠 스펙 표 시험 출력 (tools/data/export_parts.mjs 기본 폴더, 정식 출력은 MD/)
+tools/data/_out/
+
 # Gemini API 키 (공개 저장소라 절대 올리지 않음)
 .env
