@@ -13,5 +13,8 @@ tools/images/_out/
 tools/tests/_out/
 tools/tests/__pycache__/
 
+# Codex에게 맡긴 작업 기록 (tools/ai/codex_task.py)
+tools/ai/_runs/
+
 # Gemini API 키 (공개 저장소라 절대 올리지 않음)
 .env

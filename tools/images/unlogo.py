@@ -7,9 +7,11 @@ Gemini 그림 오른쪽 아래의 반투명 별 로고를 지운다 (역합성)
 로고는 그림 크기마다 자리가 정해져 있다. 잰 크기(LOGOS)는 그대로 쓰고, 처음 보는 크기는
 로고 크기·여백이 √(가로×세로)에 비례해 오른쪽 아래에 붙는다는 점(765×1024 ↔ 1024×1024 ↔ 1024×572 실측)으로
 1024×1024 지도를 늘리거나 줄여 쓴다. 로고가 단색 위에만 있는 그림이 생기면 measure()로 재서 LOGOS에 추가한다.
+Gemini 웹 원본 크기 다운로드는 로고 96px·여백 64px로 고정되어 √ 비례 예측이 맞지 않는다.
 
-실행 (알파 지도 다시 재기): python tools/images/unlogo.py measure <로고가 초록 위에만 있는 그림>... <x> <y>
+실행 (알파 지도 다시 재기): python tools/images/unlogo.py measure <로고가 초록 위에만 있는 그림>... <x> <y> [--size N]
 """
+import argparse
 import os
 import sys
 
@@ -22,6 +24,7 @@ SIZE = 80   # 로고를 덮는 정사각형 크기(px)
 LOGOS = {
     (765, 1024): {'alpha': 'gemini_logo_765x1024.png', 'x': 625, 'y': 885},
     (1024, 1024): {'alpha': 'gemini_logo_1024x1024.png', 'x': 864, 'y': 864},   # 정사각형 (경비병 1단계에서 잼)
+    (2752, 1536): {'alpha': 'gemini_logo_2752x1536.png', 'x': 2584, 'y': 1368},   # Gemini 웹 원본 크기 다운로드, 로고 96px·여백 64px로 고정 — √ 비례 아님
 }
 
 
@@ -91,11 +94,11 @@ def load_clean(path):
     return clean(np.asarray(Image.open(path).convert('RGB')))
 
 
-def measure(paths, x, y):
+def measure(paths, x, y, n=SIZE):
     """로고가 단색 크로마키 배경 위에만 있는 그림들로 알파 지도를 잰다 (빨강·파랑 채널이 흰색 쪽으로 오른 만큼)."""
     maps = []
     for p in paths:
-        o = np.asarray(Image.open(p).convert('RGB')).astype(np.float32)[y:y + SIZE, x:x + SIZE]
+        o = np.asarray(Image.open(p).convert('RGB')).astype(np.float32)[y:y + n, x:x + n]
         r0, b0 = np.median(o[..., 0]), np.median(o[..., 2])
         maps.append(np.clip(((o[..., 0] - r0) / (255 - r0) + (o[..., 2] - b0) / (255 - b0)) / 2, 0, 1))
     a = np.mean(maps, axis=0)
@@ -107,9 +110,15 @@ if __name__ == '__main__':
     if len(sys.argv) < 5 or sys.argv[1] != 'measure':
         print(__doc__)
         sys.exit(2)
-    *paths, x, y = sys.argv[2:]
-    a = measure(paths, int(x), int(y))
+    parser = argparse.ArgumentParser()
+    parser.add_argument('paths', nargs='+')
+    parser.add_argument('x', type=int)
+    parser.add_argument('y', type=int)
+    parser.add_argument('--size', type=int, default=SIZE)
+    args = parser.parse_args(sys.argv[2:])
+    paths, x, y = args.paths, args.x, args.y
+    a = measure(paths, x, y, args.size)
     w, h = Image.open(paths[0]).size
     out = os.path.join(HERE, f'gemini_logo_{w}x{h}.png')
     Image.fromarray((a * 255).round().astype(np.uint8)).save(out)
-    print(f'saved {out} (max alpha {a.max():.3f}) → LOGOS[({w}, {h})] = {{"x": {x}, "y": {y}}}')
+    print(f'saved {out} (size {args.size}×{args.size}, max alpha {a.max():.3f}) → LOGOS[({w}, {h})] = {{"x": {x}, "y": {y}}}')
