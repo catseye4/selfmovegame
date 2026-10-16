@@ -1309,8 +1309,8 @@ div.v2-settings__row > span { flex: 1; }
 .v2-callouts li.is-right::after { right: 100%; background: linear-gradient(270deg, var(--v2-amber), transparent); }
 .v2-callouts b { font-family: var(--v2-font-num); font-size: 9px; letter-spacing: 2px; color: var(--v2-amber); }
 .v2-callouts strong { font-size: 12px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.v2-callouts span { display: flex; align-items: center; gap: 4px; max-width: 100%; color: var(--sk, var(--v2-dim)); }
-.v2-callouts span i { min-width: 0; font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v2-callouts span { display: flex; align-items: flex-start; gap: 4px; max-width: 100%; color: var(--sk, var(--v2-dim)); }
+.v2-callouts span i { min-width: 0; font-style: normal; word-break: keep-all; }
 .v2-callouts span .v2-icon { flex: 0 0 auto; }
 .v2-showroom__stats {
     margin: 0;

@@ -8,6 +8,7 @@
      - 기본 공격(물기)에 산성 부식: 물린 적·거점이 몇 초간 지속 피해 (거점 2배) — battle/tuning.js ACID
      - 팔 스킬 "산성 돌진" — skills_v2.js acidCharge
 
+   V2_NAME_OVERRIDES: 기존 파츠 이름을 v2에서만 바꿈 (parts.js 원본은 그대로)
    V2_STAT_OVERRIDES: 기존 파츠 능력치를 v2에서만 바꿈 (parts.js 원본은 그대로)
      - 기본 로봇 (2026-10-03, D-043): 풀강화(Lv5)해도 1-4를 못 깸 → 기본 다리 속도 20 → 70, 기본 팔 공격력 300 → 520
        · 속도: 기본 로봇 45로 다른 조합의 1/3 (속도는 강화로 안 오름) → 95. 걷는 동안 적이 쌓여 기절·과부하
@@ -35,6 +36,8 @@ export const V2_PARTS = {
     ]
 };
 
+export const V2_NAME_OVERRIDES = { arm_mech_missile: '미사일 포드' };
+
 export const V2_STAT_OVERRIDES = {
     leg_red_robot: { speed: 70 },
     arm_red_robot: { dps: 520 }
@@ -51,6 +54,8 @@ export function registerV2Parts() {
     }
     for (const db of Object.values(PARTS_DB)) {
         for (const part of db) {
+            const name = V2_NAME_OVERRIDES[part.id];
+            if (name) part.name = name;
             const over = V2_STAT_OVERRIDES[part.id];
             if (over && part.stats) Object.assign(part.stats, over);
         }
