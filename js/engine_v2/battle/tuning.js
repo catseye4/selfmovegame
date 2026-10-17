@@ -59,7 +59,9 @@ export const SET = {
     indomitable: { below: 0.3, reduce: 0.4 },      // 불굴: 내구도 30% 아래에서 받는 피해 40% 감소
     dodge: { chance: 0.25 },                       // 그림자 회피: 25% 확률로 피해 무시
     stomp: { dmg: 0.35, range: 130 },              // 짓밟기: 걸음마다 앞쪽 충격파 (u × dmg)
-    commander: { perAlly: 0.05, max: 4 }           // 졸개 지휘: 졸개 하나마다 주는 피해 +5% (최대 4기)
+    commander: { perAlly: 0.05, max: 4 },          // 졸개 지휘: 졸개 하나마다 주는 피해 +5% (최대 4기)
+    // 합성괴인 추가 머리 화룡 머리 「용의 숨결」(세트 밖, D-054): 입에서 breathSec초 불길, 앞쪽 u × hitMul, 바닥 width px가 zoneSec초 불탐(초당 공격력 × zoneDps)
+    dragonBreath: { breathSec: 1.6, hitMul: 1.5, width: 280, zoneSec: 4, zoneDps: 0.8 }
 };
 
 // ---- 화면 배치 ----

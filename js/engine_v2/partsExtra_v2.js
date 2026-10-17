@@ -11,6 +11,9 @@
    기존 4종 파츠 확장 (D-050, 1차 안 그대로): 캐릭터마다 A·B 세트 × 4부위 = 32개.
      - id `<슬롯>_<캐릭터>_<a|b>`, 그림은 `rigVariant`(리그 부위 그림 `_a`/`_b`), 스킬·패시브는 skills_v2.js
 
+   추가 파츠 (세트 밖, 2026-10-17, D-054): head_chimera_dragon 화룡 머리 (합성괴인) — rigVariant 'dragon'
+     (그림 head_dragon, tools/rig/cut_chimera_dragon.py), 필살기 용의 숨결(skills_v2.js dragonBreath)
+
    V2_NAME_OVERRIDES: 기존 파츠 이름을 v2에서만 바꿈 (parts.js 원본은 그대로)
    V2_STAT_OVERRIDES: 기존 파츠 능력치를 v2에서만 바꿈 (parts.js 원본은 그대로)
      - 기본 로봇 (2026-10-03, D-043): 풀강화(Lv5)해도 1-4를 못 깸 → 기본 다리 속도 20 → 70, 기본 팔 공격력 300 → 520
@@ -110,6 +113,17 @@ export const V2_PARTS = {
             stats: { hp: 600, dps: 70, range: 20, speed: 10 },
             look: '안테나 달린 지휘관 헬멧',
             skillDesc: '필살기 총동원령: 졸개 4기 소환 + 6초간 모든 졸개 피해 2배'
+        },
+        {
+            // 세트에 속하지 않은 추가 머리 (2026-10-17 사용자 요청 "합성괴인 머리를 용머리로") — 그림 head_dragon
+            id: 'head_chimera_dragon',
+            name: '화룡 머리',
+            faction: '합성괴인 (키메라)',
+            rigVariant: 'dragon',
+            cost: 750,
+            stats: { hp: 650, dps: 75, range: 20, speed: 10 },
+            look: '돼지 코 대신 용의 주둥이, 검은 뿔과 호랑이 줄무늬 비늘, 입안에 불씨',
+            skillDesc: '필살기 용의 숨결: 포효하며 입에서 불길을 뿜어 앞쪽에 화염 피해 + 4초간 불바다(지속 피해, 거점 포함)'
         }
     ],
     body: [

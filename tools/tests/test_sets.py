@@ -1,5 +1,5 @@
 """기존 4종 A·B 세트 (D-050 파츠 확장 1차): 파츠 32개 데이터, 세트마다 기본 공격·스킬 1·2·필살기, 다리 패시브 8종,
-부위 그림 바꿔 끼우기(4캐릭터 세트 그림), 연구소 카드"""
+부위 그림 바꿔 끼우기(4캐릭터 세트 그림), 추가 머리(화룡 머리), 연구소 카드"""
 
 CHARS = ('mech', 'kaiju', 'hero', 'chimera')
 # 세트 장착 시 세트 그림으로 바뀌어야 하는 리그 부위 (거대로봇 무기 팔은 A 캐논·B 주먹만 따로 확인)
@@ -9,6 +9,9 @@ ALIAS_KEYS = {
     'hero': ('head', 'torso', 'pauldron', 'cape1', 'armF', 'sword', 'thighF', 'shinB'),
     'chimera': ('head', 'torso', 'wing', 'tail1', 'armF', 'armB', 'legF', 'legB'),
 }
+# 세트 밖 추가 머리 (2026-10-17, D-054): 합성괴인 화룡 머리 — 몸·팔·다리는 기본 합성괴인 파츠
+DRAGON_BUILD = ('head_chimera_dragon', 'body_chimera', 'arm_chimera', 'leg_chimera')
+HEAD_EXTRA_CARD = {'chimera': ('head_dragon.png',)}
 # 연구소 팔 카드의 세트 그림 (A, B)
 ARM_CARD = {'mech': ('armR_cannon_a.png', 'armR_fist_b.png'), 'kaiju': ('armF_a.png', 'armF_b.png'),
             'hero': ('sword_a.png', 'sword_b.png'), 'chimera': ('armF_a.png', 'armF_b.png')}
@@ -71,6 +74,20 @@ def run(ctx):
         ctx.check(all(alias.get(k) == w for k, w in want.items()), f'{name}: 세트 부위 그림으로 바꿔 그림', str(alias))
         g.shot(f'set_{name}', '#screen-battle-v2')
 
+    # ---- 추가 머리 (세트 밖): 합성괴인 화룡 머리 — 머리만 용머리 그림, 필살기 용의 숨결 ----
+    g.battle(DRAGON_BUILD, wait_ms=1500)
+    g.place_enemies(n=4, gap=45, first=110, hp=6000, speed=8, dps=8)
+    g.wait(600)
+    alias = g.js("return m.rigBattle.skeleton && m.rigBattle.skeleton.partAlias;") or {}
+    ctx.check(alias == {'head': 'head_dragon'}, '화룡 머리: 머리만 용머리 그림으로 (몸·팔·날개는 기본 그림)', str(alias))
+    hp0 = g.js("return b.enemies.filter(e => !e.isBuilding).reduce((s, e) => s + e.hp, 0);")
+    used = g.js("b.ultGauge = 1; return b.useSkill('head');")
+    g.wait(1600)
+    st = g.js("""return { zones: b.zones.length,
+        hp: b.enemies.filter(e => !e.isBuilding).reduce((s, e) => s + e.hp, 0) + 6000 * (4 - b.enemies.filter(e => !e.isBuilding).length) };""")
+    ctx.check(used and st['zones'] > 0 and st['hp'] < hp0, '화룡 머리: 용의 숨결 — 불바다 구역 + 적에게 피해', f"{used} {st} (전 {round(hp0)})")
+    g.shot('extra_chimera_dragon', '#screen-battle-v2')
+
     # ---- 다리 패시브 8종 ----
     def leg(build, setup, expr):
         g.battle(build, wait_ms=500)
@@ -110,9 +127,11 @@ def run(ctx):
         head = read('head')
         arm = [x['img'] for x in read('arm')]
         imgs = [x['img'] for x in head]
+        extra = HEAD_EXTRA_CARD.get(c, ())
         ctx.check(all(f'/rig/{c}/' in i for i in imgs + arm)
                   and sum(i.endswith('head_a.png') for i in imgs) == 1 and sum(i.endswith('head_b.png') for i in imgs) == 1
-                  and all(not i.endswith(('_a.png', '_b.png')) for i in imgs[:-2]),
-                  f'연구소: {c} 머리 카드 — 기본 + 세트 A·B, 세트 카드는 세트 그림', str(head))
+                  and sum(i.endswith('/head.png') for i in imgs) >= 1
+                  and all(sum(i.endswith(f) for i in imgs) == 1 for f in extra),
+                  f'연구소: {c} 머리 카드 — 기본 + 세트 A·B{" + 추가 " + str(extra) if extra else ""}, 세트·추가 카드는 그 그림', str(head))
         ctx.check(all(any(i.endswith(f) for i in arm) for f in ARM_CARD[c]), f'연구소: {c} 팔 세트 카드는 세트 그림 {ARM_CARD[c]}', str(arm))
         g.shot(f'set_lab_{c}', '#screen-lab-v2')

@@ -351,6 +351,29 @@ Object.assign(SKILLS, {
             });
         }
     },
+    // ===== 합성괴인 추가 머리 「화룡 머리」 (세트 밖, 2026-10-17, D-054) =====
+    // 포효 동작 동안 입(리그 mouth 소켓)에서 불길 → 앞쪽 화염 피해 + 바닥이 4초간 불탐. 수치는 battle/tuning.js SET.dragonBreath
+    dragonBreath: {
+        name: '용의 숨결', slot: 'head', ult: true, icon: 'fire', color: '#ff6a1e', target: 'enemy', range: 260,
+        desc: '입에서 불길 — 앞쪽 화염 피해 + 4초 불바다 (지속 피해, 거점 포함)',
+        use(b) {
+            const T = SET.dragonBreath;
+            monster.playSkillAnim('victory');
+            const mouth = () => monster.getSocketPoint('mouth', 'head') || monster.getMuzzlePoint() || { x: b.monsterX + 90, bottom: 130 };
+            const n = Math.round(T.breathSec / 0.1);
+            for (let k = 0; k < n; k++) {
+                b.schedule(0.4 + k * 0.1, () => { const m = mouth(); b.fx.play(SET_VFX.flame, m.x, m.bottom); });
+            }
+            b.schedule(0.5, () => {
+                const x = b.frontX() - 10;
+                b.director.shake(5, 220);
+                enemiesAhead(b, -20, b.playerRange + this.range).forEach(e => {
+                    b.dealDamageToEnemy(e, b.unit() * T.hitMul, false, { knock: 0.8 });
+                });
+                b.addZone({ x, w: T.width, sec: T.zoneSec, dps: b.playerDps * T.zoneDps, puff: SET_VFX.flameTick, every: 0.12 });
+            });
+        }
+    },
     sporeBurst: {
         name: '독 포자 폭발', slot: 'body', cd: 14, icon: 'spore', color: '#a0ff32', target: 'enemy', range: 120,
         desc: '몸 둘레 폭발 — 피해 + 산성 부식 4초',
@@ -545,6 +568,7 @@ export const PART_SKILL = {
     head_mech_b: 'overdrive', body_mech_b: 'rocketDash', arm_mech_b: 'pileBunker',
     head_kaiju_a: 'spikeStorm', body_kaiju_a: 'thornArmor', arm_kaiju_a: 'groundSlam',
     head_kaiju_b: 'toxicBreath', body_kaiju_b: 'sporeBurst', arm_kaiju_b: 'acidSpit3',
+    head_chimera_dragon: 'dragonBreath',   // 추가 머리 (세트 밖, D-054)
     head_hero_a: 'judgmentBlade', body_hero_a: 'bloodOath', arm_hero_a: 'whirlwind',
     head_hero_b: 'shadowClones', body_hero_b: 'curseChains', arm_hero_b: 'blackHole',
     head_chimera_a: 'maulCharge', body_chimera_a: 'adrenaline', arm_chimera_a: 'earthSmash',
