@@ -60,6 +60,104 @@
       "y": 685,
       "w": 229,
       "h": 292
+    },
+    "body_a": {
+      "src": "body_a.png",
+      "x": 39,
+      "y": 222,
+      "w": 795,
+      "h": 585
+    },
+    "head_a": {
+      "src": "head_a.png",
+      "x": 279,
+      "y": 59,
+      "w": 379,
+      "h": 456
+    },
+    "canister_a": {
+      "src": "canister_a.png",
+      "x": 610,
+      "y": 35,
+      "w": 174,
+      "h": 283
+    },
+    "armR_cannon_a": {
+      "src": "armR_cannon_a.png",
+      "x": 648,
+      "y": 549,
+      "w": 279,
+      "h": 305
+    },
+    "armL_a": {
+      "src": "armL_a.png",
+      "x": 51,
+      "y": 552,
+      "w": 248,
+      "h": 289
+    },
+    "legR_a": {
+      "src": "legR_a.png",
+      "x": 486,
+      "y": 715,
+      "w": 297,
+      "h": 291
+    },
+    "legL_a": {
+      "src": "legL_a.png",
+      "x": 186,
+      "y": 685,
+      "w": 218,
+      "h": 328
+    },
+    "body_b": {
+      "src": "body_b.png",
+      "x": 39,
+      "y": 147,
+      "w": 795,
+      "h": 648
+    },
+    "head_b": {
+      "src": "head_b.png",
+      "x": 279,
+      "y": 108,
+      "w": 379,
+      "h": 407
+    },
+    "canister_b": {
+      "src": "canister_b.png",
+      "x": 604,
+      "y": 35,
+      "w": 180,
+      "h": 283
+    },
+    "armR_fist_b": {
+      "src": "armR_fist_b.png",
+      "x": 648,
+      "y": 549,
+      "w": 279,
+      "h": 300
+    },
+    "armL_b": {
+      "src": "armL_b.png",
+      "x": 51,
+      "y": 552,
+      "w": 248,
+      "h": 289
+    },
+    "legR_b": {
+      "src": "legR_b.png",
+      "x": 505,
+      "y": 715,
+      "w": 286,
+      "h": 271
+    },
+    "legL_b": {
+      "src": "legL_b.png",
+      "x": 179,
+      "y": 685,
+      "w": 225,
+      "h": 309
     }
   },
   "pivots": {

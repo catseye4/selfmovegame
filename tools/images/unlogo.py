@@ -8,6 +8,8 @@ Gemini 그림 오른쪽 아래의 반투명 별 로고를 지운다 (역합성)
 로고 크기·여백이 √(가로×세로)에 비례해 오른쪽 아래에 붙는다는 점(765×1024 ↔ 1024×1024 ↔ 1024×572 실측)으로
 1024×1024 지도를 늘리거나 줄여 쓴다. 로고가 단색 위에만 있는 그림이 생기면 measure()로 재서 LOGOS에 추가한다.
 Gemini 웹 원본 크기 다운로드는 로고 96px·여백 64px로 고정되어 √ 비례 예측이 맞지 않는다.
+→ 짧은 변이 1500px 이상이면(원본 크기 다운로드) 그림 크기와 상관없이 같은 지도를 오른쪽 아래 168px 자리에 쓴다
+  (10-17 1920×2220·1920×2208·1984×2164·2102×2016·2048×2048에서 재어 2752×1536 지도와 상관 1.000).
 
 실행 (알파 지도 다시 재기): python tools/images/unlogo.py measure <로고가 초록 위에만 있는 그림>... <x> <y> [--size N]
 """
@@ -26,6 +28,10 @@ LOGOS = {
     (1024, 1024): {'alpha': 'gemini_logo_1024x1024.png', 'x': 864, 'y': 864},   # 정사각형 (경비병 1단계에서 잼)
     (2752, 1536): {'alpha': 'gemini_logo_2752x1536.png', 'x': 2584, 'y': 1368},   # Gemini 웹 원본 크기 다운로드, 로고 96px·여백 64px로 고정 — √ 비례 아님
 }
+# 원본 크기 다운로드(짧은 변 ≥ FULL_MIN): 크기와 상관없이 같은 로고가 오른쪽·아래 끝에서 FULL_OFF px 안쪽에 있음
+FULL_MIN = 1500
+FULL_OFF = 168
+FULL_ALPHA = {'alpha': 'gemini_logo_2752x1536.png'}
 
 
 def _alpha(spec):
@@ -80,6 +86,8 @@ def clean(rgb):
     spec = LOGOS.get((w, h))
     if spec:
         a, x, y = _alpha(spec), spec['x'], spec['y']
+    elif min(w, h) >= FULL_MIN:
+        a, x, y = _alpha(FULL_ALPHA), w - FULL_OFF, h - FULL_OFF
     else:
         a, x, y = _scaled(rgb)
     if a is None:

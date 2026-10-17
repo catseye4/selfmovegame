@@ -182,8 +182,9 @@ export function rigConfigFor(partsObj, fallback = null) {
 const CANNON_ATTACKS = new Set(['laser', 'missile', 'rail']);
 
 // ---- A·B 세트 파츠 그림 (D-050): 파츠의 rigVariant('a'|'b') → 그 부위 그림을 <부위키>_a / _b로 ----
-// 세트 그림을 아직 자르지 않은 캐릭터는 세트 색으로 구분 (Gemini 그림이 오면 cut_<캐릭터>_sets.py로 자르고 RIG_SET_ART에 추가)
-export const RIG_SET_ART = { kaiju: ['a', 'b'] };
+// 세트 그림은 tools/rig/cut_<캐릭터>_sets.py로 자름. 그림이 없는 부위·캐릭터는 세트 색(SET_TINT)으로 구분
+// 거대로봇 무기 팔은 A(레일건)가 캐논 팔 armR_cannon_a, B(파일벙커)가 주먹 팔 armR_fist_b만 있음
+export const RIG_SET_ART = { kaiju: ['a', 'b'], mech: ['a', 'b'], hero: ['a', 'b'], chimera: ['a', 'b'] };
 export const SET_TINT = {
     mech: { a: 'sepia(0.35) hue-rotate(-50deg) saturate(1.5) brightness(1.05)', b: 'hue-rotate(-95deg) saturate(1.35) brightness(1.1)' },
     kaiju: { a: 'sepia(0.3) saturate(0.8) brightness(1.15)', b: 'hue-rotate(25deg) saturate(1.6)' },
