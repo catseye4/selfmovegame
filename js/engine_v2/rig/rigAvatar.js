@@ -2,7 +2,7 @@
    PROJECT: MAD OVERLORD // RIG AVATAR (v2)
    캔버스 하나에 리그 캐릭터를 그리는 게임용 래퍼. monster_v2.js가 메뉴/전투 캔버스마다 하나씩 생성한다.
    - setCharacter('mech' | 'kaiju' | 'hero' | 'chimera', scale?), setMode('idle' | 'walk' | 'attack' | 'victory'),
-     setArm('cannon' | 'fist')
+     setArm('cannon' | 'fist'), setVariants({ head: 'a', ... }) (A·B 세트 부위 그림, D-050)
    - consumeHit(): 공격 클립의 fire/impact 이벤트가 쌓은 타격량을 전투 엔진이 가져감
    - muzzlePoint(): 공격 소켓(총구/입)의 캔버스 좌표 (전투 엔진의 레이저 시작점)
    - headTop(): 머리 위(체력바 자리)의 캔버스 좌표
@@ -172,9 +172,40 @@ export function rigConfigFor(partsObj, fallback = null) {
     const character = characterOfPart(partsObj && partsObj.body) || fallback;
     if (!character) return null;
     const filters = partFiltersFor(partsObj, character);
-    if (character !== 'mech') return { character, filters };
+    const variants = variantsFor(partsObj, character);
+    if (character !== 'mech') return { character, filters, variants };
     const type = partsObj.arm && partsObj.arm.attackType;
-    return { character, arm: type === 'laser' || type === 'missile' ? 'cannon' : 'fist', filters };
+    return { character, arm: CANNON_ATTACKS.has(type) ? 'cannon' : 'fist', filters, variants };
+}
+
+// 거대로봇: 원거리 공격 팔은 캐논 팔 그림 (레일건 = A 세트 포격 사령부)
+const CANNON_ATTACKS = new Set(['laser', 'missile', 'rail']);
+
+// ---- A·B 세트 파츠 그림 (D-050): 파츠의 rigVariant('a'|'b') → 그 부위 그림을 <부위키>_a / _b로 ----
+// 세트 그림을 아직 자르지 않은 캐릭터는 세트 색으로 구분 (Gemini 그림이 오면 cut_<캐릭터>_sets.py로 자르고 RIG_SET_ART에 추가)
+export const RIG_SET_ART = { kaiju: ['a', 'b'] };
+export const SET_TINT = {
+    mech: { a: 'sepia(0.35) hue-rotate(-50deg) saturate(1.5) brightness(1.05)', b: 'hue-rotate(-95deg) saturate(1.35) brightness(1.1)' },
+    kaiju: { a: 'sepia(0.3) saturate(0.8) brightness(1.15)', b: 'hue-rotate(25deg) saturate(1.6)' },
+    hero: { a: 'sepia(0.55) hue-rotate(-60deg) saturate(1.9) brightness(0.95)', b: 'brightness(0.7) saturate(1.5) hue-rotate(25deg) contrast(1.1)' },
+    chimera: { a: 'saturate(1.7) hue-rotate(-18deg) brightness(1.05) contrast(1.1)', b: 'sepia(0.4) hue-rotate(150deg) saturate(1.2)' }
+};
+
+/** 파츠 조합 → { 슬롯: 'a'|'b' } (같은 캐릭터의 세트 파츠만) */
+export function variantsFor(partsObj, character) {
+    const out = {};
+    for (const slot of ['head', 'body', 'arm', 'leg']) {
+        const part = partsObj && partsObj[slot];
+        if (part && part.rigVariant && characterOfPart(part) === character) out[slot] = part.rigVariant;
+    }
+    return out;
+}
+
+/** 연구소 카드 그림: 세트 그림이 있으면 그 파일, 없으면 기본 그림 + 세트 색 { file, filter } */
+export function variantThumb(character, file, variant) {
+    if (!variant) return { file, filter: null };
+    if ((RIG_SET_ART[character] || []).includes(variant)) return { file: file.replace(/\.png$/, `_${variant}.png`), filter: null };
+    return { file, filter: (SET_TINT[character] || {})[variant] || null };
 }
 
 // ---- 파츠 외형 차이 (로드맵 B): 같은 캐릭터 안의 변형 파츠를 색으로 구분 ----
@@ -299,7 +330,7 @@ export class RigAvatar {
         if (this.opts.fit != null) this._fitToCanvas(layout);
         else this._applyScale();
         this.skeleton = buildSkeleton(c, layout, images, this.arm);
-        this.skeleton.partFilters = this.partFilters || null;
+        this._applyVariants();   // 세트 부위 그림·색 + 파츠 색 필터
         this.springs = c.springs.map(s => new Spring(s));
         this.effects.clear();
         this.effects.setAmbient(c.ambient, (socket, bone, ox, oy) => {
@@ -393,7 +424,36 @@ export class RigAvatar {
 
     /** 부위 그림별 색 필터 { 부위키: CSS filter } (파츠 외형 차이) */
     setPartFilters(map) {
-        this.partFilters = map && Object.keys(map).length ? map : null;
+        this.basePartFilters = map || null;
+        this._mergeFilters();
+    }
+
+    /** A·B 세트 부위 { 슬롯: 'a'|'b' } (D-050). 뼈대를 다시 만들 때도 유지 */
+    setVariants(variants) {
+        this.variants = variants || {};
+        if (this._built) this._applyVariants();
+    }
+
+    // 세트 그림이 있는 부위는 그림 키를 바꾸고(skeleton.partAlias), 없는 부위는 세트 색을 깜
+    _applyVariants() {
+        const id = this.character.id;
+        const slots = SLOT_PARTS[id] || {};
+        const alias = {};
+        const tint = {};
+        for (const [slot, v] of Object.entries(this.variants || {})) {
+            for (const key of slots[slot] || []) {
+                if (this.layout.parts[`${key}_${v}`]) alias[key] = `${key}_${v}`;
+                else if (SET_TINT[id] && SET_TINT[id][v]) tint[key] = SET_TINT[id][v];
+            }
+        }
+        this.skeleton.partAlias = Object.keys(alias).length ? alias : null;
+        this.variantTint = tint;
+        this._mergeFilters();
+    }
+
+    _mergeFilters() {
+        const map = { ...(this.variantTint || {}), ...(this.basePartFilters || {}) };   // 비운 부위(흐리게)가 세트 색보다 먼저
+        this.partFilters = Object.keys(map).length ? map : null;
         if (this.skeleton) this.skeleton.partFilters = this.partFilters;
     }
 

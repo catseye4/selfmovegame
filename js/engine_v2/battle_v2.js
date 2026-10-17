@@ -13,6 +13,7 @@
      battle/attacks.js    주인공 공격·스킬 공용 (기본 공격, 미사일·파동·드론, 쿨다운·게이지·자동 사용)
      battle/enemyField.js 전장의 적과 거점: 소환·피해·처치·상태 외형·거점·EMP 포격
      battle/allies.js     아군: 세뇌 보병·새끼 괴수·졸개
+     battle/sets.js       기존 4종 A·B 세트 (D-050): 새 기본 공격·버프·지속 피해 구역·블랙홀·포탑·분신·다리 패시브
    스테이지는 stages_v2.js, 적 종류와 행동은 enemies_v2.js, 화면 연출은 ui_v2/battleDirector_v2.js
    ========================================================================== */
 
@@ -33,6 +34,7 @@ import { PlayerMethods } from './battle/player.js';
 import { AttackMethods, SKILL_AUTO_KEY } from './battle/attacks.js';
 import { EnemyMethods } from './battle/enemyField.js';
 import { AllyMethods } from './battle/allies.js';
+import { SetMethods } from './battle/sets.js';
 
 export class BattleEngine {
     constructor() {
@@ -111,6 +113,9 @@ export class BattleEngine {
         this.cinematic = false;                     // 끝 연출 중: 입력/스킬 막음
         this.stats = { kills: 0, time: 0, startDm: 0 };
         this.popupSlots = new Map();
+        this.buffs = {};
+        this.zones = [];
+        this.setFx = {};
         // 리그 애니메이션 이벤트 → 전장 이펙트 (거대로봇 출격 점프 착지)
         monsterControllerV2.onRigEvent = name => {
             if (!this.isActive) return;
@@ -118,6 +123,7 @@ export class BattleEngine {
             // 동작 효과음: 발걸음(거대 캐릭터 걷기 = stomp, 사람 크기 히어로 = step 가볍게), 점프 분사, 기 모으기
             if (name === 'stomp') sound.play('giant_step');
             else if (name === 'step') sound.play('giant_step', { vol: 0.45, rate: 1.5 });
+            if (name === 'stomp' || name === 'step') this.onFootstep();   // 다리 패시브 '짓밟기' (battle/sets.js)
             else if (name === 'thrust') sound.play('mech_thrust');
             else if (name === 'charge') sound.play('charge_up');
         };
@@ -171,6 +177,7 @@ export class BattleEngine {
         this.timers = [];
         this.skillCd = { arm: 0, body: 0 };
         this.ultGauge = 0;
+        this.resetSetState();     // A·B 세트 버프·구역·포탑·분신 (battle/sets.js)
         this.runId += 1;
         this.cinematic = false;
         this.ended = false;
@@ -242,6 +249,8 @@ export class BattleEngine {
         this.pRootT = 0;
         this.pStatusShown = undefined;
         monsterControllerV2.setStatusVisual(null, 1);
+        monsterControllerV2.setClones(0);
+        monsterControllerV2.setAnimBoost(1);
         sound.stopAllLoops();
         sound.setPaused(false);
         if (this.fx) this.fx.stop();
@@ -396,6 +405,7 @@ export class BattleEngine {
         }
         this.checkOverload(dt);          // player.js
         this.tickAcid(dt);               // enemyField.js
+        this.tickSets(dt);               // sets.js (버프·지속 피해 구역·출혈·블랙홀·포탑·분신)
         this.tickHazards(dt);            // enemyField.js (늪 장판)
         this.updateBaseArt();            // enemyField.js
         this.tickPlayerStatus(dt);       // player.js
@@ -437,6 +447,7 @@ export class BattleEngine {
         });
 
         const activeBuilding = this.enemies.find(e => e.isBuilding);
+        this.isAttacking = !!closestEnemy && minDistance <= this.playerRange;   // 다리 패시브 '포격 고정'
 
         if (closestEnemy && minDistance <= this.playerRange) {
             monsterControllerV2.setState('attacking');
@@ -459,7 +470,10 @@ export class BattleEngine {
         } else {
             monsterControllerV2.setState('walking');
             this.scrollRuins(dt);
-            if (this.moveMul() > 0) this.scrollHazards(dt);
+            if (this.moveMul() > 0) {
+                this.scrollHazards(dt);
+                this.scrollZones(dt);    // sets.js: 독안개·화염·웅덩이도 바닥과 함께
+            }
 
             if (this.monsterX > 150) {
                 this.monsterX = Math.max(150, this.monsterX - 120 * dt);
@@ -493,7 +507,8 @@ attachMethods(BattleEngine.prototype, {
     'battle/player.js': PlayerMethods,
     'battle/attacks.js': AttackMethods,
     'battle/enemyField.js': EnemyMethods,
-    'battle/allies.js': AllyMethods
+    'battle/allies.js': AllyMethods,
+    'battle/sets.js': SetMethods
 });
 
 export const battleEngineV2 = new BattleEngine();

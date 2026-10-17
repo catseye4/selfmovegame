@@ -176,6 +176,9 @@ export class MonsterController {
             // 파츠별 색 (같은 캐릭터 변형 파츠 / 비운 부위)
             this.rigBattle.setPartFilters(config.filters);
             if (this.rigMenu) this.rigMenu.setPartFilters(config.filters);
+            // A·B 세트 부위 그림 (D-050)
+            this.rigBattle.setVariants(config.variants);
+            if (this.rigMenu) this.rigMenu.setVariants(config.variants);
             if (config.arm) {
                 this.rigBattle.setArm(config.arm);
                 if (this.rigMenu) this.rigMenu.setArm(config.arm);
@@ -348,12 +351,55 @@ export class MonsterController {
 
     // 주인공 상태 이상 표시: 'slow'(푸른 기운, 동작 느리게) | 'stun'(노란 전기, 동작 멈춤) | null
     setStatusVisual(state, animScale = 1) {
-        if (this.rigBattle) this.rigBattle.timeScale = animScale;
+        this.statusAnim = animScale;
+        if (this.rigBattle) this.rigBattle.timeScale = animScale * (this.animBoost ?? 1);
         const c = this.spriteCanvas;
         if (!c) return;
         c.classList.toggle('v2-st-slow', state === 'slow');
         c.classList.toggle('v2-st-stun', state === 'stun');
         c.classList.toggle('v2-st-root', state === 'root');
+    }
+
+    /** 동작 빠르기 배율 (오버드라이브 = 공격 속도 +50%: 공격 동작의 타격 이벤트가 빨리 옴). 상태 이상 배율과 곱함 */
+    setAnimBoost(mul = 1) {
+        this.animBoost = mul;
+        if (this.rigBattle) this.rigBattle.timeScale = (this.statusAnim ?? 1) * mul;
+    }
+
+    /**
+     * 그림자 분신 (그림자 마도사 필살기, D-050): 주인공 뒤로 gap px씩 반투명 보라 분신 count명.
+     * 리그 캔버스를 매 프레임 복사해 그림 (분신은 공격 동작까지 주인공과 똑같이 움직임). count 0이면 없앰
+     */
+    setClones(count, gap = 55) {
+        (this.clones || []).forEach(c => c.remove());
+        this.clones = [];
+        if (this.cloneRaf) cancelAnimationFrame(this.cloneRaf);
+        this.cloneRaf = null;
+        const parent = this.spriteCanvas && this.spriteCanvas.parentNode;
+        if (!count || !parent || !this.useRig) return;
+        for (let i = 1; i <= count; i++) {
+            const c = document.createElement('canvas');
+            c.className = 'v2-clone';
+            c.width = BATTLE_RIG.width;
+            c.height = BATTLE_RIG.height;
+            Object.assign(c.style, {   // 리그 캔버스와 같은 자리에서 뒤로 gap px씩 (같은 부모, 앞에 두어 주인공 뒤에 그려짐)
+                position: 'absolute', left: `${BATTLE_RIG.left - gap * i}px`, bottom: `${BATTLE_RIG.bottom}px`,
+                width: `${BATTLE_RIG.width}px`, height: `${BATTLE_RIG.height}px`, pointerEvents: 'none',
+                opacity: String(0.5 - i * 0.08),
+                filter: 'brightness(0.55) saturate(0.4) sepia(0.6) hue-rotate(220deg) drop-shadow(0 0 8px rgba(200, 110, 255, 0.9))'
+            });
+            parent.insertBefore(c, this.spriteCanvas);
+            this.clones.push(c);
+        }
+        const copy = () => {
+            for (const c of this.clones) {
+                const ctx = c.getContext('2d');
+                ctx.clearRect(0, 0, c.width, c.height);
+                ctx.drawImage(this.spriteCanvas, 0, 0);
+            }
+            this.cloneRaf = requestAnimationFrame(copy);
+        };
+        copy();
     }
 
     // 패배 연출: 쓰러진 순간 그대로 멈춤 (on=false면 다시 재생)

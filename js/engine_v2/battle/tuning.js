@@ -29,6 +29,39 @@ export const ACID = { dpsMul: 0.14, baseMul: 2, sec: 3 };
 // 근접 기본 공격 휩쓸기: 맞은 적 뒤 radius px 안의 적에게도 피해 × mul (거대 캐릭터가 무리를 쳐냄)
 export const MELEE_CLEAVE = { radius: 60, mul: 0.4 };
 
+// ---- 기존 4종 A·B 세트 (D-050 파츠 확장 1차, 효과는 battle/sets.js · 스킬은 skills_v2.js) ----
+// 피해 배율은 기본 1타(u) 기준, dps가 붙은 것은 주인공 DPS 대비 초당 피해 비율
+export const SET = {
+    // 새 기본 공격: 레일건 관통(뒤로 갈수록 × pierce), 산성 침 웅덩이, 암흑 구체 폭발, 산탄(가까운 적 max명, 둘째부터 × mul)
+    rail: { pierce: 0.6, extra: 40 },
+    spit: { puddleSec: 2.5, puddleW: 70, puddleDps: 0.12 },
+    orb: { splash: 70, splashMul: 0.5 },
+    shotgun: { max: 4, mul: 0.55 },
+    // 타락 기사 대검: 넓게 휩쓸기 (기본 근접 휩쓸기 60px·40%보다 넓고 셈)
+    greatsword: { radius: 120, mul: 0.65 },
+    // 버프: 오버드라이브(공격 속도·진격 속도·받는 피해), 아드레날린(주는 피해), 가시 갑옷(받는 피해·되돌림), 피의 서약(흡혈)
+    overdrive: { sec: 6, atk: 1.5, move: 0.4, reduce: 0.3 },
+    adrenaline: { sec: 8, dmg: 0.4 },
+    thorn: { sec: 6, reduce: 0.25, reflect: 0.5 },
+    blood: { sec: 6, ratio: 0.2 },
+    // 졸개: 총동원령(4기 + 졸개 피해 ×2), 강화 주사(졸개 체력 50% 회복 + 공격 빨라짐 = 피해 ×1.5)
+    mobilize: { count: 4, sec: 6, allyMul: 2, cap: 10 },
+    boost: { heal: 0.5, sec: 6, allyMul: 1.5 },
+    // 소환·설치: 자동 포탑(sec초, every초마다 u × dmg), 그림자 분신(count명, 기본 공격마다 × mul), 블랙홀(radius 안 끌어당김 px/초)
+    turret: { sec: 8, every: 0.3, dmg: 0.35, range: 150 },
+    clones: { sec: 6, count: 2, mul: 0.5, gap: 55 },
+    blackHole: { sec: 3, radius: 170, pull: 140, dps: 0.45 },
+    // 다리 패시브
+    anchor: { dmg: 0.2 },                          // 포격 고정: 멈춰 공격하는 동안 피해 +20%
+    magField: { reduce: 0.5 },                     // 자기장 방벽: 원거리 공격 피해·효과 50% 감소
+    shell: { reduce: 0.15 },                       // 단단한 껍질: 받는 피해 15% 감소, 밀려나지 않음
+    sprint: { move: 0.3, clear: 40 },              // 질주 본능: 사거리 + clear px 안에 적이 없으면 진격 +30%
+    indomitable: { below: 0.3, reduce: 0.4 },      // 불굴: 내구도 30% 아래에서 받는 피해 40% 감소
+    dodge: { chance: 0.25 },                       // 그림자 회피: 25% 확률로 피해 무시
+    stomp: { dmg: 0.35, range: 130 },              // 짓밟기: 걸음마다 앞쪽 충격파 (u × dmg)
+    commander: { perAlly: 0.05, max: 4 }           // 졸개 지휘: 졸개 하나마다 주는 피해 +5% (최대 4기)
+};
+
 // ---- 화면 배치 ----
 // 피해 숫자: 같은 자리 연속 표시는 위로 쌓고, 지속 피해(아군 미니언 등)는 모아서 0.5초마다 표시
 export const POPUP = { column: 36, stackMs: 350, stackPx: 15, dotFlushSec: 0.5 };

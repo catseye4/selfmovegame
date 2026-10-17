@@ -30,6 +30,10 @@ BUILDS = {
     'kaiju': ('head_mutant', 'body_mutant', 'arm_mutant', 'leg_mutant'),
     'hero': ('head_hero', 'body_hero', 'arm_hero_wave', 'leg_hero_hover'),
 }
+# 기존 4종 A·B 세트 (D-050): mech_a 포격 사령부, mech_b 돌격 강습대, kaiju_a 가시 갑각, kaiju_b 독안개,
+# hero_a 타락 기사, hero_b 그림자 마도사, chimera_a 광폭 실험체, chimera_b 조직 사령관
+BUILDS.update({f'{c}_{v}': tuple(f'{s}_{c}_{v}' for s in ('head', 'body', 'arm', 'leg'))
+               for c in ('mech', 'kaiju', 'hero', 'chimera') for v in ('a', 'b')})
 ZONES = {1: ['1-1', '1-2', '1-3', '1-4', '1-5', '1-B'], 2: ['2-1', '2-2', '2-3', '2-4', '2-5', '2-B']}
 STAGE_IDS = ZONES[1]   # 스테이지를 안 고르면 구역 1
 MARK = '<!-- 아래는 손으로 쓰는 부분: report가 지우지 않음 -->'

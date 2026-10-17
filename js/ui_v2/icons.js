@@ -38,7 +38,31 @@ const P = {
     drone: '<circle cx="12" cy="12" r="4"/><path d="M12 12L5 5M12 12l7-7M12 12l-7 7M12 12l7 7" stroke="currentColor" stroke-width="2"/><circle cx="4.5" cy="4.5" r="2.5"/><circle cx="19.5" cy="4.5" r="2.5"/><circle cx="4.5" cy="19.5" r="2.5"/><circle cx="19.5" cy="19.5" r="2.5"/><circle cx="12" cy="12" r="1.6" fill="rgba(255,255,255,.9)"/>',
     roar: '<path d="M3 9l6-3 3 2 5-1-2 4 4 1-5 2 1 4-4-2-3 3-1-4-4 1 2-3z"/><path d="M19 5a9 9 0 0 1 0 14M21.5 3a12 12 0 0 1 0 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
     mind: '<path d="M12 5C6.5 5 2.8 9.3 2 12c.8 2.7 4.5 7 10 7s9.2-4.3 10-7c-.8-2.7-4.5-7-10-7z"/><path d="M12 8.2a3.8 3.8 0 1 1-3.6 5 2.4 2.4 0 1 0 2.3-3.2" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="1.8" stroke-linecap="round"/>',
-    rampage: '<path d="M12 1.5l2.2 5.6 5.8-2.4-2.4 5.8 5.4 1.5-5.4 2 2.4 5.8-5.8-2.4L12 22.5l-2.2-5.1-5.8 2.4 2.4-5.8-5.4-2 5.4-1.5L4 4.7l5.8 2.4z"/><circle cx="12" cy="12" r="3.2" fill="rgba(255,255,255,.85)"/>'
+    rampage: '<path d="M12 1.5l2.2 5.6 5.8-2.4-2.4 5.8 5.4 1.5-5.4 2 2.4 5.8-5.8-2.4L12 22.5l-2.2-5.1-5.8 2.4 2.4-5.8-5.4-2 5.4-1.5L4 4.7l5.8 2.4z"/><circle cx="12" cy="12" r="3.2" fill="rgba(255,255,255,.85)"/>',
+
+    // ---- A·B 세트 스킬 (D-050) ----
+    orbital: '<rect x="9" y="2" width="6" height="4" rx="1"/><path d="M3 3h5v2H3zM16 3h5v2h-5z"/><path d="M11 6h2v9h-2z"/><path d="M5 21h14l-7-6z"/>',
+    turret: '<rect x="3" y="13" width="9" height="7" rx="1.5"/><circle cx="7.5" cy="12" r="3.5"/><path d="M10 10.5h11v3H10z"/><path d="M19 9l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+    rail: '<path d="M2 10h15v4H2z"/><path d="M5 7.5v9M9 7.5v9M13 7.5v9" stroke="currentColor" stroke-width="1.8"/><path d="M17 11h5v2h-5z"/>',
+    overdrive: '<path d="M12 2l5.5 7.5h-3.5v4.5h-4V9.5H6.5z"/><path d="M6 15.5h12v2.2H6zM8 19.5h8v2.2H8z"/>',
+    rocket: '<path d="M21 3c-6.5 0-10.5 4-12.5 9.5l3 3C17 13.5 21 9.5 21 3z"/><circle cx="15.5" cy="8.5" r="1.8" fill="rgba(0,0,0,.4)"/><path d="M8 13l-5 1.5 2.5 2.5L4 21l4-1.5 2.5 2.5 1.5-5z"/>',
+    pile: '<path d="M2 8.5h9v7H2z"/><path d="M11 10.5h11v3H11z"/><path d="M18 7.5l4 4.5-4 4.5" fill="none" stroke="currentColor" stroke-width="2"/>',
+    spikes: '<path d="M12 1.5l2.5 7h-5zM3.5 6.5l6 4-3.2 3zM20.5 6.5l-2.8 7-3.2-3zM2.5 18l7.5-2.5v4.5zM21.5 18L14 15.5v4.5z"/><circle cx="12" cy="14.5" r="3.2"/>',
+    thorns: '<path d="M12 3.5l7 3v5c0 4.5-3 7.8-7 9.5-4-1.7-7-5-7-9.5v-5z"/><path d="M12 0.5l1.6 3h-3.2zM21.8 5.5L20.6 9l-2.2-2.3zM2.2 5.5L3.4 9l2.2-2.3zM12 23.5l1.6-3h-3.2z"/>',
+    slam: '<path d="M8 2h8v8l2.5 2v3.5h-13V12L8 10z"/><path d="M2 21.5l5.5-4 2 3 2.5-4.5 2.5 4.5 2-3 5.5 4z"/>',
+    breath: '<path d="M6.5 18.5a4 4 0 0 1-.6-8 5.6 5.6 0 0 1 10.9-1.4 4.6 4.6 0 0 1 .7 9.4z"/><circle cx="9.5" cy="14.5" r="1.3" fill="rgba(0,0,0,.35)"/><circle cx="14.5" cy="15" r="1.7" fill="rgba(0,0,0,.35)"/>',
+    spore: '<circle cx="12" cy="12" r="5"/><circle cx="4.5" cy="5.5" r="2.2"/><circle cx="19.5" cy="5" r="2.4"/><circle cx="4.5" cy="19" r="2.4"/><circle cx="19.5" cy="19" r="2"/>',
+    sword: '<path d="M20.5 1.5l2 2L11 15l-3-3z"/><path d="M5 12.5l6.5 6.5-1.6 1.6-1.8-1.1-3.6 3.5-2.5-2.5 3.5-3.6-1.1-1.8z"/>',
+    blood: '<path d="M12 2c3.5 5 6.5 8.5 6.5 12.5a6.5 6.5 0 0 1-13 0C5.5 10.5 8.5 7 12 2z"/><path d="M9 15.5a3 3 0 0 0 3 3" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="1.6"/>',
+    whirl: '<path d="M12 4a8 8 0 1 1-8 8h3a5 5 0 1 0 5-5z"/><path d="M12 0.5l3.5 3.5L12 7.5z"/>',
+    clone: '<circle cx="9" cy="6.5" r="3.2"/><path d="M3 21.5a6 6 0 0 1 12 0z"/><circle cx="16.5" cy="7.5" r="2.7" opacity=".5"/><path d="M12 21.5a5 5 0 0 1 9.5 0z" opacity=".5"/>',
+    chain: '<rect x="1.5" y="8.5" width="10" height="7" rx="3.5" fill="none" stroke="currentColor" stroke-width="2.4"/><rect x="12.5" y="8.5" width="10" height="7" rx="3.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M8.5 12h7" stroke="currentColor" stroke-width="2.4"/>',
+    blackhole: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5a9.5 9.5 0 0 1 9.5 9.5h-2.6A6.9 6.9 0 0 0 12 5.1zM12 21.5A9.5 9.5 0 0 1 2.5 12h2.6a6.9 6.9 0 0 0 6.9 6.9z"/>',
+    maul: '<path d="M2 9h10.5L9.5 5h4.5l6.5 7-6.5 7H9.5l3-4H2z"/>',
+    syringe: '<path d="M15 2.5l6.5 6.5-2 2-1-1-8 8-3.5 1 1-3.5 8-8-1-1z"/><path d="M2.5 21.5l3-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+    hammer: '<rect x="2.5" y="3" width="13" height="7.5" rx="1.2"/><path d="M7.5 10.5h3.2v11H7.5z"/><path d="M15.5 5h3v3.5h-3z"/>',
+    horn: '<path d="M2.5 9.5h4.5l9.5-6.5v18L7 14.5H2.5z"/><path d="M19 8a5.5 5.5 0 0 1 0 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    fire: '<path d="M12 1.5c1 4.2 6.5 6.3 6.5 12.5a6.5 6.5 0 0 1-13 0c0-3.3 2-5.4 3.2-6.4 0 2.2 1 3.4 2.1 3.4 0-3.2-1-6.4 1.2-9.5z"/>'
 };
 
 export function icon(name, size = 24) {

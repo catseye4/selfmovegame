@@ -273,8 +273,10 @@ export class Skeleton {
 
     draw(ctx, base) {
         for (const b of this.drawOrder) {
-            const img = this.images[b.part];
-            const part = this.layout.parts[b.part];
+            // partAlias: 세트 파츠 그림으로 바꿔 그림 (예: head → head_a, rigAvatar.setVariants). 색 필터는 원래 부위키로 찾음
+            const key = (this.partAlias && this.partAlias[b.part]) || b.part;
+            const img = this.images[key];
+            const part = this.layout.parts[key];
             if (!img || !part) continue;
             const m = Mat.mul(base, b.world);
             ctx.setTransform(m[0], m[1], m[2], m[3], m[4], m[5]);

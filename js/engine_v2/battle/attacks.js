@@ -12,7 +12,10 @@ import { HERO_WAVE } from '../vfx/heroVfx.js';
 import { HERO_VFX, MECH_VFX, meleeHitVfx } from '../vfx/vfxDefs.js';
 import { hasTarget, ULT_FILL } from '../skills_v2.js';
 import { aimAt as aimOf } from '../bases_v2.js';
-import { HERO, DRONE, MELEE_CLEAVE } from './tuning.js';
+import { HERO, DRONE, MELEE_CLEAVE, SET } from './tuning.js';
+
+// 근접 휩쓸기를 팔마다 다르게 (타락 기사 대검은 넓게, D-050)
+const CLEAVE_BY_ARM = { arm_hero_a: SET.greatsword };
 
 export const SKILL_AUTO_KEY = 'mo_v2_auto_skill';
 
@@ -26,9 +29,16 @@ export const AttackMethods = {
         // 거대로봇 리그면 실제 총구 위치에서 발사, 아니면 기존 고정 위치
         const muzzle = monsterControllerV2.getMuzzlePoint();
         const monsterFireX = muzzle ? muzzle.x : this.monsterX + 90;
-        const dmg = this.playerDps * 0.5 * hitScale;
+        const dmg = this.playerDps * 0.5 * hitScale * this.dmgMul();   // 세트 버프·패시브 (battle/sets.js)
         const isCrit = Math.random() < 0.2;
         const finalDmg = isCrit ? dmg * 1.5 : dmg;
+        this.cloneEcho(targetEnemy, finalDmg);   // 그림자 분신이 있으면 같이 쏨
+
+        // A·B 세트 새 기본 공격 4종 (battle/sets.js)
+        if (this.attackType === 'rail') return this.fireRail(targetEnemy, finalDmg, isCrit);
+        if (this.attackType === 'spit') return this.fireSpit(targetEnemy, finalDmg, isCrit);
+        if (this.attackType === 'orb') return this.fireDarkOrb(targetEnemy, finalDmg, isCrit);
+        if (this.attackType === 'shotgun') return this.fireShotgun(targetEnemy, finalDmg, isCrit);
 
         if (this.attackType === 'laser') {
             // 초장거리 포격: 총구 → 적 몸통 중앙 보라 광선
@@ -49,9 +59,10 @@ export const AttackMethods = {
             // 캐릭터별 타격 이펙트 (로봇 주먹 / 괴수 물기 / 히어로 베기 / 합성괴인 주먹·클로 / 페이퍼돌 기본 베기)
             const aim = aimOf(targetEnemy);
             this.fx.play(meleeHitVfx(monsterControllerV2.getCharacterId(), this.equippedArmId), aim.x, aim.b + 5);
-            const near = this.enemies.filter(o => o !== targetEnemy && !o.isBuilding && Math.abs(o.x - targetEnemy.x) <= MELEE_CLEAVE.radius);
+            const cleave = CLEAVE_BY_ARM[this.equippedArmId] || MELEE_CLEAVE;
+            const near = this.enemies.filter(o => o !== targetEnemy && !o.isBuilding && Math.abs(o.x - targetEnemy.x) <= cleave.radius);
             this.dealDamageToEnemy(targetEnemy, finalDmg, isCrit, { knock: 1, stop: hitScale >= 1 });
-            near.forEach(o => this.dealDamageToEnemy(o, finalDmg * MELEE_CLEAVE.mul, false, { knock: 0.6 }));
+            near.forEach(o => this.dealDamageToEnemy(o, finalDmg * cleave.mul, false, { knock: 0.6 }));
             if (this.equippedArmId === 'arm_mutant') this.applyAcid(targetEnemy);   // 산성 이빨
         }
     },
@@ -159,9 +170,9 @@ export const AttackMethods = {
         return this.monsterX + 100;
     },
 
-    /** 기본 공격 1타 피해 */
+    /** 기본 공격 1타 피해 (세트 버프·패시브 배율 포함 — 스킬 피해의 기준) */
     unit() {
-        return this.playerDps * 0.5;
+        return this.playerDps * 0.5 * this.dmgMul();
     },
 
     /** 몬스터 앞 range 안의 적 (가까운 순) */

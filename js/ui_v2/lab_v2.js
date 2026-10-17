@@ -11,7 +11,7 @@
 import { gameState } from '../engine/state.js';
 import { PART_SKILL, SKILLS, skillsForParts, legPassiveOf } from '../engine_v2/skills_v2.js';
 import { progress, MAX_LEVEL, LEVEL_BONUS } from '../engine_v2/progress_v2.js';
-import { RigAvatar, rigConfigFor } from '../engine_v2/rig/rigAvatar.js';
+import { RigAvatar, rigConfigFor, variantThumb } from '../engine_v2/rig/rigAvatar.js';
 import { RIG_CHARACTERS } from '../engine_v2/rig/characters.js';
 import { rosterOf, characterOfPart, partsOfCharacter, partSetLabel } from '../engine_v2/roster_v2.js';
 import { sound } from '../engine_v2/audio/sound_v2.js';
@@ -22,18 +22,20 @@ const $ = id => document.getElementById(id);
 const ROLE = { arm: { tag: '1', label: '스킬 1' }, body: { tag: '2', label: '스킬 2' }, head: { tag: 'ULT', label: '필살기' }, leg: { tag: 'P', label: '패시브' } };
 // 카드 그림: 그 캐릭터 리그의 해당 부위 그림
 const THUMB = {
-    mech: { head: 'head.png', body: 'body.png', arm: p => (p.attackType === 'laser' || p.attackType === 'missile' ? 'armR_cannon.png' : 'armR_fist.png'), leg: 'legR.png' },
+    mech: { head: 'head.png', body: 'body.png', arm: p => (['laser', 'missile', 'rail'].includes(p.attackType) ? 'armR_cannon.png' : 'armR_fist.png'), leg: 'legR.png' },
     kaiju: { head: 'head.png', body: 'body.png', arm: 'armF.png', leg: 'legF.png' },
     hero: { head: 'head.png', body: 'torso.png', arm: 'sword.png', leg: 'shinF.png' },
     chimera: { head: 'head.png', body: 'torso.png', arm: 'armF.png', leg: 'legF.png' }
 };
 const LAB_RIG = { width: 350, height: 400, rootX: 175, rootY: 384, scale: 0.36, fit: { x: 22, y: 16 }, shadow: true };
 
+/** 카드 그림 { src, filter }: A·B 세트 파츠는 세트 그림(있으면) 또는 기본 그림 + 세트 색 (D-050) */
 function thumbOf(slot, part) {
     const c = characterOfPart(part);
     if (!c || !THUMB[c]) return null;
     const file = THUMB[c][slot];
-    return `assets/sprites/rig/${c}/${typeof file === 'function' ? file(part) : file}`;
+    const t = variantThumb(c, typeof file === 'function' ? file(part) : file, part.rigVariant);
+    return { src: `assets/sprites/rig/${c}/${t.file}`, filter: t.filter };
 }
 
 function skillOf(slot, part) {
@@ -146,7 +148,7 @@ export class LabController {
             card.style.setProperty('--fc', color);
             card.innerHTML = `
                 <div class="v2-partcard__side">
-                    <div class="v2-partcard__thumb">${thumb ? `<img src="${thumb}" alt="">` : icon('retreat', 30)}</div>
+                    <div class="v2-partcard__thumb">${thumb ? `<img src="${thumb.src}" alt=""${thumb.filter ? ` style="filter: ${thumb.filter}"` : ''}>` : icon('retreat', 30)}</div>
                     <span class="v2-partcard__badge ${badge[1]}">${badge[0]}</span>
                 </div>
                 <div class="v2-partcard__body">
@@ -263,6 +265,7 @@ export class LabController {
         this.rig.setCharacter(config.character);
         if (config.arm) this.rig.setArm(config.arm);
         this.rig.setPartFilters(config.filters);
+        this.rig.setVariants(config.variants);
         if (!this.rigOn) {
             this.rig.setMode('idle');
             this.rig.start();

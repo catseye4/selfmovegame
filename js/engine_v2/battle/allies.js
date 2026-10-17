@@ -90,7 +90,7 @@ export const AllyMethods = {
                 ally.dom.classList.toggle('is-attacking', fighting);
             }
             if (fighting) {
-                this.dealDamageToEnemy(closestEnemyToAlly, ally.dps * dt, false, { dot: true });
+                this.dealDamageToEnemy(closestEnemyToAlly, ally.dps * this.allyDmgMul() * dt, false, { dot: true });   // 총동원령·강화 주사
 
                 if (closestEnemyToAlly.isBuilding) {
                     ally.hp -= 25 * dt;

@@ -22,7 +22,7 @@ const ENEMY_TINT = {
     slow: 'drop-shadow(0 0 6px #b050ff) saturate(0.55) brightness(0.9)',
     curse: 'brightness(0.72) saturate(0.7) drop-shadow(0 0 4px rgba(170, 80, 255, 0.9))'
 };
-const STATUS_ICON = { curse: 'curse', slow: 'slow', stun: 'stun', acid: 'acid' };
+const STATUS_ICON = { curse: 'curse', slow: 'slow', stun: 'stun', acid: 'acid', root: 'net', bleed: 'blood' };
 const PUDDLE_STICK = 1.5;   // 늪을 밟은 뒤 감속이 남는 시간(초)
 
 export const EnemyMethods = {
@@ -73,6 +73,7 @@ export const EnemyMethods = {
     dealDamageToEnemy(enemy, damage, isCrit, react = null) {
         if (enemy.armor && damage > 0) damage *= 1 - enemy.armor;   // 방패병·보스: 받는 피해 감소
         enemy.hp -= damage;
+        if (react && !react.dot) this.lifesteal(damage);           // 피의 서약 (battle/sets.js)
         if (react && !react.dot && enemy.hp > 0) this.hitReact(enemy, react);
         if (react && react.dot) {
             enemy.dotAcc = (enemy.dotAcc || 0) + damage;
@@ -200,7 +201,8 @@ export const EnemyMethods = {
     // 적 외형 상태: 기절 > 감속 > 저주 순으로 색 (피격 섬광 중에는 섬광 우선) + 상태 아이콘
     updateEnemyFilter(e) {
         if (!e.dom) return;
-        const states = [e.stunT > 0 && 'stun', e.slowT > 0 && 'slow', e.cursed && 'curse', e.acidT > 0 && 'acid'].filter(Boolean);
+        const states = [e.stunT > 0 && 'stun', e.rootT > 0 && 'root', e.slowT > 0 && 'slow', e.cursed && 'curse', e.acidT > 0 && 'acid',
+            e.bleedT > 0 && 'bleed'].filter(Boolean);
         this.updateStatusIcons(e, states);
         if (e.flashing) return;
         // 종류 색조(enemies_v2.js baseFilter) + 상태 색

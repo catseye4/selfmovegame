@@ -291,7 +291,7 @@ export function updateEnemy(b, e, dt, frontX) {
     }
     if (b.legContact(e)) return;   // 다리 패시브(궤도 돌진)로 밀려남
     setAttacking(e, true);
-    b.damagePlayer(e.dps * dt, dt);
+    b.damagePlayer(e.dps * dt, dt, e);   // e: 가시 갑옷 되돌림 대상
 
     e.cd.skill += dt;
     if (t.shock && e.cd.skill >= t.shock.every) {
@@ -319,6 +319,7 @@ export function updateEnemy(b, e, dt, frontX) {
 }
 
 function moveBy(e, px) {
+    if (e.rootT > 0) return;   // 속박 (저주의 사슬): 제자리에서 공격만
     e.x -= px;
     if (e.dom) e.dom.style.left = `${e.x}px`;
 }
@@ -330,8 +331,9 @@ function shootTranq(b, e) {
     sound.play('mech_laser', { rate: 1.7, vol: 0.6 });
     b.fx.launchOrb(from, () => ({ x: b.monsterX + 60, b: 120 }), '90, 230, 255', 0.38, () => {
         if (!b.isActive) return;
-        b.damagePlayer(e.t.ranged.dmg * b.stage.enemy.dps, 0);
-        b.applyPlayerSlow(e.t.ranged.slow);
+        const k = b.rangedMul();   // 자기장 방벽: 원거리 피해·효과 절반
+        b.damagePlayer(e.t.ranged.dmg * b.stage.enemy.dps * k, 0);
+        b.applyPlayerSlow(e.t.ranged.slow * k);
     }, null);
 }
 
@@ -343,7 +345,7 @@ function throwSludge(b, e) {
     const tx = b.monsterX + 60;
     sound.play('kaiju_spore', { rate: 0.8, vol: 0.6 });
     b.fx.launchOrb(from, () => ({ x: tx, b: FOOT_B + 6 }), '190, 230, 40', 0.55, () => {
-        if (b.isActive) b.addPuddle(tx - s.width / 2, s.width, s.sec);
+        if (b.isActive) b.addPuddle(tx - s.width / 2, s.width, s.sec * b.rangedMul());
     }, null);
 }
 
@@ -355,8 +357,9 @@ function shootNet(b, e) {
     sound.play('mech_missile_launch', { rate: 1.5, vol: 0.5 });
     b.fx.launchOrb(from, () => ({ x: b.monsterX + 60, b: 110 }), '210, 190, 140', 0.42, () => {
         if (!b.isActive) return;
-        b.damagePlayer(n.dmg * b.stage.enemy.dps, 0);
-        b.applyPlayerRoot(n.root);
+        const k = b.rangedMul();
+        b.damagePlayer(n.dmg * b.stage.enemy.dps * k, 0);
+        b.applyPlayerRoot(n.root * k);
     }, null);
 }
 
@@ -375,8 +378,8 @@ function tickBossSkills(b, e, dt, dist) {
             if (!b.isActive || !b.enemies.includes(e)) return;
             b.fx.launchOrb({ x: e.x - 20, bottom: 120 }, () => ({ x: b.monsterX + 60, b: 120 }), '120, 200, 255', 0.25, () => {
                 if (!b.isActive) return;
-                b.knockPlayerBack(m.push, '자석에 붙잡혀 내던져짐!');
-                b.applyPlayerStun(m.stun, '자석!');
+                b.knockPlayerBack(m.push, '자석에 붙잡혀 내던져짐!');   // 자기장 방벽은 knockPlayerBack 안에서 절반
+                b.applyPlayerStun(m.stun * (b.equippedLegId === 'leg_mech_b' ? 0.5 : 1), '자석!');
             }, null);
         });
     }

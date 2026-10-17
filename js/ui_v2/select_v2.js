@@ -133,6 +133,7 @@ export class SelectController {
         if (!card.rig) card.rig = new RigAvatar(card.el.querySelector('canvas'), { ...CARD_RIG, character: id });
         if (config.arm) card.rig.setArm(config.arm);
         card.rig.setPartFilters(config.filters);
+        card.rig.setVariants(config.variants);   // A·B 세트 부위 그림 (D-050)
         card.rig.start();
     }
 

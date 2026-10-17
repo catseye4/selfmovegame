@@ -7,8 +7,9 @@ import { HERO_VFX } from './heroVfx.js';
 import { MECH_VFX } from './mechVfx.js';
 import { KAIJU_VFX } from './kaijuVfx.js';
 import { CHIMERA_VFX } from './chimeraVfx.js';
+import { SET_VFX } from './setVfx.js';
 
-export { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX };
+export { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX, SET_VFX };
 
 // 리그가 없는 캐릭터(페이퍼돌)의 기본 베기
 export const GENERIC_VFX = {

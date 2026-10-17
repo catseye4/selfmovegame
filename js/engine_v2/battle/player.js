@@ -13,9 +13,11 @@ import { PHASE2, HERO, PASSIVE, LEG, PLAYER_STATUS, OVERLOAD, FOOT_B } from './t
 
 export const PlayerMethods = {
     // 몬스터가 받는 피해: 실드가 있으면 먼저 흡수
-    damagePlayer(amount, dt) {
+    // dt: 계속 맞는 근접 피해면 프레임 시간(한 방이면 0), src: 때린 적 (가시 갑옷 되돌림)
+    damagePlayer(amount, dt, src = null) {
         if (this.overloadT > 0) return;   // 과부하(긴급 수리) 중에는 피해 없음
         if (this.equippedLegId === 'leg_hero_hover') amount *= 1 - LEG.hoverReduce;   // 다리 패시브 '반중력 부양'
+        amount = this.setIncoming(amount, dt, src);   // A·B 세트: 회피·감소·되돌림 (battle/sets.js)
         if (this.shieldHp > 0) {
             const absorbed = Math.min(this.shieldHp, amount);
             this.shieldHp -= absorbed;
@@ -117,6 +119,11 @@ export const PlayerMethods = {
 
     /** 뒤로 밀려남 (고철왕 자석): 거점을 향해 다시 걸어야 해서 시간 손실 */
     knockPlayerBack(px, label) {
+        if (this.equippedLegId === 'leg_kaiju_a') {   // 다리 패시브 '단단한 껍질': 밀려나지 않음
+            this.createDamagePopup(this.monsterX + 30, 210, '버팀!', false);
+            return;
+        }
+        px *= this.rangedMul();                       // 다리 패시브 '자기장 방벽': 자석에 덜 끌려감
         this.monsterX = Math.max(80, this.monsterX - px);
         monsterControllerV2.setMonsterPosition(this.monsterX);
         if (label) this.createDamagePopup(this.monsterX + 30, 210, label, false);
@@ -127,9 +134,10 @@ export const PlayerMethods = {
         return this.pStunT > 0;
     },
 
-    /** 진격 속도 배율 (기절·속박 0, 감속 0.5) */
+    /** 진격 속도 배율 (기절·속박 0, 감속 0.5) × 세트 효과 (오버드라이브·질주 본능) */
     moveMul() {
-        return this.pStunT > 0 || this.pRootT > 0 ? 0 : this.pSlowT > 0 ? PLAYER_STATUS.slowMove : 1;
+        if (this.pStunT > 0 || this.pRootT > 0) return 0;
+        return (this.pSlowT > 0 ? PLAYER_STATUS.slowMove : 1) * this.moveBuffMul();
     },
 
     updatePlayerStatus() {
