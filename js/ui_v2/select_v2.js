@@ -65,6 +65,42 @@ export class SelectController {
             this.grid.appendChild(el);
             this.cards[c.id] = { el, rig: null };
         }
+        // 카드가 4장보다 많으면 가로로 넘김 (ui_v2.css 11장): 휠 한 칸 = 카드 2장, 양옆 화살표 = 한 화면
+        this.grid.addEventListener('wheel', e => {
+            if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+            e.preventDefault();
+            this.grid.scrollBy({ left: Math.sign(e.deltaY) * this.grid.clientWidth / 2 });
+        }, { passive: false });
+        this.pagers = [-1, 1].map(dir => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = `v2-select__pager ${dir < 0 ? 'is-prev' : 'is-next'}`;
+            b.title = dir < 0 ? '앞 캐릭터' : '다음 캐릭터';
+            b.textContent = dir < 0 ? '‹' : '›';
+            b.addEventListener('click', () => this.grid.scrollBy({ left: dir * this.grid.clientWidth }));
+            this.grid.after(b);
+            return b;
+        });
+        this.grid.addEventListener('scroll', () => this.updatePagers());
+    }
+
+    /** 넘김 화살표: 더 넘길 쪽에만 보임 */
+    updatePagers() {
+        if (!this.pagers) return;
+        const g = this.grid;
+        const max = g.scrollWidth - g.clientWidth;
+        this.pagers[0].hidden = g.scrollLeft <= 2;
+        this.pagers[1].hidden = g.scrollLeft >= max - 2;
+    }
+
+    /** 고른 캐릭터 카드가 화면 밖이면 보이게 넘김 */
+    showSelected() {
+        const card = this.cards[progress.character];
+        if (!card) return;
+        const g = this.grid;
+        const { offsetLeft: x, offsetWidth: w } = card.el;
+        if (x < g.scrollLeft || x + w > g.scrollLeft + g.clientWidth) g.scrollTo({ left: x, behavior: 'auto' });
+        this.updatePagers();
     }
 
     initEvents() {
@@ -91,6 +127,7 @@ export class SelectController {
         if (dm) dm.textContent = gameState.darkMatter.toLocaleString();
         for (const c of ROSTER) this.renderCard(c);
         this.renderInfo();
+        this.showSelected();
     }
 
     renderCard(c) {
@@ -134,6 +171,7 @@ export class SelectController {
         if (config.arm) card.rig.setArm(config.arm);
         card.rig.setPartFilters(config.filters);
         card.rig.setVariants(config.variants);   // A·B 세트 부위 그림 (D-050)
+        card.rig.setUpgrades(config.upgrades);   // 새 캐릭터 강화 부위 그림 (D-044)
         card.rig.start();
     }
 

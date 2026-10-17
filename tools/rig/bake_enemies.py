@@ -25,6 +25,7 @@ ENEMIES = {
     'medic': (92, 'walk:12,attack:10'),
     'guardian': (196, 'walk:12,attack:12,bash:10'),
     'minion': (92, 'walk:12,attack:10'),        # 합성괴인 졸개(아군) — 경비병과 같은 키
+    'rabbit': (72, 'walk:12,attack:10'),        # 뒤틀린 인형사의 토끼 인형(아군) — 작은 인형
     # 구역 2: 고철 약탈단 (D-040) — 방벽병은 덩치·배낭이 커서 103, 고철왕은 넓은 탑승형이라 230
     'raider': (92, 'walk:12,attack:10'),
     'builder': (103, 'walk:12,attack:10'),

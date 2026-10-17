@@ -14,6 +14,10 @@ MAD OVERLORD // 게임 사운드 만들기 (v2)
     Cyberpunk_Moonlight_Sonata_v2.mp3  (opengameart.org/content/cyberpunk-moonlight-sonata, Joth, CC0)
   출력: assets/audio/sfx/<이름>.ogg, assets/audio/bgm/<이름>.ogg
   실행: python tools/audio/build_audio.py <SRC 폴더>
+        python tools/audio/build_audio.py - sfx diver_   # 이름이 diver_로 시작하는 합성 효과음만 (팩 없이)
+        python tools/audio/build_audio.py - sfx saint_   # 봉합 성녀 합성 효과음만
+        python tools/audio/build_audio.py - sfx frost_   # 서리의 무희 합성 효과음만
+        python tools/audio/build_audio.py - sfx doll_    # 뒤틀린 인형사 합성 효과음만
 
 효과음 이름은 이펙트 정의(sfx: '...')와 전투 연출(director.sfx)에서 부르는 이름과 같다.
 음량/겹침 제한 같은 재생 규칙은 js/engine_v2/audio/sound_v2.js 의 SFX 표에서 정한다.
@@ -179,6 +183,286 @@ def synth_riser(sec=0.7, f0=180, f1=1400):
     return (saw * 0.7 + noise) * env
 
 
+def _band(noise, lo, hi):
+    """잡음 대역 거르기 (lo~hi Hz, 배열이면 샘플마다)"""
+    n = len(noise)
+    lo = np.broadcast_to(np.asarray(lo, dtype=np.float64), (n,))
+    hi = np.broadcast_to(np.asarray(hi, dtype=np.float64), (n,))
+    return one_pole_lowpass(noise, hi) - one_pole_lowpass(noise, lo)
+
+
+def _bubbles(sec, count, f0=280, f1=900, dur=0.035, gain=0.5):
+    """물방울 '퐁' 소리: 짧게 음이 올라가는 사인 (무작위 시각)"""
+    out = np.zeros(int(sec * SR), np.float32)
+    for _ in range(count):
+        at = rng.uniform(0, sec - dur)
+        t = t_axis(dur)
+        f = rng.uniform(f0, f1)
+        freq = f * (1 + 1.4 * t / dur)
+        ph = 2 * np.pi * np.cumsum(freq) / SR
+        b = np.sin(ph) * np.sin(np.pi * t / dur) * gain * rng.uniform(0.4, 1)
+        i = int(at * SR)
+        out[i:i + len(b)] += b[: len(out) - i]
+    return out
+
+
+def _clinks(sec, count, t0=0.0, t1=None, gain=0.5):
+    """쇠사슬 고리 부딪힘: 높은 비조화음 짧게 여러 번"""
+    out = np.zeros(int(sec * SR), np.float32)
+    t1 = sec - 0.03 if t1 is None else t1
+    for _ in range(count):
+        at = rng.uniform(t0, t1)
+        t = t_axis(0.04)
+        tone = sum(np.sin(2 * np.pi * f * t) for f in rng.uniform(2200, 5200, 3)) / 3
+        c = tone * np.exp(-t / 0.008) * gain * rng.uniform(0.5, 1)
+        i = int(at * SR)
+        out[i:i + len(c)] += c[: len(out) - i]
+    return out
+
+
+def synth_diver_jet():
+    """고압 방수포: 쉬익 하는 고압 물 분사 + 짧은 저음 퉁"""
+    sec = 0.3
+    t = t_axis(sec)
+    hiss = _band(rng.standard_normal(len(t)).astype(np.float32), 1200, 6500)
+    env = np.minimum(1, t / 0.01) * np.exp(-t / 0.12)
+    thump = np.sin(2 * np.pi * 90 * t) * np.exp(-t / 0.04) * 0.6
+    return (hiss * 2.2 * env + thump + _bubbles(sec, 3, 500, 1200, 0.025, 0.25)).astype(np.float32)
+
+
+def synth_diver_anchor_throw():
+    """앵커 던지기: 휙 바람 + 풀려나가는 사슬 소리"""
+    sec = 0.5
+    return (synth_whoosh(sec, 300, 2600) * 1.2 + _clinks(sec, 14, 0.05, 0.42, 0.45)).astype(np.float32)
+
+
+def synth_diver_anchor_hit():
+    """앵커가 박힘: 쇠 부딪히는 '쨍' + 둔탁한 쿵"""
+    sec = 0.4
+    t = t_axis(sec)
+    clank = sum(np.sin(2 * np.pi * f * t) * a for f, a in [(520, 1), (1340, 0.6), (2210, 0.4), (3170, 0.25)]) * np.exp(-t / 0.12)
+    noise = _band(rng.standard_normal(len(t)).astype(np.float32), 800, 5000) * np.exp(-t / 0.015) * 2
+    thud = np.sin(2 * np.pi * 70 * t) * np.exp(-t / 0.06)
+    return (clank * 0.45 + noise + thud * 0.8 + _clinks(sec, 5, 0.03, 0.25, 0.3)).astype(np.float32)
+
+
+def synth_diver_surge():
+    """고압 분사: 쏴아 하고 밀려가는 큰 물살 + 거품"""
+    sec = 0.95
+    t = t_axis(sec)
+    u = t / sec
+    noise = rng.standard_normal(len(t)).astype(np.float32)
+    rush = _band(noise, 150 + 300 * u, 900 + 3200 * np.sin(np.pi * np.clip(u * 1.3, 0, 1)) ** 2)
+    env = np.minimum(1, t / 0.03) * (1 - u) ** 1.3
+    rumble = np.sin(2 * np.pi * 55 * t + 3 * np.sin(2 * np.pi * 7 * t)) * env * 0.5
+    return (rush * 2.0 * env + rumble + _bubbles(sec, 22, 260, 900, 0.04, 0.35)).astype(np.float32)
+
+
+def synth_diver_hands():
+    """심연의 손: 깊은 바다의 낮은 울림 + 속삭이는 물결 + 올라오는 거품"""
+    sec = 1.3
+    t = t_axis(sec)
+    u = t / sec
+    env = np.sin(np.pi * np.clip(u * 1.15, 0, 1)) ** 0.8
+    drone = (np.sin(2 * np.pi * 55 * t + 0.6 * np.sin(2 * np.pi * 3 * t))
+             + 0.6 * np.sin(2 * np.pi * 82.5 * t + 0.4 * np.sin(2 * np.pi * 2.3 * t))) * env
+    whisper = _band(rng.standard_normal(len(t)).astype(np.float32), 500, 1600) * (0.6 + 0.4 * np.sin(2 * np.pi * 9 * t)) * env * 1.6
+    return (drone * 0.55 + whisper + _bubbles(sec, 18, 200, 700, 0.05, 0.3) * env).astype(np.float32)
+
+
+def _chord(sec, freqs, attack=0.15, vib=5.0, glide=1.0):
+    """성가대 같은 화음: 사인 여러 개 + 느린 떨림, glide배까지 음이 미끄러져 오름"""
+    t = t_axis(sec)
+    u = t / sec
+    out = np.zeros(len(t), np.float32)
+    for i, f in enumerate(freqs):
+        freq = f * (1 + (glide - 1) * u ** 2) * (1 + 0.006 * np.sin(2 * np.pi * (vib + i * 0.7) * t))
+        ph = 2 * np.pi * np.cumsum(freq) / SR
+        out += (np.sin(ph) + 0.3 * np.sin(2 * ph)).astype(np.float32)
+    env = np.minimum(1, t / attack) * (1 - u) ** 1.2
+    return out * env / len(freqs)
+
+
+def synth_saint_needle():
+    """봉합 주사 발사: 짧게 내려가는 '쀼' + 유리 딸깍"""
+    sec = 0.16
+    t = t_axis(sec)
+    freq = 2400 - 1300 * t / sec
+    whistle = np.sin(2 * np.pi * np.cumsum(freq) / SR) * np.exp(-t / 0.06)
+    click = _band(rng.standard_normal(len(t)).astype(np.float32), 3000, 9000) * np.exp(-t / 0.008) * 1.5
+    return (whistle * 0.6 + click).astype(np.float32)
+
+
+def synth_saint_stitch():
+    """바늘이 꽂힘: 푹 + 실을 당기는 짧은 '찍'"""
+    sec = 0.22
+    t = t_axis(sec)
+    pierce = _band(rng.standard_normal(len(t)).astype(np.float32), 1500, 6000) * np.exp(-t / 0.02) * 1.6
+    thunk = np.sin(2 * np.pi * 120 * t) * np.exp(-t / 0.035)
+    squeak = np.sin(2 * np.pi * np.cumsum(1800 + 1500 * t / sec) / SR) * np.exp(-((t - 0.07) / 0.03) ** 2) * 0.35
+    return (pierce + thunk * 0.7 + squeak).astype(np.float32)
+
+
+def synth_saint_seal():
+    """생명 봉인: 실이 휘감기는 휙 소리 + 낮게 깔리는 성가 화음"""
+    sec = 1.1
+    whoosh = synth_whoosh(sec, 400, 3000) * 0.9
+    choir = _chord(sec, [220, 277.2, 329.6, 440], attack=0.25, vib=4.5)
+    return (whoosh + choir * 0.9 + _clinks(sec, 6, 0.05, 0.5, 0.25)).astype(np.float32)
+
+
+def synth_saint_revive():
+    """억지 부활: 심장 박동 한 번 + 위로 미끄러지는 금빛 화음 + 반짝임"""
+    sec = 1.4
+    t = t_axis(sec)
+    beat = np.zeros(len(t), np.float32)
+    hb = synth_heartbeat(0.5)
+    beat[:len(hb)] += hb[: len(beat)] * 0.9
+    choir = _chord(sec, [261.6, 329.6, 392.0, 523.3], attack=0.3, vib=5.5, glide=1.5)
+    shimmer = _band(rng.standard_normal(len(t)).astype(np.float32), 5000, 11000) * np.sin(np.pi * np.clip(t / sec, 0, 1)) * 0.25
+    return (beat + choir + shimmer).astype(np.float32)
+
+
+def _chimes(sec, count, t0=0.0, t1=None, f0=1800, f1=4200, decay=0.12, gain=0.4):
+    """얼음 방울 소리: 맑은 높은 사인(배음 하나)이 여러 번 울림"""
+    out = np.zeros(int(sec * SR), np.float32)
+    t1 = sec - decay if t1 is None else t1
+    for _ in range(count):
+        at = rng.uniform(t0, t1)
+        t = t_axis(decay * 3)
+        f = rng.uniform(f0, f1)
+        c = (np.sin(2 * np.pi * f * t) + 0.4 * np.sin(2 * np.pi * f * 2.76 * t)) * np.exp(-t / decay) * gain * rng.uniform(0.5, 1)
+        i = int(at * SR)
+        out[i:i + len(c)] += c[: len(out) - i]
+    return out
+
+
+def synth_frost_fan():
+    """서리 부채: 짧게 휙 + 얼음 방울 둘"""
+    sec = 0.32
+    return (synth_whoosh(sec, 900, 5000) * 0.9 + _chimes(sec, 2, 0.05, 0.2, 2500, 4500, 0.06, 0.3)).astype(np.float32)
+
+
+def synth_frost_hit():
+    """얼음 칼날이 맞음: 짧은 서걱 + 쨍"""
+    sec = 0.2
+    t = t_axis(sec)
+    crack = _band(rng.standard_normal(len(t)).astype(np.float32), 2500, 9000) * np.exp(-t / 0.015) * 1.5
+    return (crack + _chimes(sec, 1, 0.0, 0.02, 3000, 4000, 0.05, 0.35)).astype(np.float32)
+
+
+def synth_frost_freeze():
+    """얼어붙음: 바스락 얼음 끼는 소리가 빠르게 퍼짐 + 낮은 쿵"""
+    sec = 0.55
+    t = t_axis(sec)
+    crackle = np.zeros(len(t), np.float32)
+    for _ in range(40):
+        at = rng.uniform(0, 0.4) ** 1.5
+        i = int(at * SR)
+        n = int(0.004 * SR)
+        crackle[i:i + n] += rng.standard_normal(min(n, len(t) - i)).astype(np.float32) * rng.uniform(0.3, 1)
+    crackle = _band(crackle, 1500, 8000) * 1.8
+    thud = np.sin(2 * np.pi * 90 * t) * np.exp(-t / 0.05) * 0.5
+    return (crackle + thud + _chimes(sec, 3, 0.1, 0.4, 2200, 3800, 0.08, 0.25)).astype(np.float32)
+
+
+def synth_frost_shatter():
+    """얼음 결정이 깨짐: 쨍그랑 잡음 + 흩어지는 조각 소리"""
+    sec = 0.8
+    t = t_axis(sec)
+    burst = _band(rng.standard_normal(len(t)).astype(np.float32), 2000, 10000) * np.exp(-t / 0.05) * 1.8
+    return (burst + _chimes(sec, 14, 0.02, 0.6, 2000, 6000, 0.06, 0.35) + _clinks(sec, 10, 0.05, 0.5, 0.3)).astype(np.float32)
+
+
+def synth_frost_crescent():
+    """초승달 참격: 크게 휙 + 높게 울리는 얼음 화음"""
+    sec = 0.7
+    return (synth_whoosh(sec, 500, 4500) * 1.1 + _chord(sec, [1046.5, 1318.5, 1568.0], attack=0.03, vib=7) * 0.35
+            + _chimes(sec, 4, 0.1, 0.5, 2500, 5000, 0.08, 0.25)).astype(np.float32)
+
+
+def synth_frost_blizzard():
+    """눈보라: 휘몰아치는 바람(차단 주파수가 출렁이는 잡음) + 흩날리는 얼음 방울"""
+    sec = 1.3
+    t = t_axis(sec)
+    u = t / sec
+    wind = _band(rng.standard_normal(len(t)).astype(np.float32), 300, 1500 + 1200 * np.sin(2 * np.pi * 2.2 * t) ** 2)
+    env = np.sin(np.pi * np.clip(u, 0, 1)) ** 0.7
+    return (wind * 2.2 * env + _chimes(sec, 10, 0.1, 1.1, 2500, 5500, 0.07, 0.2)).astype(np.float32)
+
+
+def synth_frost_eternal():
+    """영원한 안식: 낮게 깔리는 차가운 화음 + 얼음이 자라는 바스락 + 맑은 종소리"""
+    sec = 1.5
+    choir = _chord(sec, [196.0, 233.1, 293.7, 392.0], attack=0.2, vib=3.5)
+    grow = np.zeros(int(sec * SR), np.float32)
+    fz = synth_frost_freeze()
+    grow[: len(fz)] += fz * 0.8
+    return (choir * 0.9 + grow + _chimes(sec, 8, 0.2, 1.2, 1500, 3500, 0.2, 0.3)).astype(np.float32)
+
+
+def _snip(sec, at=0.0, gain=1.0):
+    """가위 날이 맞물리는 '싹둑': 금속 마찰 잡음이 짧게 미끄러지다 딸깍"""
+    out = np.zeros(int(sec * SR), np.float32)
+    t = t_axis(0.09)
+    slide = _band(rng.standard_normal(len(t)).astype(np.float32), 3000 + 20000 * t, 9000 + 20000 * t) * np.sin(np.pi * t / 0.09) * 1.6
+    t2 = t_axis(0.03)
+    click = (np.sin(2 * np.pi * 3200 * t2) + 0.5 * np.sin(2 * np.pi * 5100 * t2)) * np.exp(-t2 / 0.006)
+    i = int(at * SR)
+    out[i:i + len(slide)] += slide[: len(out) - i] * gain
+    j = i + len(slide)
+    out[j:j + len(click)] += click[: max(0, len(out) - j)] * gain * 0.8
+    return out
+
+
+def synth_doll_snip():
+    """가위 참격: 싹둑"""
+    return _snip(0.16).astype(np.float32)
+
+
+def synth_doll_xcut():
+    """가위 참격 X자: 크게 휙 + 싹둑 두 번"""
+    sec = 0.6
+    return (synth_whoosh(sec, 600, 5000) * 0.8 + _snip(sec, 0.12, 1.2) + _snip(sec, 0.28, 1.2)).astype(np.float32)
+
+
+def synth_doll_summon():
+    """인형 가족: 실이 퉁 + 인형이 내려앉는 폭신한 소리 + 삑삑이 장난감"""
+    sec = 0.45
+    t = t_axis(sec)
+    twang = np.sin(2 * np.pi * 330 * t) * np.exp(-t / 0.15) * (1 + 0.3 * np.sin(2 * np.pi * 6 * t))
+    thump = _band(rng.standard_normal(len(t)).astype(np.float32), 100, 700) * np.exp(-((t - 0.18) / 0.03) ** 2) * 1.5
+    sq_t = t_axis(0.12)
+    squeak = np.sin(2 * np.pi * np.cumsum(1300 + 900 * np.sin(np.pi * sq_t / 0.12)) / SR) * np.sin(np.pi * sq_t / 0.12) * 0.4
+    out = twang * 0.6 + thump
+    i = int(0.2 * SR)
+    out[i:i + len(squeak)] += squeak[: len(out) - i]
+    return out.astype(np.float32)
+
+
+def synth_doll_burst():
+    """토끼 인형이 터짐: 퐁 + 솜이 흩어지는 사각사각"""
+    sec = 0.6
+    t = t_axis(sec)
+    pop = np.sin(2 * np.pi * np.cumsum(220 * np.exp(-t / 0.08) + 80) / SR) * np.exp(-t / 0.07)
+    fluff = _band(rng.standard_normal(len(t)).astype(np.float32), 800, 4000) * np.exp(-t / 0.18) * 1.2
+    return (pop + fluff).astype(np.float32)
+
+
+def synth_doll_strings():
+    """인형 실: 여러 줄이 차례로 퉁기는 하프 같은 소리 + 낮은 웅웅"""
+    sec = 1.3
+    out = np.zeros(int(sec * SR), np.float32)
+    for k, f in enumerate([392.0, 466.2, 587.3, 698.5, 784.0]):
+        t = t_axis(0.8)
+        pluck = (np.sin(2 * np.pi * f * t) + 0.4 * np.sin(2 * np.pi * f * 2 * t)) * np.exp(-t / 0.25)
+        i = int(k * 0.09 * SR)
+        out[i:i + len(pluck)] += pluck[: len(out) - i] * 0.5
+    t = t_axis(sec)
+    drone = np.sin(2 * np.pi * 98 * t + 0.5 * np.sin(2 * np.pi * 3 * t)) * np.sin(np.pi * t / sec) * 0.4
+    return (out + drone).astype(np.float32)
+
+
 # ---------------------------------------------------------------------------
 # 효과음 조합: 이름 → [(파일, 옵션)] 또는 합성 함수
 SFX = {
@@ -217,6 +501,31 @@ SFX = {
     'chimera_summon': [(CRE + 'grunt_04.ogg', {}), (DIG + 'phaseJump2.ogg', dict(gain=0.6))],
     'chimera_quake': [(SCI + 'lowFrequency_explosion_001.ogg', dict(t1=0.5, fout=0.15))],
     'chimera_slam': [(SCI + 'explosionCrunch_003.ogg', dict(t1=1.0, fout=0.3)), (IMP + 'impactSoft_heavy_000.ogg', {})],
+    # 심연의 길잡이 (새 캐릭터, D-044): 팩 없이 합성
+    'diver_jet': lambda: synth_diver_jet(),
+    'diver_anchor_throw': lambda: synth_diver_anchor_throw(),
+    'diver_anchor_hit': lambda: synth_diver_anchor_hit(),
+    'diver_surge': lambda: synth_diver_surge(),
+    'diver_hands': lambda: synth_diver_hands(),
+    # 봉합 성녀 (D-046): 팩 없이 합성
+    'saint_needle': lambda: synth_saint_needle(),
+    'saint_stitch': lambda: synth_saint_stitch(),
+    'saint_seal': lambda: synth_saint_seal(),
+    'saint_revive': lambda: synth_saint_revive(),
+    # 서리의 무희 (D-046): 팩 없이 합성
+    'frost_fan': lambda: synth_frost_fan(),
+    'frost_hit': lambda: synth_frost_hit(),
+    'frost_freeze': lambda: synth_frost_freeze(),
+    'frost_shatter': lambda: synth_frost_shatter(),
+    'frost_crescent': lambda: synth_frost_crescent(),
+    'frost_blizzard': lambda: synth_frost_blizzard(),
+    'frost_eternal': lambda: synth_frost_eternal(),
+    # 뒤틀린 인형사 (D-049): 팩 없이 합성
+    'doll_snip': lambda: synth_doll_snip(),
+    'doll_xcut': lambda: synth_doll_xcut(),
+    'doll_summon': lambda: synth_doll_summon(),
+    'doll_burst': lambda: synth_doll_burst(),
+    'doll_strings': lambda: synth_doll_strings(),
     'chimera_phase2': [(CRE + 'roar_02.ogg', {}), (DIG + 'powerUp1.ogg', dict(gain=0.6))],
     'generic_slash': [(RPG + 'knifeSlice2.ogg', {})],
     # 실드
@@ -265,8 +574,10 @@ BGM = {
 BGM_RMS_DB = -17.0   # 배경음끼리 체감 음량을 맞춤
 
 
-def build_sfx(src):
+def build_sfx(src, prefix=''):
     for name, spec in SFX.items():
+        if not name.startswith(prefix):
+            continue
         if callable(spec):
             a = spec(src) if spec.__code__.co_argcount else spec()
         else:
@@ -294,7 +605,8 @@ if __name__ == '__main__':
         sys.exit(1)
     src_dir = sys.argv[1]
     only = sys.argv[2] if len(sys.argv) > 2 else 'all'
+    prefix = sys.argv[3] if len(sys.argv) > 3 else ''
     if only in ('all', 'sfx'):
-        build_sfx(src_dir)
+        build_sfx(src_dir, prefix)
     if only in ('all', 'bgm'):
         build_bgm(src_dir)

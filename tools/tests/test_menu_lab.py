@@ -64,14 +64,17 @@ def run(ctx):
     ctx.check(st['hp'] > hp1, '강화: 능력치 상승 (HP)', f"{hp1} → {st['hp']}")
     g.shot('lab_upgrade', '#screen-lab-v2')
 
-    # 캐릭터 선택창 (D-051): 카드 4장, 지금 캐릭터 표시
+    # 캐릭터 선택창 (D-051): 카드 8장(기존 4 + 새 캐릭터 4, 한 화면 4장 + 가로로 넘김), 지금 캐릭터 표시
     g.page.click('#btn-lab-back-v2')
     g.wait(400)
     g.page.click('#btn-to-select-v2')
     g.wait(1200)
-    st = g.js("""return { cards: document.querySelectorAll('.v2-charcard').length,
-        sel: document.querySelector('.v2-charcard.is-selected')?.dataset.char };""")
-    ctx.check(st['cards'] == 4 and st['sel'] == 'mech', '선택창: 카드 4장, 지금 캐릭터 = 거대로봇', str(st))
+    st = g.js("""const grid = document.getElementById('select-grid-v2');
+        const vis = [...document.querySelectorAll('.v2-charcard')].filter(c => c.offsetLeft + c.offsetWidth <= grid.scrollLeft + grid.clientWidth + 1);
+        return { cards: document.querySelectorAll('.v2-charcard').length, visible: vis.length, scroll: grid.scrollWidth > grid.clientWidth,
+            sel: document.querySelector('.v2-charcard.is-selected')?.dataset.char };""")
+    ctx.check(st['cards'] == 8 and st['visible'] == 4 and st['scroll'] and st['sel'] == 'mech',
+              '선택창: 카드 8장 (한 화면 4장 + 가로로 넘김), 지금 캐릭터 = 거대로봇', str(st))
 
     # 합성괴인 (파츠 무료·보유) → 바로 그 캐릭터 파츠로
     g.page.click('.v2-charcard[data-char="chimera"]')

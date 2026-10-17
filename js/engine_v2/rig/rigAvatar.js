@@ -1,8 +1,9 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // RIG AVATAR (v2)
    캔버스 하나에 리그 캐릭터를 그리는 게임용 래퍼. monster_v2.js가 메뉴/전투 캔버스마다 하나씩 생성한다.
-   - setCharacter('mech' | 'kaiju' | 'hero' | 'chimera', scale?), setMode('idle' | 'walk' | 'attack' | 'victory'),
-     setArm('cannon' | 'fist'), setVariants({ head: 'a', ... }) (A·B 세트 부위 그림, D-050)
+   - setCharacter('mech' | 'kaiju' | 'hero' | 'chimera' | 'diver' | 'saint' | 'frost' | 'doll', scale?), setMode('idle' | 'walk' | 'attack' | 'victory'),
+     setArm('cannon' | 'fist'), setVariants({ head: 'a', ... }) (A·B 세트 부위 그림, D-050),
+     setUpgrades({ head, body, arm, leg }) (새 캐릭터 강화 부위 그림, D-044)
    - consumeHit(): 공격 클립의 fire/impact 이벤트가 쌓은 타격량을 전투 엔진이 가져감
    - muzzlePoint(): 공격 소켓(총구/입)의 캔버스 좌표 (전투 엔진의 레이저 시작점)
    - headTop(): 머리 위(체력바 자리)의 캔버스 좌표
@@ -111,6 +112,20 @@ export function buildSkeleton(character, layout, images, arm) {
 }
 
 /**
+ * 강화 파츠 그림 바꿔 끼우기 (D-044, 새 캐릭터): slots = { head, body, arm, leg } 중 true인 슬롯의 부위 뼈를
+ * <부위>_up 그림으로, 아니면 기본 그림으로. character.upgrade = { parts: {슬롯: [뼈...]}, sockets: {슬롯: {소켓: 강화 소켓}} }
+ */
+export function applyUpgrades(skeleton, character, slots = {}) {
+    const up = character.upgrade;
+    if (!up) return;
+    skeleton.socketAlias = {};
+    for (const [slot, bones] of Object.entries(up.parts)) {
+        for (const bone of bones) skeleton.setPart(bone, slots[slot] ? `${bone}_up` : bone);
+        if (slots[slot] && up.sockets?.[slot]) Object.assign(skeleton.socketAlias, up.sockets[slot]);
+    }
+}
+
+/**
  * 애니메이션 이벤트 → 이펙트 (게임 RigAvatar와 rig_test.html 공용)
  * @param {Object} env { effects, skeleton, character, arm, toScreen(p), groundY, onGrow(mult), onShield() }
  *   stomp/step {foot, bone} · charge {color?, socket?, bone?} · chargeEnd · fire {color?, size?}
@@ -173,9 +188,15 @@ export function rigConfigFor(partsObj, fallback = null) {
     if (!character) return null;
     const filters = partFiltersFor(partsObj, character);
     const variants = variantsFor(partsObj, character);
-    if (character !== 'mech') return { character, filters, variants };
+    // 새 캐릭터: 같은 캐릭터 강화 파츠(rigUpgrade)를 낀 슬롯은 강화 그림으로 (D-044)
+    const upgrades = {};
+    for (const slot of ['head', 'body', 'arm', 'leg']) {
+        const part = partsObj && partsObj[slot];
+        if (part && part.rigUpgrade && characterOfPart(part) === character) upgrades[slot] = true;
+    }
+    if (character !== 'mech') return { character, filters, variants, upgrades };
     const type = partsObj.arm && partsObj.arm.attackType;
-    return { character, arm: CANNON_ATTACKS.has(type) ? 'cannon' : 'fist', filters, variants };
+    return { character, arm: CANNON_ATTACKS.has(type) ? 'cannon' : 'fist', filters, variants, upgrades };
 }
 
 // 거대로봇: 원거리 공격 팔은 캐논 팔 그림 (레일건 = A 세트 포격 사령부)
@@ -216,7 +237,15 @@ const SLOT_PARTS = {
     mech: { head: ['head'], body: ['body', 'canister'], arm: ['armR_cannon', 'armR_fist', 'armL'], leg: ['legR', 'legL'] },
     kaiju: { head: ['head', 'jaw'], body: ['body', 'tail1', 'tail2', 'tail3'], arm: ['armF'], leg: ['legF', 'legN'] },
     hero: { head: ['head'], body: ['torso', 'pauldron', 'cape1', 'cape2'], arm: ['armF', 'sword'], leg: ['thighF', 'shinF', 'thighB', 'shinB'] },
-    chimera: { head: ['head'], body: ['torso', 'wing', 'tail1', 'tail2'], arm: ['armF', 'armB'], leg: ['legF', 'legB'] }
+    chimera: { head: ['head'], body: ['torso', 'wing', 'tail1', 'tail2'], arm: ['armF', 'armB'], leg: ['legF', 'legB'] },
+    diver: { head: ['head', 'head_up'], body: ['torso', 'torso_up'], arm: ['armF', 'armB', 'armF_up', 'armB_up'],
+        leg: ['legF', 'legB', 'legF_up', 'legB_up'] },
+    saint: { head: ['head', 'head_up'], body: ['torso', 'torso_up'], arm: ['armF', 'armB', 'armF_up', 'armB_up'],
+        leg: ['legF', 'legB', 'legF_up', 'legB_up'] },
+    frost: { head: ['head', 'hair', 'head_up', 'hair_up'], body: ['torso', 'torso_up'], arm: ['armF', 'armB', 'armF_up', 'armB_up'],
+        leg: ['legF', 'legB', 'legF_up', 'legB_up'] },
+    doll: { head: ['head', 'head_up'], body: ['torso', 'torso_up'], arm: ['armF', 'armB', 'armF_up', 'armB_up'],
+        leg: ['legF', 'legB', 'legF_up', 'legB_up'] }
 };
 // 같은 팩션 안의 변형 파츠 색 (기본 파츠는 원래 색)
 const PART_TINT = {
@@ -332,6 +361,7 @@ export class RigAvatar {
         if (this.opts.fit != null) this._fitToCanvas(layout);
         else this._applyScale();
         this.skeleton = buildSkeleton(c, layout, images, this.arm);
+        applyUpgrades(this.skeleton, c, this.upgrades);   // 새 캐릭터 강화 부위 그림 (D-044)
         this._applyVariants();   // 세트 부위 그림·색 + 파츠 색 필터
         this.springs = c.springs.map(s => new Spring(s));
         this.effects.clear();
@@ -422,6 +452,12 @@ export class RigAvatar {
     socketPoint(socket, bone) {
         if (!this._built) return null;
         return this._toCanvas(this.skeleton.socketWorld(socket, bone));
+    }
+
+    /** 새 캐릭터 강화 부위 그림 { head, body, arm, leg: true } (D-044). 뼈대를 다시 만들 때도 유지 */
+    setUpgrades(slots) {
+        this.upgrades = slots || {};
+        if (this._built) applyUpgrades(this.skeleton, this.character, this.upgrades);
     }
 
     /** 부위 그림별 색 필터 { 부위키: CSS filter } (파츠 외형 차이) */

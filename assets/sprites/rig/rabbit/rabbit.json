@@ -1,0 +1,17 @@
+{
+  "frameWidth": 60,
+  "frameHeight": 72,
+  "anchorX": 29.7,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/rabbit/rabbit_walk.png",
+      "frames": 12,
+      "duration": 0.55
+    },
+    "attack": {
+      "src": "assets/sprites/rig/rabbit/rabbit_attack.png",
+      "frames": 10,
+      "duration": 0.8
+    }
+  }
+}

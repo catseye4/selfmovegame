@@ -220,6 +220,7 @@ export class Skeleton {
             b.rest = parent ? [b.pivot[0] - parent.pivot[0] + ox, b.pivot[1] - parent.pivot[1] + oy] : [0, 0];
         }
         this.drawOrder = this.bones.filter(b => b.part).sort((a, b) => a.z - b.z);
+        this.socketAlias = null;
         // 자동 접지: [[소켓, 뼈], ...] 중 가장 낮은 발이 지면(모델 y=0)에 닿도록 전체를 올리거나 내림
         // (다리가 몸통에 매달린 캐릭터에서 걸음마다 몸이 오르내리는 높이를 다리 각도로부터 자동 계산)
         this.autoGround = null;
@@ -264,7 +265,8 @@ export class Skeleton {
     }
 
     socketWorld(socketName, boneName) {
-        const s = this.layout.sockets[socketName];
+        // socketAlias: 강화 그림으로 바꿔 끼운 부위의 소켓 (예: 더 긴 강화 물대포의 총구, rigAvatar.applyUpgrades)
+        const s = this.layout.sockets[this.socketAlias?.[socketName] ?? socketName];
         const b = this.byName[boneName];
         if (!b) return [0, 0];                       // 없는 뼈: 루트 위치 (이펙트만 어긋나고 멈추지 않게)
         if (!s) return [b.world[4], b.world[5]];     // 없는 소켓: 뼈 피벗 위치

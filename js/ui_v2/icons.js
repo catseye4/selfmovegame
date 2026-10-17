@@ -30,6 +30,24 @@ const P = {
     shield: '<path d="M12 2l8 3v6.5c0 5-3.5 8.8-8 10.5-4.5-1.7-8-5.5-8-10.5V5z"/><path d="M12 6l3.5 2v4l-3.5 2-3.5-2V8z" fill="rgba(0,0,0,.35)"/>',
     minions: '<circle cx="8" cy="7" r="3"/><circle cx="16.5" cy="8" r="2.5"/><path d="M2.5 20a5.5 5.5 0 0 1 11 0zM12.5 20a4.3 4.3 0 0 1 8.5 0z"/><path d="M6 4.5l-1-2.5M10 4.5l1-2.5" stroke="currentColor" stroke-width="1.6"/>',
     egg: '<path d="M12 2c4 0 6.8 6.5 6.8 11A6.8 6.8 0 0 1 5.2 13C5.2 8.5 8 2 12 2z"/><circle cx="10" cy="10" r="1.4" fill="rgba(0,0,0,.35)"/><circle cx="14" cy="14.5" r="1.8" fill="rgba(0,0,0,.35)"/><circle cx="9.5" cy="16" r="1.1" fill="rgba(0,0,0,.35)"/>',
+    // 심연의 길잡이: 앵커 · 물살 · 유령 손
+    anchor: '<circle cx="12" cy="4.5" r="2.3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v13M7.5 10.5h9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M3.5 13.5c.5 4.5 4 7 8.5 7s8-2.5 8.5-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M2 15.5l1.5-3 3 1.6M22 15.5l-1.5-3-3 1.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+    surge: '<path d="M2 9c2.5-3 5-3 7.5 0s5 3 7.5 0 3.5-3 5 0v4c-1.5-3-3.5-3-5 0s-5 3-7.5 0-5-3-7.5 0z"/><path d="M2 16c2.5-3 5-3 7.5 0s5 3 7.5 0 3.5-3 5 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".7"/><circle cx="19" cy="4.5" r="1.5"/><circle cx="15" cy="3.5" r="1"/>',
+    hand: '<path d="M7 22v-7.5L4.2 10a1.6 1.6 0 0 1 2.7-1.7L8.5 11V4.5a1.5 1.5 0 0 1 3 0V10V3a1.5 1.5 0 0 1 3 0v7V4.5a1.5 1.5 0 0 1 3 0V11V7a1.5 1.5 0 0 1 3 0v8c0 3.5-2 7-5 7z"/><path d="M3 22h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".6"/>',
+    // 봉합 성녀: 주사기 · 조준 원(생명 봉인) · 붉은 십자(억지 부활) · 봉합 표식
+    syringe: '<path d="M14.5 2.5l7 7-1.7 1.7-1.3-1.3-7.6 7.6-3 .6.6-3 7.6-7.6-1.3-1.3z"/><path d="M5.6 15.4l3 3L3 24l-1-1-1-1z"/><path d="M10.5 9.5l1.4 1.4M12.6 7.4L14 8.8" stroke="rgba(0,0,0,.45)" stroke-width="1.3"/>',
+    sealring: '<circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12" cy="12" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 1.5v6M12 16.5v6M1.5 12h6M16.5 12h6" stroke="currentColor" stroke-width="2.2"/>',
+    redcross: '<path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z"/><path d="M12 4.5v15M4.5 12h15" stroke="rgba(255,255,255,.55)" stroke-width="1.3" stroke-dasharray="2 2"/>',
+    stitch: '<path d="M2 12h20" stroke="currentColor" stroke-width="2.4"/><path d="M5.5 6.5l2.5 11M11 6.5l2.5 11M16.5 6.5l2.5 11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+    // 서리의 무희: 부채 · 초승달 · 얼음 속 사람 · 눈꽃(냉기·빙결 상태)
+    fan: '<path d="M12 21L2.5 8.5A13 13 0 0 1 21.5 8.5z"/><path d="M12 21l-6.5-12M12 21L9.5 6M12 21l2.5-15M12 21l6.5-12" stroke="rgba(0,0,0,.35)" stroke-width="1.2"/><circle cx="12" cy="20.5" r="1.6"/>',
+    crescent: '<path d="M14 2.5a9.5 9.5 0 1 0 7.5 15.2A11 11 0 0 1 14 2.5z"/><path d="M20 3l1 2.2 2.2.8-2.2.8L20 9l-.8-2.2-2.2-.8 2.2-.8z"/>',
+    icecage: '<path d="M4 22L7 6l3 7 2-11 2 11 3-7 3 16z"/><circle cx="12" cy="15" r="2.4" fill="rgba(0,0,0,.45)"/><path d="M9.5 21c0-2.5 1.1-3.6 2.5-3.6s2.5 1.1 2.5 3.6" fill="rgba(0,0,0,.45)"/>',
+    snow: '<path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M9.5 3.5L12 6l2.5-2.5M9.5 20.5L12 18l2.5 2.5" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+    // 뒤틀린 인형사: 가위 · 토끼 인형 · 꼭두각시 (상태 아이콘도 꼭두각시)
+    scissors: '<circle cx="6" cy="18" r="3.2" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="18" cy="18" r="3.2" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M8 15.5L20 2.5M16 15.5L4 2.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+    rabbit: '<path d="M8.5 9C7 5.5 7 2 8.5 1.5s2.5 3.5 2.2 7.2M15.5 9c1.5-3.5 1.5-7 0-7.5s-2.5 3.5-2.2 7.2" stroke="currentColor" stroke-width="2" fill="currentColor"/><circle cx="12" cy="13" r="5.5"/><path d="M8 18.5h8l1 4H7z"/><circle cx="10" cy="12.5" r="1" fill="rgba(0,0,0,.6)"/><circle cx="14" cy="12.5" r="1" fill="rgba(0,0,0,.6)"/>',
+    puppet: '<path d="M3 2h18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M7 2v7M17 2v7M12 2v4" stroke="currentColor" stroke-width="1.2"/><circle cx="12" cy="9" r="3"/><path d="M8.5 13h7l1 6h-2.5l-.5 3h-3l-.5-3H7.5z"/><path d="M8.5 13L6 10M15.5 13L18 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
     // ---- 상태 (적 체력바 옆) ----
     slow: '<path d="M4 4l8 7 8-7v5l-8 7-8-7z"/><path d="M4 12l8 7 8-7v4l-8 6-8-6z" opacity=".6"/>',
     net: '<path d="M3 5l18 14M21 5L3 19M3 12h18M8 4l-2 16M16 4l2 16" fill="none" stroke="currentColor" stroke-width="2"/>',
@@ -59,7 +77,7 @@ const P = {
     chain: '<rect x="1.5" y="8.5" width="10" height="7" rx="3.5" fill="none" stroke="currentColor" stroke-width="2.4"/><rect x="12.5" y="8.5" width="10" height="7" rx="3.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M8.5 12h7" stroke="currentColor" stroke-width="2.4"/>',
     blackhole: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5a9.5 9.5 0 0 1 9.5 9.5h-2.6A6.9 6.9 0 0 0 12 5.1zM12 21.5A9.5 9.5 0 0 1 2.5 12h2.6a6.9 6.9 0 0 0 6.9 6.9z"/>',
     maul: '<path d="M2 9h10.5L9.5 5h4.5l6.5 7-6.5 7H9.5l3-4H2z"/>',
-    syringe: '<path d="M15 2.5l6.5 6.5-2 2-1-1-8 8-3.5 1 1-3.5 8-8-1-1z"/><path d="M2.5 21.5l3-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+    injector: '<path d="M15 2.5l6.5 6.5-2 2-1-1-8 8-3.5 1 1-3.5 8-8-1-1z"/><path d="M2.5 21.5l3-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
     hammer: '<rect x="2.5" y="3" width="13" height="7.5" rx="1.2"/><path d="M7.5 10.5h3.2v11H7.5z"/><path d="M15.5 5h3v3.5h-3z"/>',
     horn: '<path d="M2.5 9.5h4.5l9.5-6.5v18L7 14.5H2.5z"/><path d="M19 8a5.5 5.5 0 0 1 0 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
     fire: '<path d="M12 1.5c1 4.2 6.5 6.3 6.5 12.5a6.5 6.5 0 0 1-13 0c0-3.3 2-5.4 3.2-6.4 0 2.2 1 3.4 2.1 3.4 0-3.2-1-6.4 1.2-9.5z"/>'

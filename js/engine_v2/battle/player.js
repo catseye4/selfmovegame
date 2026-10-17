@@ -1,6 +1,6 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // 전투 — 주인공 (v2)
-   내구도·실드·과부하(D-028), 상태 이상(감속·기절·속박), 다리 패시브(궤도 돌진·반중력 부양),
+   내구도·실드·과부하(D-028), 상태 이상(감속·기절·속박), 다리 패시브(궤도 돌진·반중력 부양·잠수화),
    팩션 패시브(괴수 재생, 히어로 흑마법 장판, 괴수 포자, 합성괴인 지진·2페이즈).
    battle_v2.js의 BattleEngine에 메서드로 붙는다 (this = 전투 엔진).
    ========================================================================== */
@@ -9,7 +9,7 @@ import { monsterControllerV2 } from '../monster_v2.js';
 import { sound } from '../audio/sound_v2.js';
 import { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX } from '../vfx/vfxDefs.js';
 import { aimAt as aimOf } from '../bases_v2.js';
-import { PHASE2, HERO, PASSIVE, LEG, PLAYER_STATUS, OVERLOAD, FOOT_B } from './tuning.js';
+import { PHASE2, HERO, PASSIVE, LEG, PLAYER_STATUS, OVERLOAD, FOOT_B, FROST } from './tuning.js';
 
 export const PlayerMethods = {
     // 몬스터가 받는 피해: 실드가 있으면 먼저 흡수
@@ -17,6 +17,7 @@ export const PlayerMethods = {
     damagePlayer(amount, dt, src = null) {
         if (this.overloadT > 0) return;   // 과부하(긴급 수리) 중에는 피해 없음
         if (this.equippedLegId === 'leg_hero_hover') amount *= 1 - LEG.hoverReduce;   // 다리 패시브 '반중력 부양'
+        if (this.blizzard) amount *= 1 - FROST.blizzardGuard;                         // 서리의 무희 '눈보라 춤' 동안
         amount = this.setIncoming(amount, dt, src);   // A·B 세트: 회피·감소·되돌림 (battle/sets.js)
         if (this.shieldHp > 0) {
             const absorbed = Math.min(this.shieldHp, amount);
@@ -99,6 +100,7 @@ export const PlayerMethods = {
             if (!quiet) this.createDamagePopup(this.monsterX + 40, 190, '감속 무효', false);
             return;
         }
+        sec *= 1 - this.bootsCut('slow');                // 다리 패시브 '잠수화' (diver.js)
         if (this.pSlowT <= 0) this.createDamagePopup(this.monsterX + 40, 190, '❄ 감속!', false);
         this.pSlowT = Math.max(this.pSlowT, sec);
         this.updatePlayerStatus();
@@ -112,6 +114,7 @@ export const PlayerMethods = {
 
     /** 속박 (그물): 진격 불가, 공격·스킬은 가능 (구역 2 그물총 사수) */
     applyPlayerRoot(sec) {
+        sec *= 1 - this.bootsCut('slow');                // 잠수화
         if (this.pRootT <= 0) this.createDamagePopup(this.monsterX + 40, 200, '🕸 그물에 묶임!', false);
         this.pRootT = Math.max(this.pRootT, sec);
         this.updatePlayerStatus();
@@ -124,6 +127,11 @@ export const PlayerMethods = {
             return;
         }
         px *= this.rangedMul();                       // 다리 패시브 '자기장 방벽': 자석에 덜 끌려감
+        const cut = this.bootsCut('push');               // 잠수화: 덜 밀려남
+        if (cut) {
+            px *= 1 - cut;
+            label = '⚓ 잠수화 — 버팀';
+        }
         this.monsterX = Math.max(80, this.monsterX - px);
         monsterControllerV2.setMonsterPosition(this.monsterX);
         if (label) this.createDamagePopup(this.monsterX + 30, 210, label, false);
@@ -137,7 +145,7 @@ export const PlayerMethods = {
     /** 진격 속도 배율 (기절·속박 0, 감속 0.5) × 세트 효과 (오버드라이브·질주 본능) */
     moveMul() {
         if (this.pStunT > 0 || this.pRootT > 0) return 0;
-        return (this.pSlowT > 0 ? PLAYER_STATUS.slowMove : 1) * this.moveBuffMul();
+        return (this.pSlowT > 0 ? PLAYER_STATUS.slowMove : 1) * this.moveBuffMul() * this.dollStride();   // 인형사 다리 '실 걸음' (doll.js)
     },
 
     updatePlayerStatus() {

@@ -29,6 +29,18 @@ BUILDS = {
     'mech_missile': ('head_mech', 'body_mech', 'arm_mech_missile', 'leg_mech_wheel'),
     'kaiju': ('head_mutant', 'body_mutant', 'arm_mutant', 'leg_mutant'),
     'hero': ('head_hero', 'body_hero', 'arm_hero_wave', 'leg_hero_hover'),
+    # 심연의 길잡이 (새 캐릭터, D-044): 기본 4부위 / 강화 4부위
+    'diver': ('head_diver', 'body_diver', 'arm_diver', 'leg_diver'),
+    'diver_up': ('head_diver_up', 'body_diver_up', 'arm_diver_up', 'leg_diver_up'),
+    # 봉합 성녀 (D-046)
+    'saint': ('head_saint', 'body_saint', 'arm_saint', 'leg_saint'),
+    'saint_up': ('head_saint_up', 'body_saint_up', 'arm_saint_up', 'leg_saint_up'),
+    # 서리의 무희 (D-046)
+    'frost': ('head_frost', 'body_frost', 'arm_frost', 'leg_frost'),
+    'frost_up': ('head_frost_up', 'body_frost_up', 'arm_frost_up', 'leg_frost_up'),
+    # 뒤틀린 인형사 (D-049)
+    'doll': ('head_doll', 'body_doll', 'arm_doll', 'leg_doll'),
+    'doll_up': ('head_doll_up', 'body_doll_up', 'arm_doll_up', 'leg_doll_up'),
 }
 # 기존 4종 A·B 세트 (D-050): mech_a 포격 사령부, mech_b 돌격 강습대, kaiju_a 가시 갑각, kaiju_b 독안개,
 # hero_a 타락 기사, hero_b 그림자 마도사, chimera_a 광폭 실험체, chimera_b 조직 사령관

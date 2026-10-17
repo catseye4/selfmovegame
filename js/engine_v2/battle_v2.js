@@ -14,6 +14,10 @@
      battle/enemyField.js 전장의 적과 거점: 소환·피해·처치·상태 외형·거점·EMP 포격
      battle/allies.js     아군: 세뇌 보병·새끼 괴수·졸개
      battle/sets.js       기존 4종 A·B 세트 (D-050): 새 기본 공격·버프·지속 피해 구역·블랙홀·포탑·분신·다리 패시브
+     battle/diver.js      심연의 길잡이(새 캐릭터): 고압 방수포·앵커 견인·고압 분사·심연의 손·잠수화
+     battle/saint.js      봉합 성녀(새 캐릭터): 봉합 주사·3연발·생명 봉인·억지 부활·자가 봉합, 시체
+     battle/frost.js      서리의 무희(새 캐릭터): 냉기·빙결, 서리 부채·초승달 참격·눈보라 춤·영원한 안식·빙판 걸음
+     battle/doll.js       뒤틀린 인형사(새 캐릭터): 가위 참격·X자·인형 가족(토끼 인형)·인형 실(꼭두각시)·실 걸음
    스테이지는 stages_v2.js, 적 종류와 행동은 enemies_v2.js, 화면 연출은 ui_v2/battleDirector_v2.js
    ========================================================================== */
 
@@ -35,6 +39,10 @@ import { AttackMethods, SKILL_AUTO_KEY } from './battle/attacks.js';
 import { EnemyMethods } from './battle/enemyField.js';
 import { AllyMethods } from './battle/allies.js';
 import { SetMethods } from './battle/sets.js';
+import { DiverMethods } from './battle/diver.js';
+import { SaintMethods } from './battle/saint.js';
+import { FrostMethods } from './battle/frost.js';
+import { DollMethods } from './battle/doll.js';
 
 export class BattleEngine {
     constructor() {
@@ -173,6 +181,11 @@ export class BattleEngine {
         this.shieldHp = 0;
         this.shieldHitCd = 0;
         this.pendingEggs = 0;
+        this.corpses = [];        // 봉합 성녀: 봉합된 채 쓰러진 적의 시체 (억지 부활로 아군)
+        this.seal = null;         // 봉합 성녀: 생명 봉인 장판
+        this.blizzard = null;     // 서리의 무희: 눈보라 춤
+        this.stitchHealT = 0;
+        this.stitchHealAcc = 0;
         this.shieldTimer = Infinity;
         this.timers = [];
         this.skillCd = { arm: 0, body: 0 };
@@ -406,6 +419,10 @@ export class BattleEngine {
         this.checkOverload(dt);          // player.js
         this.tickAcid(dt);               // enemyField.js
         this.tickSets(dt);               // sets.js (버프·지속 피해 구역·출혈·블랙홀·포탑·분신)
+        this.tickDiver(dt);              // diver.js (끌려오는 적, 심연의 손 지속 피해)
+        this.tickSaint(dt);              // saint.js (봉합 표식, 생명 봉인 장판, 시체, 자가 봉합)
+        this.tickFrost(dt);              // frost.js (냉기·빙결 시간, 눈보라)
+        this.tickDoll(dt);               // doll.js (토끼 인형이 붙잡은 적, 꼭두각시)
         this.tickHazards(dt);            // enemyField.js (늪 장판)
         this.updateBaseArt();            // enemyField.js
         this.tickPlayerStatus(dt);       // player.js
@@ -473,6 +490,7 @@ export class BattleEngine {
             if (this.moveMul() > 0) {
                 this.scrollHazards(dt);
                 this.scrollZones(dt);    // sets.js: 독안개·화염·웅덩이도 바닥과 함께
+                if (this.corpses.length) this.scrollCorpses(dt);   // saint.js
             }
 
             if (this.monsterX > 150) {
@@ -508,7 +526,11 @@ attachMethods(BattleEngine.prototype, {
     'battle/attacks.js': AttackMethods,
     'battle/enemyField.js': EnemyMethods,
     'battle/allies.js': AllyMethods,
-    'battle/sets.js': SetMethods
+    'battle/sets.js': SetMethods,
+    'battle/diver.js': DiverMethods,
+    'battle/saint.js': SaintMethods,
+    'battle/frost.js': FrostMethods,
+    'battle/doll.js': DollMethods
 });
 
 export const battleEngineV2 = new BattleEngine();

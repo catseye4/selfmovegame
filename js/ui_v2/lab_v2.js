@@ -20,12 +20,19 @@ import { openSettings } from './settingsPanel_v2.js';
 
 const $ = id => document.getElementById(id);
 const ROLE = { arm: { tag: '1', label: '스킬 1' }, body: { tag: '2', label: '스킬 2' }, head: { tag: 'ULT', label: '필살기' }, leg: { tag: 'P', label: '패시브' } };
-// 카드 그림: 그 캐릭터 리그의 해당 부위 그림
+// 카드 그림: 그 캐릭터 리그의 해당 부위 그림 (새 캐릭터는 강화 파츠면 <부위>_up 그림)
+const upThumb = file => p => (p.rigUpgrade ? file.replace('.png', '_up.png') : file);
+const NEW_THUMB = { head: upThumb('head.png'), body: upThumb('torso.png'), arm: upThumb('armF.png'), leg: upThumb('legF.png') };
 const THUMB = {
     mech: { head: 'head.png', body: 'body.png', arm: p => (['laser', 'missile', 'rail'].includes(p.attackType) ? 'armR_cannon.png' : 'armR_fist.png'), leg: 'legR.png' },
     kaiju: { head: 'head.png', body: 'body.png', arm: 'armF.png', leg: 'legF.png' },
     hero: { head: 'head.png', body: 'torso.png', arm: 'sword.png', leg: 'shinF.png' },
-    chimera: { head: 'head.png', body: 'torso.png', arm: 'armF.png', leg: 'legF.png' }
+    chimera: { head: 'head.png', body: 'torso.png', arm: 'armF.png', leg: 'legF.png' },
+    // 새 캐릭터: 강화 파츠는 강화 그림 (D-044)
+    diver: NEW_THUMB,
+    saint: NEW_THUMB,
+    frost: NEW_THUMB,
+    doll: NEW_THUMB
 };
 const LAB_RIG = { width: 350, height: 400, rootX: 175, rootY: 384, scale: 0.36, fit: { x: 22, y: 16 }, shadow: true };
 
@@ -266,6 +273,7 @@ export class LabController {
         if (config.arm) this.rig.setArm(config.arm);
         this.rig.setPartFilters(config.filters);
         this.rig.setVariants(config.variants);
+        this.rig.setUpgrades(config.upgrades);
         if (!this.rigOn) {
             this.rig.setMode('idle');
             this.rig.start();

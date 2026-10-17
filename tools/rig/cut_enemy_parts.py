@@ -71,6 +71,9 @@ ENEMIES = {
     'minion':   {'key': 'green', 'flip': True, 'head_y': 470, 'hip_y': 640, 'crotch': 505, 'slope': 0.12, 'arms': 'two',
                  'close': 7, 'arm_top': 400, 'head_x': (200, 560), 'tail': (712, 655, 1024, 775),
                  'pivot': {'armF': (320, 515), 'armB': (585, 470), 'legB': (590, 655), 'tail': (712, 728)}},
+    # 뒤틀린 인형사의 토끼 인형(아군, 새 캐릭터 D-049): 오른쪽을 보는 그림 → 뒤집어 자름. 앞으로 뻗은 두 팔이 겹쳐 한 조각
+    'rabbit':   {'key': 'green', 'flip': True, 'head_y': 520, 'hip_y': 770, 'crotch': 495, 'slope': 0.0, 'arms': 'one',
+                 'close': 9, 'arm_top': 470, 'pivot': {'arms': (480, 548)}},
 }
 NECK_BAND = 14            # 몸통이 머리 아래쪽으로 더 가지는 목 띠(px)
 HIP_BAND = 32             # 다리가 골반(몸통) 아래로 더 올라가는 겹침(px)

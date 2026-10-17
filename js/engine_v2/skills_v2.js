@@ -98,6 +98,35 @@ export const SKILLS = {
             }
         }
     },
+    anchorPull: {
+        name: '앵커 견인', slot: 'arm', cd: 10, icon: 'anchor', color: '#3fe0c8', target: 'enemy', range: 420,
+        desc: '먼 적(사수·의무병 먼저)을 발 앞으로 끌어와 기절',
+        use(b) {
+            const t = b.anchorTarget(this.range);
+            if (t) monster.playCast(() => b.throwAnchor(t, this.range), 'anchor');
+        }
+    },
+    needleTriple: {
+        name: '봉합 주사 3연발', slot: 'arm', cd: 9, icon: 'syringe', color: '#ff4d6d', target: 'enemy', range: 120,
+        desc: '바늘 셋을 연달아 쏴 피해 + 잠깐 묶고 봉합 표식',
+        use(b) {
+            monster.playCast(() => b.tripleNeedle(this.range), 'triple');
+        }
+    },
+    crescentSlash: {
+        name: '초승달 참격', slot: 'arm', cd: 9, icon: 'crescent', color: '#7fd4ff', target: 'enemy', range: 200,
+        desc: '큰 서리 초승달이 앞의 적을 모두 베고 냉기 2',
+        use(b) {
+            monster.playCast(() => b.crescentSlash(this.range), 'crescent');
+        }
+    },
+    scissorX: {
+        name: '가위 참격 X자', slot: 'arm', cd: 8, icon: 'scissors', color: '#d8e8f4', target: 'enemy', range: 60,
+        desc: '앞의 적을 X자로 크게 벰 (방패 방어 일부 무시)',
+        use(b) {
+            monster.playCast(() => b.scissorX(this.range), 'xcut');
+        }
+    },
     acidCharge: {
         name: '산성 돌진', slot: 'arm', cd: 9, icon: 'acid', color: '#a0ff32', target: 'enemy', range: 90,
         desc: '거체로 들이받아 큰 피해 + 주변 적을 밀쳐내고 산성 웅덩이로 부식 (거점에 강함)',
@@ -159,6 +188,38 @@ export const SKILLS = {
         }
     },
 
+    pressureSurge: {
+        name: '고압 분사', slot: 'body', cd: 14, icon: 'surge', color: '#5ae1eb', target: 'enemy', range: 160,
+        desc: '물살로 앞의 적을 모두 밀어내고 감속',
+        use(b) {
+            monster.playCast(() => b.pressureSurge(this.range));
+        }
+    },
+
+    lifeSeal: {
+        name: '생명 봉인', slot: 'body', cd: 15, icon: 'sealring', color: '#ff5a78', target: 'enemy', range: 200,
+        desc: '앞에 붉은 실 장판 4초: 안의 적을 묶고 계속 피해',
+        use(b) {
+            monster.playCast(() => b.lifeSeal());
+        }
+    },
+
+    blizzardDance: {
+        name: '눈보라 춤', slot: 'body', cd: 15, icon: 'fan', color: '#a8e4ff', target: 'enemy', range: 140,
+        desc: '4초간 둘레 눈보라: 계속 피해 + 냉기, 받는 피해 30% 감소',
+        use(b) {
+            monster.playCast(() => b.blizzardDance(), 'spin');
+        }
+    },
+
+    dollFamily: {
+        name: '인형 가족', slot: 'body', cd: 14, icon: 'rabbit', color: '#5ae6f0', target: 'self',
+        desc: '토끼 인형 3기: 적을 붙잡아 막고 쓰러지면 터짐 (최대 4)',
+        use(b) {
+            monster.playCast(() => b.dollFamily());
+        }
+    },
+
     // ===== 머리 (필살기) =====
     droneSwarm: {
         name: '스웜 드론 총출격', slot: 'head', ult: true, icon: 'drone', color: '#d75aff', target: 'enemy', range: 400,
@@ -187,6 +248,34 @@ export const SKILLS = {
         use(b) {
             const targets = b.enemiesInRange(b.playerRange + this.range).filter(e => !e.isBuilding).slice(0, 2);
             monster.playCast(() => targets.forEach((e, i) => b.schedule(i * 0.12, () => b.convertEnemy(e))));
+        }
+    },
+    abyssHands: {
+        name: '심연의 손', slot: 'head', ult: true, icon: 'hand', color: '#28dcbe', target: 'enemy', range: 320,
+        desc: '유령 손이 적 6명까지 묶고 지속 피해 (거점도)',
+        use(b) {
+            monster.playCast(() => b.abyssHands(this.range));
+        }
+    },
+    forcedRevive: {
+        name: '억지 부활', slot: 'head', ult: true, icon: 'redcross', color: '#ff3355', target: 'enemy', range: 400,
+        desc: '봉합된 시체(없으면 약한 적)를 3명까지 아군으로',
+        use(b) {
+            monster.playCast(() => b.forcedRevive(this.range));
+        }
+    },
+    eternalRest: {
+        name: '영원한 안식', slot: 'head', ult: true, icon: 'icecage', color: '#9fe0ff', target: 'enemy', range: 350,
+        desc: '앞의 적을 얼음 결정에 가뒀다가 한꺼번에 깨뜨림',
+        use(b) {
+            monster.playCast(() => b.eternalRest(this.range));
+        }
+    },
+    puppetStrings: {
+        name: '인형 실', slot: 'head', ult: true, icon: 'puppet', color: '#5ae6f0', target: 'minion', range: 320,
+        desc: '적 4명까지 4초간 꼭두각시로: 멈춘 채 다른 적을 때림',
+        use(b) {
+            monster.playCast(() => b.puppetStrings(this.range), 'strings');
         }
     },
     rampage: {
@@ -492,7 +581,7 @@ Object.assign(SKILLS, {
         }
     },
     adrenaline: {
-        name: '아드레날린 주입', slot: 'body', cd: 15, icon: 'syringe', color: '#ff9628', target: 'self',
+        name: '아드레날린 주입', slot: 'body', cd: 15, icon: 'injector', color: '#ff9628', target: 'self',
         desc: '8초간 주는 피해 +40%',
         use(b) {
             b.fx.play(SET_VFX.adrenaline, b.monsterX + 35, FOOT_B);
@@ -528,7 +617,7 @@ Object.assign(SKILLS, {
         }
     },
     boostShot: {
-        name: '강화 주사', slot: 'body', cd: 14, icon: 'syringe', color: '#78ff8c', target: 'self',
+        name: '강화 주사', slot: 'body', cd: 14, icon: 'injector', color: '#78ff8c', target: 'self',
         desc: '모든 아군 졸개 체력 50% 회복 + 6초 공격 속도 증가',
         use(b) {
             b.allies.forEach(a => {
@@ -572,7 +661,19 @@ export const PART_SKILL = {
     head_hero_a: 'judgmentBlade', body_hero_a: 'bloodOath', arm_hero_a: 'whirlwind',
     head_hero_b: 'shadowClones', body_hero_b: 'curseChains', arm_hero_b: 'blackHole',
     head_chimera_a: 'maulCharge', body_chimera_a: 'adrenaline', arm_chimera_a: 'earthSmash',
-    head_chimera_b: 'mobilize', body_chimera_b: 'boostShot', arm_chimera_b: 'flamethrower'
+    head_chimera_b: 'mobilize', body_chimera_b: 'boostShot', arm_chimera_b: 'flamethrower',
+    // 심연의 길잡이 (기본·강화 파츠가 같은 스킬 — 강화는 능력치와 그림)
+    arm_diver: 'anchorPull', arm_diver_up: 'anchorPull', body_diver: 'pressureSurge', body_diver_up: 'pressureSurge',
+    head_diver: 'abyssHands', head_diver_up: 'abyssHands',
+    // 봉합 성녀
+    arm_saint: 'needleTriple', arm_saint_up: 'needleTriple', body_saint: 'lifeSeal', body_saint_up: 'lifeSeal',
+    head_saint: 'forcedRevive', head_saint_up: 'forcedRevive',
+    // 서리의 무희
+    arm_frost: 'crescentSlash', arm_frost_up: 'crescentSlash', body_frost: 'blizzardDance', body_frost_up: 'blizzardDance',
+    head_frost: 'eternalRest', head_frost_up: 'eternalRest',
+    // 뒤틀린 인형사
+    arm_doll: 'scissorX', arm_doll_up: 'scissorX', body_doll: 'dollFamily', body_doll_up: 'dollFamily',
+    head_doll: 'puppetStrings', head_doll_up: 'puppetStrings'
 };
 
 // 다리 패시브 (v2 기준 설명 — parts.js 설명은 구버전과 공용이라 여기서 덮어씀). 효과는 battle/player.js (수치는 battle/tuning.js LEG)
@@ -590,7 +691,15 @@ export const LEG_PASSIVES = {
     leg_hero_a: { name: '불굴', desc: '내구도 30% 아래에서 받는 피해 40% 감소' },
     leg_hero_b: { name: '그림자 회피', desc: '25% 확률로 받는 피해 무시' },
     leg_chimera_a: { name: '짓밟기', desc: '걸음마다 앞쪽 작은 충격파 피해' },
-    leg_chimera_b: { name: '졸개 지휘', desc: '졸개 하나마다 주는 피해 +5% (최대 4기)' }
+    leg_chimera_b: { name: '졸개 지휘', desc: '졸개 하나마다 주는 피해 +5% (최대 4기)' },
+    leg_diver: { name: '잠수화', desc: '밀려남 60% 감소, 감속·속박 시간 절반' },
+    leg_diver_up: { name: '잠수화 (강화)', desc: '밀려남 80% 감소, 감속·속박 시간 70% 감소' },
+    leg_saint: { name: '자가 봉합', desc: '잃은 내구도가 많을수록 빨리 회복 (최대 초당 2%)' },
+    leg_saint_up: { name: '자가 봉합 (강화)', desc: '잃은 내구도가 많을수록 빨리 회복 (최대 초당 2.8%)' },
+    leg_frost: { name: '빙판 걸음', desc: '얼어 있는 적에게 주는 피해 30% 증가' },
+    leg_frost_up: { name: '빙판 걸음 (강화)', desc: '얼어 있는 적에게 주는 피해 45% 증가' },
+    leg_doll: { name: '실 걸음', desc: '토끼 인형 하나마다 진격 속도 5% 증가 (최대 4기)' },
+    leg_doll_up: { name: '실 걸음 (강화)', desc: '토끼 인형 하나마다 진격 속도 7% 증가 (최대 4기)' }
 };
 
 /** 다리 파츠 패시브 { name, desc } (없으면 null) */

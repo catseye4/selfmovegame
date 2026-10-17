@@ -238,6 +238,21 @@ const MINION_SWING = {
     tracks: { ...BATON_SWING.tracks, tail: { rot: [[0, 0], [0.3, -14, 'in'], [0.4, 12, 'out'], [0.8, 0]] } }
 };
 
+// 뒤틀린 인형사의 토끼 인형(아군): 두 팔을 앞으로 뻗어 끌어안듯 붙잡고 꽉 조임 (적을 붙잡아 둠), 귀·몸이 출렁
+const RABBIT_GRAB = {
+    duration: 0.8, loop: true,
+    tracks: {
+        arms: { rot: [[0, 0], [0.2, 18, 'out'], [0.35, -6, 'in'], [0.45, 2], [0.55, -6], [0.8, 0]],
+                x: [[0, 0], [0.2, -12, 'out'], [0.35, 4, 'in'], [0.8, 0]] },
+        body: { x: [[0, 0], [0.2, -8, 'out'], [0.35, 4], [0.8, 0]], rot: [[0, 0], [0.2, -6], [0.35, 3], [0.8, 0]],
+                y: [[0, 0], [0.35, 6], [0.8, 0]] },
+        head: { rot: [[0, 0], [0.2, -5], [0.35, 4], [0.5, -2], [0.8, 0]] },
+        legF: { rot: [[0, 0], [0.2, 10, 'out'], [0.8, 0]] },
+        legB: { rot: [[0, 0], [0.2, -8, 'out'], [0.8, 0]] }
+    },
+    events: [[0.35, 'impact', { socket: 'tip', bone: 'arms', color: '120, 230, 240' }]]
+};
+
 export const ENEMY_RIGS = {
     guard: enemy('guard', '경비병', { walkOpt: { ...SOLDIER_WALK, armF: 12, armB: 12 }, clips: { attack: BATON_SWING } }),
     shield: enemy('shield', '방패병', { walkOpt: { ...SOLDIER_WALK, dur: 0.8, leg: 18, armF: 2, armB: 10 }, clips: { attack: SHIELD_BASH } }),
@@ -250,6 +265,8 @@ export const ENEMY_RIGS = {
     }),
     // 아군 (오른쪽을 보는 그림을 뒤집어 잘랐으므로 적처럼 왼쪽을 봄 — 게임에선 아군이라 다시 뒤집어 그림)
     minion: enemy('minion', '합성괴인 졸개', { tail: true, walkOpt: { ...SOLDIER_WALK, dur: 0.75, armF: 10, armB: 6, tail: 8 }, clips: { attack: MINION_SWING } }),
+    // 뒤틀린 인형사의 토끼 인형 (새 캐릭터 D-049): 짧은 다리로 통통 뛰듯 걷는 인형
+    rabbit: enemy('rabbit', '토끼 인형', { arms: 'one', walkOpt: { dur: 0.55, leg: 26, lift: 30, bob: 16, arms: 6 }, clips: { attack: RABBIT_GRAB }, hitBone: 'arms' }),
     // ---- 구역 2: 고철 약탈단 ----
     raider: enemy('raider', '고철 약탈자', { walkOpt: { ...SOLDIER_WALK, armF: 12, armB: 12 }, clips: { attack: BATON_SWING } }),
     builder: enemy('builder', '고철 방벽병', { walkOpt: { ...SOLDIER_WALK, dur: 0.85, leg: 18, armF: 6, armB: 8 }, clips: { attack: HAMMER_SLAM } }),
