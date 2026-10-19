@@ -52,10 +52,17 @@ GROUND_B = 60               # 게임 바닥 높이 (bottom px, index.css .buildi
 
 
 def key_out(rgb, key='green'):
-    """단색 배경 지우기 — key 'green'(#00FF00) | 'magenta'(#FF00FF, 구역 2)"""
+    """단색 배경 지우기 — key 'green'(#00FF00) | 'magenta'(#FF00FF, 구역 2) | 'yellow'(#FFFF00, 구역 4 — 보라·형광 녹색을 써서)"""
     a = rgb.astype(np.float32)
     r, g, b = a[..., 0], a[..., 1], a[..., 2]
-    if key == 'magenta':
+    if key == 'yellow':
+        k = np.minimum(r, g) - b
+        alpha = np.clip((KEY_HI - k) / (KEY_HI - KEY_LO), 0, 1)
+        # 섞인 배경 노랑을 뺌: 빨강·초록을 파랑 쪽으로 끌어내림
+        lim = b + KEY_LO
+        a[..., 0] = np.where(k > KEY_LO, np.minimum(r, lim), r)
+        a[..., 1] = np.where(k > KEY_LO, np.minimum(g, lim), g)
+    elif key == 'magenta':
         k = np.minimum(r, b) - g
         alpha = np.clip((KEY_HI - k) / (KEY_HI - KEY_LO), 0, 1)
         # 섞인 배경 분홍을 뺌: 빨강·파랑을 초록 쪽으로 끌어내림

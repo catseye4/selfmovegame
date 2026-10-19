@@ -10,14 +10,13 @@
 
 const dir = id => `assets/sprites/rig/${id}/`;
 
-/** 뼈대: 망토(있으면) → 다리 → 몸통 → 뒷팔 → 머리 → 앞팔(또는 두 팔 한 조각) 순으로 앞에 그림 */
-function bones({ arms = 'two', cape = false, tail = false } = {}) {
-    const list = [
-        { name: 'root', parent: null },
-        { name: 'legB', parent: 'root', part: 'legB', z: 1 },
-        { name: 'legF', parent: 'root', part: 'legF', z: 2 },
-        { name: 'body', parent: 'root', part: 'torso', z: 3 }
-    ];
+/** 뼈대: 망토(있으면) → 다리 → 몸통 → 뒷팔 → 머리 → 앞팔(또는 두 팔 한 조각) 순으로 앞에 그림
+ *  arms 'none' = 팔·머리 없는 한 덩어리(슬라임), legs false = 다리 없이 떠 있음(가마에 탄 대주교) */
+function bones({ arms = 'two', cape = false, tail = false, legs = true } = {}) {
+    const list = [{ name: 'root', parent: null }];
+    if (legs) list.push({ name: 'legB', parent: 'root', part: 'legB', z: 1 }, { name: 'legF', parent: 'root', part: 'legF', z: 2 });
+    list.push({ name: 'body', parent: 'root', part: 'torso', z: 3 });
+    if (arms === 'none') return list;
     if (cape) list.push({ name: 'cape', parent: 'body', part: 'cape', z: 0 });
     if (tail) list.push({ name: 'tail', parent: 'body', part: 'tail', z: 0 });   // 꼬리 뿌리는 뒷다리 뒤에 숨음
     if (arms === 'two') list.push({ name: 'armB', parent: 'body', part: 'armB', z: 4 });
@@ -216,16 +215,16 @@ const SCRAP_DROP = {
     events: [[0.65, 'impact', { socket: 'tip', bone: 'armF', color: '255, 200, 120' }]]
 };
 
-function enemy(id, name, { arms = 'two', cape = false, tail = false, walkOpt, clips, hitBone = 'armF', shadow }) {
+function enemy(id, name, { arms = 'two', cape = false, tail = false, legs = true, walkOpt, walkClip, clips, hitBone = 'armF', shadow }) {
     return {
         id, name, assetDir: dir(id),
-        bones: bones({ arms, cape, tail }),
-        springs: [{ bone: 'head', channel: 'y', axis: 1, gain: 0.3, k: 260, damping: 12, limit: 6 }],
-        clips: { idle: idle(arms === 'two' ? 'armF' : 'arms'), walk: walk(walkOpt), ...clips },
+        bones: bones({ arms, cape, tail, legs }),
+        springs: arms === 'none' ? [] : [{ bone: 'head', channel: 'y', axis: 1, gain: 0.3, k: 260, damping: 12, limit: 6 }],
+        clips: { idle: idle(arms === 'two' ? 'armF' : arms === 'none' ? 'body' : 'arms'), walk: walkClip || walk(walkOpt), ...clips },
         arms: null,
         attack: 'attack',
         hitSocket: ['tip', hitBone],
-        debugSockets: [['tip', hitBone], ['footF', 'legF'], ['footB', 'legB']],
+        debugSockets: legs ? [['tip', hitBone], ['footF', 'legF'], ['footB', 'legB']] : [['tip', hitBone]],
         shadow: shadow || { rx: 180, ry: 18 }
     };
 }
@@ -253,6 +252,107 @@ const RABBIT_GRAB = {
     events: [[0.35, 'impact', { socket: 'tip', bone: 'arms', color: '120, 230, 240' }]]
 };
 
+// ---- 구역 3·4 (D-056) ----
+// 지팡이 시전(마법사·대주교): 지팡이를 앞으로 치켜들었다가 겨누며 내뻗음
+const STAFF_CAST = {
+    duration: 0.9, loop: true,
+    tracks: {
+        armF: { rot: [[0, 0], [0.3, 38, 'in'], [0.42, 14, 'out'], [0.7, 12], [0.9, 0]], x: [[0, 0], [0.3, 6], [0.42, -16, 'out'], [0.7, -10], [0.9, 0]] },
+        armB: { rot: [[0, 0], [0.3, -14], [0.42, 6], [0.9, 0]] },
+        body: { x: [[0, 0], [0.3, 8, 'in'], [0.42, -10, 'out'], [0.9, 0]], rot: [[0, 0], [0.3, 4], [0.42, -4], [0.9, 0]] },
+        head: { rot: [[0, 0], [0.3, 3], [0.42, -3], [0.9, 0]] }
+    },
+    events: impact(0.42, '200, 220, 255')
+};
+// 대주교 '천상의 심판'(한 번): 두 팔을 하늘로 들어 올려 빛을 부름
+const HOLY_RAISE = {
+    duration: 1.1, loop: true,
+    tracks: {
+        armF: { rot: [[0, 0], [0.4, 28, 'in'], [0.9, 32], [1.1, 0]], y: [[0, 0], [0.4, -14], [0.9, -16], [1.1, 0]] },
+        armB: { rot: [[0, 0], [0.4, -24, 'in'], [0.9, -28], [1.1, 0]] },
+        body: { y: [[0, 0], [0.4, -16, 'out'], [0.9, -18], [1.1, 0]], rot: [[0, 0], [0.4, 3], [0.9, 3], [1.1, 0]] },
+        head: { rot: [[0, 0], [0.4, 6], [0.9, 6], [1.1, 0]] }
+    },
+    events: impact(0.45, '255, 236, 170')
+};
+// 촉수 후려치기: 촉수를 뒤로 감았다가 앞으로 채찍처럼
+const TENTACLE_LASH = {
+    duration: 0.85, loop: true,
+    tracks: {
+        armF: { rot: [[0, 0], [0.3, -36, 'in'], [0.42, 58, 'out'], [0.58, 42], [0.85, 0]] },
+        armB: { rot: [[0, 0], [0.3, 22], [0.42, -18, 'out'], [0.85, 0]] },
+        body: { x: [[0, 0], [0.3, 10, 'in'], [0.42, -20, 'out'], [0.6, -14], [0.85, 0]], rot: [[0, 0], [0.3, 4], [0.42, -6, 'out'], [0.85, 0]] },
+        head: { rot: [[0, 0], [0.3, 4], [0.42, -5], [0.85, 0]] },
+        legF: { rot: [[0, 0], [0.42, 10, 'out'], [0.85, 0]] },
+        legB: { rot: [[0, 0], [0.42, -8, 'out'], [0.85, 0]] }
+    },
+    events: impact(0.42, '170, 90, 255')
+};
+// 악마기사 도끼 내려찍기 = 망치 내리찍기 + 망토 펄럭
+const AXE_CLEAVE = {
+    ...HAMMER_SLAM,
+    tracks: { ...HAMMER_SLAM.tracks, cape: { rot: [[0, 0], [0.4, -5], [0.52, 9, 'out'], [1.0, 0]] } },
+    events: impact(0.52, '255, 90, 60')
+};
+// 이단심문관 철퇴 = 진압봉 내려치기 + 망토 펄럭
+const MACE_SWING = {
+    ...BATON_SWING,
+    tracks: { ...BATON_SWING.tracks, cape: { rot: [[0, 0], [0.3, -4], [0.4, 8, 'out'], [0.8, 0]] } },
+    events: impact(0.4, '255, 210, 120')
+};
+// 대주교(다리 없음): 가마째 떠서 천천히 출렁이며 나아감
+const FLOAT_WALK = {
+    duration: 1.4, loop: true,
+    tracks: {
+        body: { y: [[0, 0], [0.7, -12], [1.4, 0]], rot: [[0, -1], [0.7, 1], [1.4, -1]] },
+        head: { rot: [[0, 1.5], [0.7, -1.5], [1.4, 1.5]] },
+        armF: { rot: [[0, -3], [0.7, 3], [1.4, -3]] },
+        armB: { rot: [[0, 2], [0.7, -4], [1.4, 2]] }
+    }
+};
+// 슬라임: 눌렸다 늘어나며 꿈틀꿈틀 (몸통 피벗 = 바닥 가운데)
+const SLIME_WALK = {
+    duration: 0.8, loop: true,
+    tracks: {
+        body: { sy: [[0, 1], [0.2, 0.86, 'out'], [0.4, 1.08, 'in'], [0.6, 0.96], [0.8, 1]],
+                sx: [[0, 1], [0.2, 1.1, 'out'], [0.4, 0.94, 'in'], [0.6, 1.03], [0.8, 1]],
+                x: [[0, 0], [0.4, -8], [0.8, 0]] }
+    }
+};
+// 슬라임 덮치기: 뒤로 웅크렸다가 앞으로 길게 늘어나며 덮침
+const SLIME_LUNGE = {
+    duration: 0.8, loop: true,
+    tracks: {
+        body: { sy: [[0, 1], [0.28, 0.78, 'in'], [0.4, 1.12, 'out'], [0.55, 0.92], [0.8, 1]],
+                sx: [[0, 1], [0.28, 1.16, 'in'], [0.4, 0.9, 'out'], [0.55, 1.06], [0.8, 1]],
+                x: [[0, 0], [0.28, 14, 'in'], [0.4, -34, 'out'], [0.6, -24], [0.8, 0]],
+                rot: [[0, 0], [0.28, 4], [0.4, -8, 'out'], [0.8, 0]] }
+    },
+    events: [[0.4, 'impact', { socket: 'tip', bone: 'body', color: '150, 255, 90' }]]
+};
+
+// 오큘러스(벌레 몸, 다리 없음): 몸이 천천히 들썩이며 미끄러지듯 나아감, 팔은 마법진을 그리듯 출렁
+const SERPENT_WALK = {
+    duration: 1.3, loop: true,
+    tracks: {
+        body: { y: [[0, 0], [0.65, -8], [1.3, 0]], sy: [[0, 1], [0.65, 1.02], [1.3, 1]], sx: [[0, 1], [0.65, 0.985], [1.3, 1]] },
+        head: { rot: [[0, 2], [0.65, -2.5], [1.3, 2]] },
+        armF: { rot: [[0, -4], [0.65, 6], [1.3, -4]] },
+        armB: { rot: [[0, 5], [0.65, -5], [1.3, 5]] }
+    }
+};
+// 2페이즈 톱날 팔 내려찍기: 톱날을 더 치켜들었다가 앞으로 내려침 (+ 뒷팔 반대로)
+const SAW_CHOP = {
+    duration: 0.9, loop: true,
+    tracks: {
+        armF: { rot: [[0, 0], [0.3, 26, 'in'], [0.42, -42, 'out'], [0.6, -32], [0.9, 0]] },
+        armB: { rot: [[0, 0], [0.3, -18], [0.42, 30, 'out'], [0.9, 0]] },
+        body: { x: [[0, 0], [0.3, 12, 'in'], [0.42, -28, 'out'], [0.65, -20], [0.9, 0]], rot: [[0, 0], [0.3, 2], [0.42, -3, 'out'], [0.9, 0]] },
+        head: { rot: [[0, 0], [0.3, 4], [0.42, -6], [0.9, 0]] }
+    },
+    events: impact(0.42, '255, 60, 80')
+};
+
 export const ENEMY_RIGS = {
     guard: enemy('guard', '경비병', { walkOpt: { ...SOLDIER_WALK, armF: 12, armB: 12 }, clips: { attack: BATON_SWING } }),
     shield: enemy('shield', '방패병', { walkOpt: { ...SOLDIER_WALK, dur: 0.8, leg: 18, armF: 2, armB: 10 }, clips: { attack: SHIELD_BASH } }),
@@ -276,5 +376,38 @@ export const ENEMY_RIGS = {
     scrapking: enemy('scrapking', '고철왕', {
         walkOpt: { dur: 1.0, leg: 14, lift: 22, bob: 12, armF: 3, armB: 6 },
         clips: { attack: CLAW_SMASH, magnet: MAGNET_PULL, drop: SCRAP_DROP }, shadow: { rx: 300, ry: 24 }
+    }),
+    // ---- 구역 3: 성왕국 이단심문소 & 타락 기사단 ----
+    soldier: enemy('soldier', '왕국보병', { walkOpt: { ...SOLDIER_WALK, armF: 8, armB: 12 }, clips: { attack: SPEAR_THRUST } }),
+    inquisitor: enemy('inquisitor', '이단심문관', {
+        cape: true, walkOpt: { ...SOLDIER_WALK, dur: 0.8, leg: 20, armF: 6, armB: 10, cape: 4 }, clips: { attack: MACE_SWING }
+    }),
+    holyshield: enemy('holyshield', '신성 방패병', { walkOpt: { ...SOLDIER_WALK, dur: 0.85, leg: 18, armF: 2, armB: 10 }, clips: { attack: SHIELD_BASH } }),
+    priest: enemy('priest', '신관', { walkOpt: { ...SOLDIER_WALK, armF: 6, armB: 10 }, clips: { attack: HEAL_SPRAY } }),
+    mage: enemy('mage', '마법사', { walkOpt: { ...SOLDIER_WALK, armF: 4, armB: 10 }, clips: { attack: STAFF_CAST } }),
+    demon: enemy('demon', '악마병', { walkOpt: { ...SOLDIER_WALK, dur: 0.65, armF: 3, armB: 12 }, clips: { attack: SHIELD_BASH } }),
+    demonknight: enemy('demonknight', '악마기사', {
+        cape: true, walkOpt: { dur: 0.9, leg: 18, lift: 20, bob: 12, armF: 3, armB: 8, cape: 4 }, clips: { attack: AXE_CLEAVE },
+        shadow: { rx: 220, ry: 20 }
+    }),
+    archbishop: enemy('archbishop', '대주교 베네딕트', {
+        legs: false, walkClip: FLOAT_WALK, clips: { attack: STAFF_CAST, bash: HOLY_RAISE }, shadow: { rx: 280, ry: 22 }
+    }),
+    // ---- 구역 4: 별의 사도들과 실패한 진화체들 ----
+    cultist: enemy('cultist', '진화의 광신도', { walkOpt: { dur: 0.6, leg: 24, lift: 24, bob: 12, armF: 10, armB: 14 }, clips: { attack: BATON_SWING } }),
+    tentacle: enemy('tentacle', '심연 촉수귀', { walkOpt: { ...SOLDIER_WALK, dur: 0.8, leg: 20, armF: 14, armB: 14 }, clips: { attack: TENTACLE_LASH } }),
+    carapace: enemy('carapace', '생체 방패수', {
+        walkOpt: { dur: 0.95, leg: 16, lift: 18, bob: 12, armF: 2, armB: 10 }, clips: { attack: SHIELD_BASH }, shadow: { rx: 210, ry: 20 }
+    }),
+    sporer: enemy('sporer', '포자 술사', { walkOpt: { ...SOLDIER_WALK, armF: 8, armB: 8 }, clips: { attack: LADLE_THROW } }),
+    // 보스 관장자 오큘러스: 1페이즈 마법사형(지팡이 대신 손끝 마법진 — 시전·점액 던지기·두 팔 들어 파동), 2페이즈 외눈 괴수(톱날 내려찍기)
+    oculus: enemy('oculus', '관장자 오큘러스', {
+        legs: false, walkClip: SERPENT_WALK, clips: { attack: STAFF_CAST, magnet: LADLE_THROW, drop: HOLY_RAISE }, shadow: { rx: 300, ry: 24 }
+    }),
+    oculus2: enemy('oculus2', '관장자 오큘러스 (2페이즈)', {
+        legs: false, walkClip: SERPENT_WALK, clips: { attack: SAW_CHOP, magnet: SAW_CHOP, drop: HOLY_RAISE }, shadow: { rx: 300, ry: 24 }
+    }),
+    slime: enemy('slime', '키메라 슬라임', {
+        arms: 'none', legs: false, walkClip: SLIME_WALK, clips: { attack: SLIME_LUNGE }, hitBone: 'body', shadow: { rx: 200, ry: 20 }
     })
 };

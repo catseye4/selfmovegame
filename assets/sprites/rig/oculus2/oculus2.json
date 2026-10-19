@@ -1,0 +1,27 @@
+{
+  "frameWidth": 228,
+  "frameHeight": 242,
+  "anchorX": 139.4,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/oculus2/oculus2_walk.png",
+      "frames": 12,
+      "duration": 1.3
+    },
+    "attack": {
+      "src": "assets/sprites/rig/oculus2/oculus2_attack.png",
+      "frames": 12,
+      "duration": 0.9
+    },
+    "magnet": {
+      "src": "assets/sprites/rig/oculus2/oculus2_magnet.png",
+      "frames": 12,
+      "duration": 0.9
+    },
+    "drop": {
+      "src": "assets/sprites/rig/oculus2/oculus2_drop.png",
+      "frames": 12,
+      "duration": 1.1
+    }
+  }
+}

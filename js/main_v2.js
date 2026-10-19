@@ -11,6 +11,8 @@ import { sound } from './engine_v2/audio/sound_v2.js';
 import { progress } from './engine_v2/progress_v2.js';
 import { registerV2Parts } from './engine_v2/partsExtra_v2.js';
 import { runLoading } from './ui_v2/loading_v2.js';
+import { applyVfxChoices, readVfxChoices, readVfxStyle } from './engine_v2/vfx/vfxVariants.js';
+import { preloadVfxSheets } from './engine_v2/vfx/vfxPlayer.js';
 
 class GameRouterV2 {
     constructor() {
@@ -141,6 +143,9 @@ function fitScreens() {
 }
 
 export function initGameRouterV2() {
+    applyVfxChoices(readVfxChoices());
+    battleEngineV2.fx.vfx.style = readVfxStyle();
+    preloadVfxSheets();   // 그림 프레임 이펙트(D-060) 미리 받기
     document.body.classList.add('v2-fit');
     fitScreens();
     window.addEventListener('resize', fitScreens);

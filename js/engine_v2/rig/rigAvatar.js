@@ -258,6 +258,23 @@ const PART_TINT = {
 // 비운 부위(아직 안 산 파츠): 흐리게. 다른 캐릭터 파츠 테두리 빛은 연구소가 고른 캐릭터 파츠만 보여 주면서 없앰 (D-051)
 const EMPTY_SLOT = 'grayscale(1) brightness(0.45) opacity(0.55)';
 
+/**
+ * 세트 부위 그림 { alias: { 부위키: '<부위키>_a' } | null, tint: { 부위키: 세트 색 } } — variants = { 슬롯: 'a'|'b'|'dragon' }
+ * (게임 RigAvatar와 rig_test.html 공용) 그 부위의 세트 그림이 rig.json에 있으면 그림을 바꾸고, 없으면 세트 색
+ */
+export function variantAlias(character, layout, variants) {
+    const slots = SLOT_PARTS[character] || {};
+    const alias = {};
+    const tint = {};
+    for (const [slot, v] of Object.entries(variants || {})) {
+        for (const key of slots[slot] || []) {
+            if (layout.parts[`${key}_${v}`]) alias[key] = `${key}_${v}`;
+            else if (SET_TINT[character] && SET_TINT[character][v]) tint[key] = SET_TINT[character][v];
+        }
+    }
+    return { alias: Object.keys(alias).length ? alias : null, tint };
+}
+
 /** 파츠 조합 → { 리그 부위키: CSS filter } */
 export function partFiltersFor(partsObj, character) {
     const map = {};
@@ -474,17 +491,8 @@ export class RigAvatar {
 
     // 세트 그림이 있는 부위는 그림 키를 바꾸고(skeleton.partAlias), 없는 부위는 세트 색을 깜
     _applyVariants() {
-        const id = this.character.id;
-        const slots = SLOT_PARTS[id] || {};
-        const alias = {};
-        const tint = {};
-        for (const [slot, v] of Object.entries(this.variants || {})) {
-            for (const key of slots[slot] || []) {
-                if (this.layout.parts[`${key}_${v}`]) alias[key] = `${key}_${v}`;
-                else if (SET_TINT[id] && SET_TINT[id][v]) tint[key] = SET_TINT[id][v];
-            }
-        }
-        this.skeleton.partAlias = Object.keys(alias).length ? alias : null;
+        const { alias, tint } = variantAlias(this.character.id, this.layout, this.variants);
+        this.skeleton.partAlias = alias;
         this.variantTint = tint;
         this._mergeFilters();
     }

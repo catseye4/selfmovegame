@@ -143,10 +143,12 @@ export class BattleEngine {
         this.isActive = true;
         this.distanceTraveled = 0;
         this.stage = stageById(progress.selectedStage || defaultStage(progress).id);
-        // 구역 배경 (ui_v2.css .v2-zone-2), 보스전은 경보 조명·불길 판 (.v2-stage-boss)
+        // 구역 배경 (ui_v2.css .v2-zone-2 ~ 4), 보스전은 경보 조명·불길 판 (.v2-stage-boss)
+        // .v2-boss-rage(구역 4 보스 2페이즈)·.v2-crimson(구역 3 악마기사 소환 점멸)은 전투 중에 붙음
         const screen = document.getElementById('screen-battle-v2');
         screen?.classList.toggle('v2-stage-boss', !!this.stage.boss);
-        screen?.classList.toggle('v2-zone-2', this.stage.chapter === 'ch2');
+        [2, 3, 4].forEach(z => screen?.classList.toggle(`v2-zone-${z}`, this.stage.zone === z));
+        screen?.classList.remove('v2-boss-rage', 'v2-crimson');
         this.maxDistance = this.stage.distance;
         this.spawnInterval = this.stage.enemy.spawn;
         this.starFlags = [false, false, false];
@@ -163,6 +165,9 @@ export class BattleEngine {
         this.artTimer = 0;
         this.artWarned = false;
         this.boss = null;
+        this.bossPhase = false;   // 구역 3: 정문을 부숴 보스전에 들어감 (enemyField.js openBossGate)
+        this.knightTimer = 0;     // 구역 3: 심연의 문 개방 (악마기사 소환)
+        this.knightWarned = false;
         this.ruins = [];          // 요새 잔해 (다시 걸으면 바닥과 함께 흘러 나감)
         this.ruinHoldT = 0;       // 요새가 무너지는 동안 주인공이 멈춰 지켜보는 시간
         this.monsterX = 150;

@@ -463,6 +463,211 @@ def synth_doll_strings():
     return (out + drone).astype(np.float32)
 
 
+def synth_zone_gas():
+    """소각탑 유독 가스: 길게 쉬익 하는 분사 + 낮게 부글거림"""
+    sec = 1.2
+    t = t_axis(sec)
+    u = t / sec
+    env = np.minimum(1, t / 0.035) * (1 - u) ** 0.55
+    noise = rng.standard_normal(len(t)).astype(np.float32)
+    hiss = _band(noise, 900, 6500 + 2000 * np.sin(2 * np.pi * 3 * t) ** 2)
+    rumble = one_pole_lowpass(noise, 160) * 1.3 + np.sin(2 * np.pi * 48 * t + 0.5 * np.sin(2 * np.pi * 13 * t)) * 0.35
+    bubbles = _bubbles(sec, 14, 50, 140, 0.075, 0.4)
+    return fades((hiss * 2.2 + rumble + bubbles) * env, 0.008, 0.02).astype(np.float32)
+
+
+def synth_zone_judgment():
+    """천상의 심판: 빠르게 올라가는 맑은 화음 뒤 빛기둥의 쿵"""
+    sec = 1.0
+    out = np.zeros(int(sec * SR), np.float32)
+    rise = _chord(0.4, [523.3, 659.3, 784.0], attack=0.012, vib=6, glide=3)
+    rise *= 0.25 + 1.75 * t_axis(0.4) / 0.4
+    out[:len(rise)] += rise
+    t = t_axis(0.65)
+    thud = np.sin(2 * np.pi * np.cumsum(140 * np.exp(-t / 0.06) + 48) / SR) * np.exp(-t / 0.2)
+    burst = _band(rng.standard_normal(len(t)).astype(np.float32), 220, 6500) * np.exp(-t / 0.045)
+    ring = (np.sin(2 * np.pi * 1046.5 * t) + 0.5 * np.sin(2 * np.pi * 1568 * t)) * np.exp(-t / 0.22)
+    i = int(0.35 * SR)
+    hit = thud * 1.5 + burst * 1.1 + ring * 0.3
+    out[i:i + len(hit)] += hit[: len(out) - i]
+    return fades(out, 0.004, 0.02).astype(np.float32)
+
+
+def synth_zone_hellgate():
+    """악마병 지옥문: 낮은 우르릉 + 불꽃이 일렁이는 잡음"""
+    sec = 0.9
+    t = t_axis(sec)
+    u = t / sec
+    env = np.minimum(1, t / 0.04) * (1 - u) ** 0.65
+    rumble = np.sin(2 * np.pi * 55 * t + 0.8 * np.sin(2 * np.pi * 7 * t)) + 0.5 * np.sin(2 * np.pi * 82 * t)
+    fire = _band(rng.standard_normal(len(t)).astype(np.float32), 130, 2200 + 1100 * np.sin(2 * np.pi * 4 * t) ** 2)
+    flutter = 0.5 + 0.5 * np.sin(2 * np.pi * 13 * t) ** 2
+    return fades((rumble * 0.9 + fire * 1.8 * flutter) * env, 0.008, 0.02).astype(np.float32)
+
+
+def synth_zone_knight():
+    """악마기사 소환: 더 낮고 큰 지옥문 울림 + 금속성 쾅"""
+    sec = 1.3
+    t = t_axis(sec)
+    u = t / sec
+    env = np.minimum(1, t / 0.05) * (1 - u) ** 0.6
+    rumble = np.sin(2 * np.pi * np.cumsum(54 - 22 * u) / SR) + 0.55 * np.sin(2 * np.pi * 35 * t)
+    fire = _band(rng.standard_normal(len(t)).astype(np.float32), 90, 1600) * (0.5 + 0.5 * np.sin(2 * np.pi * 11 * t) ** 2)
+    out = (rumble * 0.9 + fire * 1.1) * env
+    hit_t = t_axis(1.06)
+    clank = sum(np.sin(2 * np.pi * f * hit_t) * a for f, a in [(180, 1), (421, 0.7), (907, 0.5), (1583, 0.3)]) * np.exp(-hit_t / 0.26)
+    slam = np.sin(2 * np.pi * np.cumsum(90 * np.exp(-hit_t / 0.08) + 30) / SR) * np.exp(-hit_t / 0.24)
+    crack = _band(rng.standard_normal(len(hit_t)).astype(np.float32), 500, 5500) * np.exp(-hit_t / 0.035)
+    hit = clank * 0.65 + slam * 1.3 + crack * 1.8
+    i = int(0.24 * SR)
+    out[i:i + len(hit)] += hit[: len(out) - i]
+    return fades(out + _clinks(sec, 6, 0.28, 0.66, 0.25) * env, 0.008, 0.02).astype(np.float32)
+
+
+def synth_zone_axe():
+    """도끼 내려찍기: 묵직한 휙 뒤 둔탁한 쿵"""
+    sec = 0.6
+    out = np.zeros(int(sec * SR), np.float32)
+    whoosh = synth_whoosh(0.3, 90, 1600) * 1.6
+    out[:len(whoosh)] += whoosh
+    t = t_axis(0.36)
+    thud = np.sin(2 * np.pi * np.cumsum(110 * np.exp(-t / 0.05) + 42) / SR) * np.exp(-t / 0.13)
+    crack = _band(rng.standard_normal(len(t)).astype(np.float32), 100, 1400) * np.exp(-t / 0.06)
+    hit = thud * 1.3 + crack * 1.4
+    i = int(0.24 * SR)
+    out[i:i + len(hit)] += hit[: len(out) - i]
+    return fades(out, 0.004, 0.02).astype(np.float32)
+
+
+def synth_zone_spell_fire():
+    """불 원소탄: 짧게 화르륵 하는 불꽃 분출"""
+    sec = 0.4
+    t = t_axis(sec)
+    fire = _band(rng.standard_normal(len(t)).astype(np.float32), 220, 2600 + 2000 * np.exp(-t / 0.09))
+    env = np.minimum(1, t / 0.008) * np.exp(-t / 0.13) * (0.6 + 0.4 * np.sin(2 * np.pi * 23 * t) ** 2)
+    puff = np.sin(2 * np.pi * np.cumsum(170 * np.exp(-t / 0.04) + 70) / SR) * np.exp(-t / 0.055)
+    return fades(fire * 2.2 * env + puff * 0.5 + synth_whoosh(sec, 200, 3000) * 0.55, 0.003, 0.02).astype(np.float32)
+
+
+def synth_zone_spell_bolt():
+    """번개 원소탄: 짧은 전기 스파크가 지직 튐"""
+    sec = 0.35
+    out = np.zeros(int(sec * SR), np.float32)
+    for at, amp in [(0.0, 1), (0.045, 0.8), (0.12, 0.6), (0.215, 0.4)]:
+        t = t_axis(0.135)
+        crack = _band(rng.standard_normal(len(t)).astype(np.float32), 1800, 10000)
+        zap = np.sin(2 * np.pi * np.cumsum(3100 * np.exp(-t / 0.025) + 900) / SR) * np.exp(-t / 0.015)
+        spark = (crack * 1.8 * np.exp(-t / 0.035) + zap * 0.3) * amp
+        i = int(at * SR)
+        out[i:i + len(spark)] += spark[: len(out) - i]
+    return fades(out, 0.001, 0.02).astype(np.float32)
+
+
+def synth_zone_spell_ice():
+    """얼음 원소탄: 차갑고 맑은 쨍 + 짧은 바람"""
+    sec = 0.4
+    t = t_axis(sec)
+    ring = (np.sin(2 * np.pi * 2600 * t) + 0.35 * np.sin(2 * np.pi * 4130 * t) + 0.16 * np.sin(2 * np.pi * 5980 * t)) * np.exp(-t / 0.13)
+    crack = _band(rng.standard_normal(len(t)).astype(np.float32), 3000, 9000) * np.exp(-t / 0.012)
+    return fades(ring * 0.65 + crack * 0.7 + synth_whoosh(sec, 1200, 6500) * 0.7, 0.002, 0.02).astype(np.float32)
+
+
+def synth_zone_arrow():
+    """통제탑 화살: 활시위 퉁 + 짧게 날아가는 휙"""
+    sec = 0.3
+    t = t_axis(sec)
+    ph = 2 * np.pi * np.cumsum(245 - 35 * t / sec) / SR
+    twang = (np.sin(ph) + 0.45 * np.sin(2 * ph) + 0.2 * np.sin(3 * ph)) * np.exp(-t / 0.055)
+    click = _band(rng.standard_normal(len(t)).astype(np.float32), 1200, 6000) * np.exp(-t / 0.008)
+    return fades(twang * 0.7 + click * 0.4 + synth_whoosh(sec, 700, 5500) * 0.85, 0.002, 0.02).astype(np.float32)
+
+
+def synth_zone_venom():
+    """유기질 벽 독액: 찍 하는 분사 뒤 짧게 부글거림"""
+    sec = 0.5
+    t = t_axis(sec)
+    noise = rng.standard_normal(len(t)).astype(np.float32)
+    spit = _band(noise, 900, 4300) * np.exp(-t / 0.03) * 1.8
+    squirt = _band(noise, 150, 1100) * np.exp(-t / 0.16) * (0.5 + 0.5 * np.sin(2 * np.pi * 13 * t) ** 2)
+    return fades(spit + squirt * 0.8 + _bubbles(sec, 7, 100, 380, 0.055, 0.45), 0.002, 0.02).astype(np.float32)
+
+
+def synth_zone_heal_holy():
+    """신관 치유: 작고 맑은 종소리 세 개"""
+    sec = 0.6
+    out = np.zeros(int(sec * SR), np.float32)
+    for at, f in [(0.0, 1046.5), (0.13, 1318.5), (0.26, 1568.0)]:
+        t = t_axis(0.45)
+        chime = (np.sin(2 * np.pi * f * t) + 0.2 * np.sin(2 * np.pi * f * 2.76 * t) + 0.08 * np.sin(2 * np.pi * f * 4.08 * t)) * np.exp(-t / 0.14)
+        chime = fades(chime, 0.003, 0.03)
+        i = int(at * SR)
+        out[i:i + len(chime)] += chime[: len(out) - i] * 0.45
+    return fades(out, 0.003, 0.02).astype(np.float32)
+
+
+def synth_zone_spore():
+    """포자 덩어리: 퍽 하고 터지는 발사음 + 쉿"""
+    sec = 0.4
+    t = t_axis(sec)
+    pop = np.sin(2 * np.pi * np.cumsum(190 * np.exp(-t / 0.035) + 65) / SR) * np.exp(-t / 0.055)
+    puff = _band(rng.standard_normal(len(t)).astype(np.float32), 350, 3300) * np.minimum(1, t / 0.008) * np.exp(-t / 0.12)
+    return fades(pop + puff * 1.5 + synth_whoosh(sec, 600, 2500) * 0.3, 0.003, 0.02).astype(np.float32)
+
+
+def synth_zone_goo():
+    """유전자 붕괴 점액: 낮게 미끄러지는 질척한 철퍽"""
+    sec = 0.5
+    t = t_axis(sec)
+    freq = (180 * np.exp(-t / 0.07) + 55) * (1 + 0.2 * np.sin(2 * np.pi * 18 * t))
+    ph = 2 * np.pi * np.cumsum(freq) / SR
+    squelch = (np.sin(ph) + 0.35 * np.sin(2 * ph)) * np.exp(-t / 0.14)
+    splash = _band(rng.standard_normal(len(t)).astype(np.float32), 100, 1800 + 1000 * np.exp(-t / 0.1))
+    splash *= np.exp(-t / 0.12) * (0.4 + 0.6 * np.sin(2 * np.pi * 20 * t) ** 2)
+    return fades(squelch * 0.8 + splash * 1.8 + _bubbles(sec, 8, 80, 260, 0.06, 0.3), 0.002, 0.02).astype(np.float32)
+
+
+def synth_zone_mutation():
+    """극한의 변이: 내려가는 톱니파의 낮은 포효 + 찢어지는 고역 잡음 (목소리 없음)"""
+    sec = 1.6
+    t = t_axis(sec)
+    u = t / sec
+    ph = 2 * np.pi * np.cumsum(102 * 0.36 ** u) / SR
+    saw = (2 * ((ph / (2 * np.pi)) % 1) - 1).astype(np.float32)
+    saw = one_pole_lowpass(saw, 450 + 950 * (1 - u))
+    noise = rng.standard_normal(len(t)).astype(np.float32)
+    grit = _band(noise, 70, 2000 + 700 * np.sin(2 * np.pi * 5 * t) ** 2)
+    env = np.minimum(1, t / 0.06) * (1 - u) ** 0.65
+    roar = np.tanh(saw * 2.4 + grit * 0.8) * (0.65 + 0.35 * np.sin(2 * np.pi * 7 * t) ** 2) * env
+    tear = _band(noise, 4200, 9500) * (0.3 + 0.7 * np.sin(2 * np.pi * 17 * t) ** 2) * np.exp(-((u - 0.48) / 0.28) ** 2)
+    return fades(roar + tear * 0.6 + np.sin(2 * np.pi * 38 * t) * env * 0.4, 0.008, 0.025).astype(np.float32)
+
+
+def synth_zone_charge():
+    """돌진 충돌: 아주 낮고 큰 쿵 + 튀는 파편"""
+    sec = 0.7
+    t = t_axis(sec)
+    thud = np.sin(2 * np.pi * np.cumsum(120 * np.exp(-t / 0.04) + 32) / SR) * np.exp(-t / 0.19)
+    noise = rng.standard_normal(len(t)).astype(np.float32)
+    blast = one_pole_lowpass(noise, 750) * np.exp(-t / 0.13)
+    shards = _band(noise, 1700, 7000) * np.exp(-t / 0.08)
+    return fades(thud * 1.5 + blast * 1.5 + shards * 0.9 + _clinks(sec, 9, 0.02, 0.35, 0.3), 0.003, 0.02).astype(np.float32)
+
+
+def synth_zone_split():
+    """슬라임 분열: 찰싹 뒤 작은 물방울 두 개"""
+    sec = 0.4
+    t = t_axis(sec)
+    slap = _band(rng.standard_normal(len(t)).astype(np.float32), 250, 4200) * np.exp(-t / 0.035)
+    out = slap * 1.8 + np.sin(2 * np.pi * 110 * t) * np.exp(-t / 0.04) * 0.4
+    for at, f in [(0.1, 650), (0.23, 880)]:
+        drop_t = t_axis(0.17)
+        ph = 2 * np.pi * np.cumsum(f * (1 + 1.4 * drop_t / 0.17)) / SR
+        drop = np.sin(ph) * np.sin(np.pi * drop_t / 0.17) ** 1.2 * 0.65
+        i = int(at * SR)
+        out[i:i + len(drop)] += drop[: len(out) - i]
+    return fades(out, 0.002, 0.02).astype(np.float32)
+
+
 # ---------------------------------------------------------------------------
 # 효과음 조합: 이름 → [(파일, 옵션)] 또는 합성 함수
 SFX = {
@@ -554,6 +759,23 @@ SFX = {
     'result_lose': [(UI + 'minimize_006.ogg', {})],
     'result_star': [(IMP + 'impactBell_heavy_001.ogg', dict(pitch=1.4, t1=0.6, fout=0.2))],
     'low_hp': lambda: synth_heartbeat(1.1),
+    # 구역 2·3·4 적·보스·거점 (D-056): 팩 없이 합성
+    'zone_gas': lambda: synth_zone_gas(),
+    'zone_judgment': lambda: synth_zone_judgment(),
+    'zone_hellgate': lambda: synth_zone_hellgate(),
+    'zone_knight': lambda: synth_zone_knight(),
+    'zone_axe': lambda: synth_zone_axe(),
+    'zone_spell_fire': lambda: synth_zone_spell_fire(),
+    'zone_spell_bolt': lambda: synth_zone_spell_bolt(),
+    'zone_spell_ice': lambda: synth_zone_spell_ice(),
+    'zone_arrow': lambda: synth_zone_arrow(),
+    'zone_venom': lambda: synth_zone_venom(),
+    'zone_heal_holy': lambda: synth_zone_heal_holy(),
+    'zone_spore': lambda: synth_zone_spore(),
+    'zone_goo': lambda: synth_zone_goo(),
+    'zone_mutation': lambda: synth_zone_mutation(),
+    'zone_charge': lambda: synth_zone_charge(),
+    'zone_split': lambda: synth_zone_split(),
     # UI
     'ui_click': [(UIA + 'click2.ogg', {})],
     'ui_toggle': [(UI + 'toggle_001.ogg', {})],

@@ -208,16 +208,17 @@ export class BattleDirector {
     /**
      * 거점 파괴: 건물 곳곳에서 연쇄 폭발 → 대폭발 + 섬광 + 흔들림 + 슬로모션.
      * 중간 요새는 별이 HUD로 날아가고 진격 재개, 최종 기지는 MISSION COMPLETE 후 결과 화면.
+     * opts.stamp: [제목, 아래 문구] — 기본 문구 대신 (구역 3 정문 붕괴, 정문 뒤 보스 격파)
      * @returns {Promise} 연출이 끝나면 resolve
      */
-    async baseDestroyed(enemy, isFinal) {
+    async baseDestroyed(enemy, isFinal, opts = {}) {
         if (!this.attach()) return;
         const token = this.token;
         const fx = this.b.fx;
         const size = enemy.size || { w: isFinal ? 120 : 90, h: isFinal ? 200 : 150 };   // 건물 그림 크기
         const w = size.w;
         const cx = enemy.x + w / 2;
-        gameTime.speed = 1;                 // 연출 타이밍을 실제 시간에 맞춤
+        if (isFinal) gameTime.speed = 1;    // 최종 연출 타이밍을 실제 시간에 맞춤
         gameTime.hitStop(0.09, 0);
         this.flash('#fff', 160, 0.55);
         this.shake(isFinal ? 7 : 5, 380);
@@ -252,13 +253,13 @@ export class BattleDirector {
 
         if (!isFinal) {
             this.flyStar(cx, FB + 110);
-            this.stamp('FORTRESS DESTROYED', '중간 거점 요새 분쇄 · 진격 재개', 'is-gold', 1600);
+            this.stamp(...(opts.stamp || ['FORTRESS DESTROYED', '중간 거점 요새 분쇄 · 진격 재개']), 'is-gold', 1600);
             return;
         }
         await wait(1500);
         if (!this.alive(token)) return;
         this.frame.classList.add('v2-ending');
-        this.stamp('MISSION COMPLETE', '최종 핵심 기지 완전 분쇄', 'is-gold is-big', 1900);
+        this.stamp(...(opts.stamp || ['MISSION COMPLETE', '최종 핵심 기지 완전 분쇄']), 'is-gold is-big', 1900);
         this.sfx('mission_complete');
         await wait(2000);
     }

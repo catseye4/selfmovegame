@@ -1,0 +1,17 @@
+{
+  "frameWidth": 86,
+  "frameHeight": 96,
+  "anchorX": 45.9,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/mage/mage_walk.png",
+      "frames": 12,
+      "duration": 0.7
+    },
+    "attack": {
+      "src": "assets/sprites/rig/mage/mage_attack.png",
+      "frames": 10,
+      "duration": 0.9
+    }
+  }
+}

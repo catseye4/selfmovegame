@@ -116,7 +116,7 @@ export const SaintMethods = {
                 if (!this.isActive || !this.enemies.includes(e)) return;
                 this.enemies = this.enemies.filter(o => o !== e);   // 산 채로 꿰맴 (보상 없음, 히어로 대세뇌와 같은 규칙)
                 if (e.dom) e.dom.remove();
-                this.riseAlly(e.x, e.type, e.maxHp, e.dps);
+                this.riseAlly(e.x, e.artKey || e.type, e.maxHp, e.dps);
             }));
     },
 
@@ -148,7 +148,7 @@ export const SaintMethods = {
         el.className = 'v2-corpse';
         el.style.left = `${e.x + 14}px`;
         this.domEnemies.appendChild(el);
-        this.corpses.push({ x: e.x, type: e.type, hp: e.maxHp, dps: e.dps, t: SAINT.corpseSec, dom: el });
+        this.corpses.push({ x: e.x, type: e.artKey || e.type, hp: e.maxHp, dps: e.dps, t: SAINT.corpseSec, dom: el });
         this.fx.play(SAINT_VFX.corpseStitch, e.x + 38, FOOT_B);
     },
 

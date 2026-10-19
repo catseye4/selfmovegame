@@ -46,7 +46,8 @@ BUILDS = {
 # hero_a 타락 기사, hero_b 그림자 마도사, chimera_a 광폭 실험체, chimera_b 조직 사령관
 BUILDS.update({f'{c}_{v}': tuple(f'{s}_{c}_{v}' for s in ('head', 'body', 'arm', 'leg'))
                for c in ('mech', 'kaiju', 'hero', 'chimera') for v in ('a', 'b')})
-ZONES = {1: ['1-1', '1-2', '1-3', '1-4', '1-5', '1-B'], 2: ['2-1', '2-2', '2-3', '2-4', '2-5', '2-B']}
+ZONES = {1: ['1-1', '1-2', '1-3', '1-4', '1-5', '1-B'], 2: ['2-1', '2-2', '2-3', '2-4', '2-5', '2-B'],
+         3: ['3-1', '3-2', '3-3', '3-4', '3-5', '3-6', '3-B'], 4: ['4-1', '4-2', '4-3', '4-4', '4-5', '4-6', '4-B']}   # 구역 3·4 (D-056)
 STAGE_IDS = ZONES[1]   # 스테이지를 안 고르면 구역 1
 MARK = '<!-- 아래는 손으로 쓰는 부분: report가 지우지 않음 -->'
 LIMIT = 300   # 안전장치(게임 시간, 초). 실제 패배는 스테이지 제한 시간(TIME OVER)
@@ -83,7 +84,7 @@ def _sim(build, level, speed, results, stages):
             g.reload_v2()
         head, body, arm, leg = BUILDS[build]
         for sid in stages:
-            g.js(f"""{ZONES[1] + ZONES[2][:-1]}.forEach(id => progress.stages[id] = {{ stars: [true,true,true], cleared: true, bestTime: 1 }});
+            g.js(f"""{[sid for ids in ZONES.values() for sid in ids]}.forEach(id => progress.stages[id] = {{ stars: [true,true,true], cleared: true, bestTime: 1 }});
                 ['{head}','{body}','{arm}','{leg}'].forEach(id => {{ progress.owned.add(id); progress.levels[id] = {level}; }});
                 gameState.equippedParts = {{ head: '{head}', body: '{body}', arm: '{arm}', leg: '{leg}' }};
                 progress.selectStage('{sid}');
@@ -144,7 +145,9 @@ def batch(specs, parallel=2, limit_sec=1200, stages=None):
 
 
 LIMITS = {1: '1-1 150/100, 1-2 180/110, 1-3 180/110, 1-4 200/120, 1-5 230/140, 1-B 225/150',
-          2: '2-1 200/130, 2-2 210/135, 2-3 220/140, 2-4 230/145, 2-5 240/150, 2-B 240/160'}
+          2: '2-1 200/130, 2-2 210/135, 2-3 220/140, 2-4 230/145, 2-5 240/150, 2-B 240/160',
+          3: '3-1 210/135, 3-2 220/140, 3-3 230/145, 3-4 235/150, 3-5 240/155, 3-6 250/160, 3-B 270/185',
+          4: '4-1 220/140, 4-2 225/145, 4-3 230/150, 4-4 240/155, 4-5 245/160, 4-6 255/165, 4-B 260/175'}
 
 
 def report():

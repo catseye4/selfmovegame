@@ -71,6 +71,40 @@ ENEMIES = {
     'minion':   {'key': 'green', 'flip': True, 'head_y': 470, 'hip_y': 640, 'crotch': 505, 'slope': 0.12, 'arms': 'two',
                  'close': 7, 'arm_top': 400, 'head_x': (200, 560), 'tail': (712, 655, 1024, 775),
                  'pivot': {'armF': (320, 515), 'armB': (585, 470), 'legB': (590, 655), 'tail': (712, 728)}},
+    # ---- 구역 3: 성왕국 이단심문소 (초록 배경, D-056) ----
+    'soldier':    {'key': 'green', 'head_y': 440, 'hip_y': 690, 'crotch': 520, 'slope': 0.35, 'arms': 'two', 'close': 9},
+    'inquisitor': {'key': 'green', 'head_y': 450, 'hip_y': 740, 'crotch': 520, 'slope': 0.3, 'arms': 'two', 'close': 9,
+                   'cape': (560, 440), 'cape_color': 'red'},
+    'holyshield': {'key': 'green', 'head_y': 420, 'hip_y': 700, 'crotch': 520, 'slope': 0.3, 'arms': 'two', 'shoulder': True, 'close': 11,
+                   'arm_top': 200},
+    'priest':     {'key': 'green', 'head_y': 440, 'hip_y': 720, 'crotch': 510, 'slope': 0.3, 'arms': 'two', 'shoulder': True, 'close': 9,
+                   'arm_top': 250},   # 책 위로 피어오르는 빛가루도 앞팔에
+    'mage':       {'key': 'green', 'head_y': 450, 'hip_y': 730, 'crotch': 520, 'slope': 0.3, 'arms': 'two', 'shoulder': True, 'close': 9,
+                   'arm_top': 150},
+    'demon':      {'key': 'green', 'head_y': 430, 'hip_y': 700, 'crotch': 520, 'slope': 0.3, 'arms': 'two', 'close': 9},
+    'demonknight': {'key': 'green', 'head_y': 400, 'hip_y': 720, 'crotch': 530, 'slope': 0.3, 'arms': 'two', 'close': 9,
+                    'cape': (600, 420), 'cape_color': 'red'},
+    # 보스 대주교: 가마에 떠 있어 다리 없음 (가마·예복 아래쪽 = 몸통), 등 뒤 악마 그림자는 몸통에 남김
+    'archbishop': {'key': 'green', 'legs': 'none', 'head_y': 420, 'hip_y': 720, 'crotch': 520, 'slope': 0.0, 'arms': 'two', 'shoulder': True,
+                   'close': 9, 'arm_top': 100, 'head_x': (330, 640),
+                   'pivot': {'armF': (370, 395), 'armB': (650, 410)}},   # 넓은 소매: 닿는 곳 대신 어깨를 직접
+    # ---- 구역 4: 진화의 심연 (노랑 배경) ----
+    'cultist':    {'key': 'yellow', 'head_y': 430, 'hip_y': 720, 'crotch': 520, 'slope': 0.3, 'arms': 'two', 'shoulder': True, 'close': 9,
+                   'arm_top': 150},   # 머리 높이까지 치켜든 뒷손·지팡이 끝
+    'tentacle':   {'key': 'yellow', 'head_y': 400, 'hip_y': 700, 'crotch': 540, 'slope': 0.3, 'arms': 'two', 'shoulder': True, 'close': 9,
+                   'arm_top': 150},
+    'carapace':   {'key': 'yellow', 'head_y': 400, 'hip_y': 700, 'crotch': 540, 'slope': 0.3, 'arms': 'two', 'shoulder': True, 'close': 11,
+                   'arm_top': 150, 'head_x': (270, 545)},   # 등껍질 윗부분은 몸통에 (고개를 까딱여도 등껍질은 그대로)
+    'sporer':     {'key': 'yellow', 'head_y': 430, 'hip_y': 720, 'crotch': 520, 'slope': 0.3, 'arms': 'two', 'shoulder': True, 'close': 9,
+                   'head_x': (300, 560)},
+    # 보스 관장자 오큘러스: 아래는 거대한 벌레 몸 (다리 없음 — 몸통에 포함), 2페이즈(oculus2)는 외눈 투구·톱날 팔
+    'oculus':     {'key': 'yellow', 'legs': 'none', 'head_y': 330, 'hip_y': 700, 'crotch': 520, 'slope': 0.0, 'arms': 'two',
+                   'shoulder': True, 'close': 9, 'arm_top': 120, 'head_x': (420, 790)},
+    'oculus2':    {'key': 'yellow', 'legs': 'none', 'head_y': 330, 'hip_y': 700, 'crotch': 520, 'slope': 0.0, 'arms': 'two',
+                   'shoulder': True, 'close': 9, 'arm_top': 60, 'head_x': (360, 790)},
+    # 키메라 슬라임: 팔·다리·머리 없는 한 덩어리 (걷기 = 눌렸다 늘어나기)
+    'slime':      {'key': 'yellow', 'arms': 'none', 'head_y': 300, 'hip_y': 800, 'crotch': 512, 'slope': 0.0,
+                   'pivot': {'root': (530, 910), 'body': (530, 905)}},   # 바닥 가운데에서 눌렸다 늘어남 (오른쪽 아래 방울은 무시)
     # 뒤틀린 인형사의 토끼 인형(아군, 새 캐릭터 D-049): 오른쪽을 보는 그림 → 뒤집어 자름. 앞으로 뻗은 두 팔이 겹쳐 한 조각
     'rabbit':   {'key': 'green', 'flip': True, 'head_y': 520, 'hip_y': 770, 'crotch': 495, 'slope': 0.0, 'arms': 'one',
                  'close': 9, 'arm_top': 470, 'pivot': {'arms': (480, 548)}},
@@ -112,9 +146,19 @@ def arm_masks(full, armless, cfg, rows, op1, op2):
     big.sort(key=lambda i: cent[i][0])
     arm_f, arm_b = (lab == big[0]), (lab == big[1])
     # 무기 끝 불꽃처럼 떨어진 작은 조각: 앞팔 가까이(왼쪽)면 앞팔에
+    # 팔 없는 그림에 아예 없는 조각(뒷손에 매달린 향로 등)은 가까운 팔에
     for i in range(1, n):
-        if i not in big and st[i, cv2.CC_STAT_AREA] >= 20 and cent[i][0] < cent[big[0]][0] + 40:
-            arm_f |= lab == i
+        if i in big or st[i, cv2.CC_STAT_AREA] < 20:
+            continue
+        piece = lab == i
+        if cent[i][0] < cent[big[0]][0] + 40:
+            arm_f |= piece
+        elif not (piece & op2).any():
+            near_f = abs(cent[i][0] - cent[big[0]][0]) < abs(cent[i][0] - cent[big[1]][0])
+            if near_f:
+                arm_f |= piece
+            else:
+                arm_b |= piece
     return {'armF': grow(arm_f, op1 & ~arm_b, SEAM), 'armB': grow(arm_b, op1 & ~arm_f, SEAM)}
 
 
@@ -126,9 +170,24 @@ def arm_pivot(mask):
     return float(xs[band].mean()), float(top + 18)
 
 
+def shoulder_pivot(mask, body):
+    """팔 조각이 몸통(팔 없는 그림)에 닿는 곳의 맨 위 = 어깨.
+    지팡이 끝·치켜든 손이 어깨보다 높아 '맨 위'가 어깨가 아닐 때 (cfg shoulder: True)"""
+    contact = mask & grow(body, np.ones_like(body), 4) & ~body
+    if not contact.any():
+        contact = mask & body
+    ys, xs = np.nonzero(contact)
+    top = ys.min()
+    band = ys < top + 30
+    return float(xs[band].mean()), float(top + 14)
+
+
 def masks_for(name):
     cfg = ENEMIES[name]
     full = keyed(SRC.format(name=name, n=1), cfg['key'])
+    if cfg['arms'] == 'none':
+        # 팔·다리·머리 없는 덩어리(슬라임): 그림 한 장 = 몸통 한 조각
+        return cfg, full, full, {'torso': full[..., 3] > 0}
     armless = keyed(SRC.format(name=name, n=2), cfg['key'])
     if cfg.get('flip'):
         full, armless = np.ascontiguousarray(full[:, ::-1]), np.ascontiguousarray(armless[:, ::-1])
@@ -140,13 +199,20 @@ def masks_for(name):
     anyarm = np.zeros_like(op1)
     for m in arms.values():
         anyarm |= m
-    # 따로 흔드는 조각: 보스 망토(파란색) / 졸개 꼬리(영역)
+    # 따로 흔드는 조각: 보스 망토(파란색, cape_color로 바꿈) / 졸개 꼬리(영역)
     cape, extra_name, region = np.zeros_like(op1), None, None
     if 'cape' in cfg:
         rgb = armless[..., :3].astype(int)
-        blue = (rgb[..., 2] > rgb[..., 0] + 50) & (rgb[..., 2] > rgb[..., 1] + 30)
+        r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+        if cfg.get('cape_color') == 'red':
+            tone = (r > g + 40) & (r > b + 15)
+        else:
+            tone = (b > r + 50) & (b > g + 30)
         region = (cols >= cfg['cape'][0]) & (rows >= cfg['cape'][1])
-        cape = largest(op2 & blue & region)
+        cape = largest(op2 & tone & region)
+        if cfg.get('cape_close'):
+            k = np.ones((cfg['cape_close'], cfg['cape_close']), np.uint8)
+            cape = (cv2.morphologyEx(cape.astype(np.uint8), cv2.MORPH_CLOSE, k) > 0) & op2 & region
         extra_name = 'cape'
     elif 'tail' in cfg:
         x0, y0, x1, y1 = cfg['tail']
@@ -160,6 +226,11 @@ def masks_for(name):
         head &= (cols >= cfg['head_x'][0]) & (cols < cfg['head_x'][1])
     for x0, y0, x1, y1 in cfg.get('head_cut', []):
         head &= ~((cols >= x0) & (cols < x1) & (rows >= y0) & (rows < y1))
+    if cfg.get('legs') == 'none':
+        # 다리 없음(가마에 뜬 대주교 등): 아래쪽 전부 몸통 — 걷기는 몸통이 떠서 출렁임
+        torso = op2 & ((rows >= cfg['head_y'] - NECK_BAND) | (op1 & ~head & ~anyarm)) & ~cape
+        masks = {**({extra_name: cape} if cape.any() else {}), 'torso': torso, **arms, 'head': head}
+        return cfg, full, armless, masks
     torso = op2 & ((rows >= cfg['head_y'] - NECK_BAND) | (op1 & ~head & ~anyarm)) & (rows < cfg['hip_y']) & ~cape
     legs = op2 & (rows >= cfg['hip_y'] - HIP_BAND) & ~cape
     split = cfg['crotch'] + cfg['slope'] * (rows - cfg['hip_y'])
@@ -188,8 +259,9 @@ def preview(name):
     im = Image.fromarray(vis)
     d = ImageDraw.Draw(im)
     d.line([(0, cfg['head_y']), (1024, cfg['head_y'])], fill=(80, 255, 80))
-    d.line([(0, cfg['hip_y']), (1024, cfg['hip_y'])], fill=(80, 160, 255))
-    d.line([(cfg['crotch'], cfg['hip_y']), (cfg['crotch'] + cfg['slope'] * 250, cfg['hip_y'] + 250)], fill=(80, 160, 255))
+    if 'legF' in masks:
+        d.line([(0, cfg['hip_y']), (1024, cfg['hip_y'])], fill=(80, 160, 255))
+        d.line([(cfg['crotch'], cfg['hip_y']), (cfg['crotch'] + cfg['slope'] * 250, cfg['hip_y'] + 250)], fill=(80, 160, 255))
     out = os.path.join(HERE, f'_cut_{name}.png')
     im.save(out)
     print('preview', out)
@@ -204,16 +276,24 @@ def build(name):
     pivots = {
         'root': (float((feet_x.min() + feet_x.max()) / 2), float(ground)),
         'body': (float(cfg['crotch']), float((cfg['head_y'] + cfg['hip_y']) / 2)),
-        'head': (float(np.nonzero(masks['head'][cfg['head_y'] - 1])[0].mean()) if masks['head'][cfg['head_y'] - 1].any()
-                 else float(cfg['crotch']), float(cfg['head_y'] + 2)),
-        'legF': (float(cfg['crotch'] - 58), float(cfg['hip_y'] + 6)),
-        'legB': (float(cfg['crotch'] + 72), float(cfg['hip_y'] + 6)),
     }
-    sockets = {'footF': (pivots['legF'][0], float(ground)), 'footB': (pivots['legB'][0], float(ground))}
-    weapon = masks.get('armF', masks.get('arms'))
+    if 'head' in masks:
+        row = masks['head'][cfg['head_y'] - 1]
+        pivots['head'] = (float(np.nonzero(row)[0].mean()) if row.any() else float(cfg['crotch']), float(cfg['head_y'] + 2))
+    if 'legF' in masks:
+        pivots['legF'] = (float(cfg['crotch'] - 58), float(cfg['hip_y'] + 6))
+        pivots['legB'] = (float(cfg['crotch'] + 72), float(cfg['hip_y'] + 6))
+        sockets = {'footF': (pivots['legF'][0], float(ground)), 'footB': (pivots['legB'][0], float(ground))}
+    else:                                                      # 다리 없음: 발 소켓은 바닥 가운데
+        sockets = {'footF': (pivots['root'][0] - 40, float(ground)), 'footB': (pivots['root'][0] + 40, float(ground))}
+    weapon = masks.get('armF', masks.get('arms', masks['torso']))
     for k in ('armF', 'armB', 'arms', 'cape', 'tail'):
         if k in masks:
             pivots[k] = arm_pivot(masks[k])
+    if cfg.get('shoulder'):
+        for k in ('armF', 'armB', 'arms'):
+            if k in masks:
+                pivots[k] = shoulder_pivot(masks[k], armless[..., 3] > 0)
     pivots.update({k: (float(x), float(y)) for k, (x, y) in cfg.get('pivot', {}).items()})
     ys, xs = np.nonzero(weapon)
     tip = int(np.argmin(xs))                                   # 무기 끝 = 앞쪽 조각의 맨 왼쪽
@@ -230,7 +310,7 @@ def build(name):
               'sockets': {k: [float(x), float(y)] for k, (x, y) in sockets.items()}}
     write_layout(out_dir, layout)
     print(name, 'parts:', {k: (v['w'], v['h']) for k, v in layout['parts'].items()})
-    order = [k for k in ('cape', 'tail') if k in parts] + ['legB', 'legF', 'torso'] + [k for k in ('armB', 'arms', 'armF') if k in parts] + ['head']
+    order = [k for k in ('cape', 'tail', 'legB', 'legF', 'torso', 'armB', 'arms', 'armF', 'head') if k in parts]
     rest_check(out_dir, layout, order, full, os.path.join(HERE, f'_rest_check_{name}.png'))
 
 

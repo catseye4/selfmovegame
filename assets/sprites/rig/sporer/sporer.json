@@ -1,0 +1,17 @@
+{
+  "frameWidth": 89,
+  "frameHeight": 104,
+  "anchorX": 42.8,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/sporer/sporer_walk.png",
+      "frames": 12,
+      "duration": 0.7
+    },
+    "attack": {
+      "src": "assets/sprites/rig/sporer/sporer_attack.png",
+      "frames": 10,
+      "duration": 0.8
+    }
+  }
+}

@@ -60,12 +60,26 @@ function table(name) {
     const start = tokens.findIndex((token, i) => token === 'export' && tokens[i + 1] === 'const'
         && tokens[i + 2] === name && tokens[i + 3] === '=' && tokens[i + 4] === '{');
     if (start < 0) throw new Error(`${name}: 표를 찾을 수 없습니다.`);
-    let depth = 0;
-    for (let i = start + 4; i < tokens.length; i++) {
-        if (tokens[i] === '{') depth++;
-        if (tokens[i] === '}' && --depth === 0) return properties(tokens.slice(start + 4, i + 1), name);
+    const starts = [start + 4];
+    for (let i = 0; i < tokens.length; i++) {
+        if (tokens[i] === 'Object' && tokens[i + 1] === '.' && tokens[i + 2] === 'assign'
+            && tokens[i + 3] === '(' && tokens[i + 4] === name && tokens[i + 5] === ',' && tokens[i + 6] === '{') {
+            starts.push(i + 6);
+        }
     }
-    throw new Error(`${name}: 표가 닫히지 않았습니다.`);
+    // 덧붙인 블록도 순서대로 합쳐, 같은 키는 나중 정의로 덮어쓴다.
+    const result = new Map();
+    for (const objectStart of starts) {
+        let depth = 0;
+        let end = objectStart;
+        for (; end < tokens.length; end++) {
+            if (tokens[end] === '{') depth++;
+            if (tokens[end] === '}' && --depth === 0) break;
+        }
+        if (end === tokens.length) throw new Error(`${name}: 표가 닫히지 않았습니다.`);
+        for (const [key, value] of properties(tokens.slice(objectStart, end + 1), name)) result.set(key, value);
+    }
+    return result;
 }
 
 function metadata(valueTokens, label, withCooldown = false) {
@@ -91,6 +105,9 @@ const slots = [ ['head', '머리', '필살기'], ['body', '몸통', '스킬 2'],
 const columns = ['부위', '파츠 이름', 'id', '세트', '가격(DM)', '체력', '초당 피해', '사거리', '속도', '공격 방식', '스킬 종류', '스킬·패시브 이름', '쿨다운(초)', '설명'];
 const groups = ROSTER.map(character => ({ ...character, rows: [] }));
 const others = { id: null, faction: '기타', rows: [] };
+// 테스트 화면(rig_test.html)의 캐릭터별 파츠·스킬 목록: 슬롯 순서는 팔 → 몸통 → 머리 → 다리 (스킬 1 → 2 → 필살기 → 패시브)
+const catalog = Object.fromEntries(ROSTER.map(character => [character.id, []]));
+const catalogSlots = ['arm', 'body', 'head', 'leg'];
 for (const [slot, label, kind] of slots) {
     for (const part of PARTS_DB[slot] || []) {
         if (part.id === 'none') continue;
@@ -103,8 +120,16 @@ for (const [slot, label, kind] of slots) {
             slot === 'arm' ? part.attackType ?? '' : '', kind,
             skill?.name ?? '', skill?.cd ?? '', skill?.desc ?? part.skillDesc ?? ''
         ]);
+        const character = characterOfPart(part);
+        if (catalog[character]) catalog[character].push({
+            slot, id: part.id, name: part.name, set: partSetLabel(part), variant: part.rigVariant || null,
+            upgrade: !!part.rigUpgrade, attackType: slot === 'arm' ? part.attackType || 'melee' : null,
+            skill: slot === 'leg' ? part.id : partSkills.get(part.id) || null, kind,
+            skillName: skill?.name ?? '', cd: skill?.cd ?? '', desc: skill?.desc ?? part.skillDesc ?? ''
+        });
     }
 }
+for (const list of Object.values(catalog)) list.sort((a, b) => catalogSlots.indexOf(a.slot) - catalogSlots.indexOf(b.slot));
 if (others.rows.length) groups.push(others);
 
 function markdownCell(value) {
@@ -141,6 +166,14 @@ const markdownPath = resolve(outputDir, '파츠_스펙표.md');
 const csvPath = resolve(outputDir, '파츠_스펙표.csv');
 await writeFile(markdownPath, markdown.join('\n') + '\n', 'utf8');
 await writeFile(csvPath, '\uFEFF' + csv.join('\r\n') + '\r\n', 'utf8');
+// 테스트 화면용 데이터 (파츠 표와 같이 다시 만든다)
+const gen = fileURLToPath(new URL('../../js/rig_test/partSkills.gen.js', import.meta.url));
+await writeFile(gen, [
+    '// 자동 생성: node tools/data/export_parts.mjs (손으로 고치지 말 것) — rig_test.html 캐릭터별 파츠·스킬 목록',
+    '// skill = skills_v2.js의 스킬 키 (다리는 파츠 id = 패시브 키), variant = 세트 그림(a·b·dragon), upgrade = 새 캐릭터 강화 그림',
+    `export const PART_CATALOG = ${JSON.stringify(catalog, null, 1)};`, ''
+].join('\n'), 'utf8');
+console.log(gen);
 for (const group of groups) console.log(`${group.faction}: ${group.rows.length}개`);
 console.log(markdownPath);
 console.log(csvPath);

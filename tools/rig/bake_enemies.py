@@ -33,6 +33,24 @@ ENEMIES = {
     'netter': (92, 'walk:12,attack:8'),
     'mechanic': (92, 'walk:12,attack:10'),
     'scrapking': (230, 'walk:12,attack:12,magnet:12,drop:10'),
+    # 구역 3: 성왕국 (D-056) — 방패병 103, 악마기사(엘리트) 115, 대주교는 가마까지 215
+    'soldier': (92, 'walk:12,attack:10'),
+    'inquisitor': (96, 'walk:12,attack:10'),
+    'holyshield': (103, 'walk:12,attack:10'),
+    'priest': (92, 'walk:12,attack:10'),
+    'mage': (96, 'walk:12,attack:10'),
+    'demon': (90, 'walk:12,attack:10'),
+    'demonknight': (115, 'walk:12,attack:12'),
+    'archbishop': (215, 'walk:12,attack:12,bash:12'),
+    # 구역 4: 심연 — 방패수 108, 포자 술사는 등의 식물까지 104, 슬라임은 납작하고 넓어 78
+    'cultist': (94, 'walk:12,attack:10'),
+    'tentacle': (96, 'walk:12,attack:10'),
+    'carapace': (108, 'walk:12,attack:10'),
+    'sporer': (104, 'walk:12,attack:10'),
+    'slime': (78, 'walk:12,attack:10'),
+    # 보스 오큘러스 (벌레 몸이 넓어 고철왕과 같은 230), 2페이즈는 같은 틀로 그림만 바꿔 끼움
+    'oculus': (230, 'walk:12,attack:12,magnet:12,drop:12'),
+    'oculus2': (236, 'walk:12,attack:12,magnet:12,drop:12'),
 }
 
 

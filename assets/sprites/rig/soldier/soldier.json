@@ -1,0 +1,17 @@
+{
+  "frameWidth": 85,
+  "frameHeight": 92,
+  "anchorX": 55.9,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/soldier/soldier_walk.png",
+      "frames": 12,
+      "duration": 0.7
+    },
+    "attack": {
+      "src": "assets/sprites/rig/soldier/soldier_attack.png",
+      "frames": 10,
+      "duration": 0.8
+    }
+  }
+}

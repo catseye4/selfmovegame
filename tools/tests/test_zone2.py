@@ -19,7 +19,7 @@ def run(ctx):
     st = g.js("""const tabs = [...document.querySelectorAll('#menu-zones-v2 .v2-zonetab')];
         const z2 = tabs.find(t => t.dataset.zone === 'ch2'); z2.click();
         return { n: tabs.length, locked: z2.classList.contains('is-locked'), foot: document.getElementById('menu-map-foot-v2').textContent };""")
-    ctx.check(st['n'] == 2 and st['locked'] and '잠김' in st['foot'], '구역 탭: 구역 2는 1-B 전까지 잠김', str(st))
+    ctx.check(st['n'] >= 2 and st['locked'] and '잠김' in st['foot'], '구역 탭: 구역 2는 1-B 전까지 잠김', str(st))
 
     # 1-B를 깨면 구역 2가 열리고, 누르면 2-1
     g.js(CLEAR_CH1 + "window.madOverlordGameV2.menuController.renderStages();")

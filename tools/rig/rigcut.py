@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw
 
 
 def remove_key_background(path, key, crop=None, key_t=60, spill_t=12, min_part=None):
-    """단색 크로마키 배경 제거 → RGBA. key: 'green'(#00FF00) | 'magenta'(#FF00FF).
+    """단색 크로마키 배경 제거 → RGBA. key: 'green'(#00FF00) | 'magenta'(#FF00FF) | 'yellow'(#FFFF00, 구역 4).
     crop=(x0, y0, x1, y1)이면 그 영역만 사용.
     min_part=None 이면 가장 큰 덩어리만 남기고(워터마크 등 제거),
     숫자면 그 면적 이상 덩어리는 모두 남김 (본체와 떨어진 칼 등을 살릴 때)."""
@@ -24,6 +24,9 @@ def remove_key_background(path, key, crop=None, key_t=60, spill_t=12, min_part=N
         keyness = g - np.maximum(r, b)
     elif key == 'magenta':
         keyness = np.minimum(r, b) - g
+    elif key == 'yellow':
+        # 빨강·초록이 함께 높아야 노랑 — 형광 녹색(초록만 높음)은 |r - g|만큼 깎여 남음
+        keyness = np.minimum(r, g) - b - np.abs(r - g)
     else:
         raise ValueError(key)
     alpha = np.where(keyness > key_t, 0, 255).astype(np.uint8)
@@ -31,6 +34,11 @@ def remove_key_background(path, key, crop=None, key_t=60, spill_t=12, min_part=N
     spill = (alpha == 255) & (keyness > spill_t)
     if key == 'green':
         rgb[..., 1] = np.where(spill, np.maximum(r, b) + spill_t, g)
+    elif key == 'yellow':
+        # 노란 번짐: 빨강·초록을 같은 만큼 내려 색상 차이(r - g)는 유지
+        cut_k = np.where(spill, keyness - spill_t, 0)
+        rgb[..., 0] = r - cut_k
+        rgb[..., 1] = g - cut_k
     else:
         lim = g + spill_t
         rgb[..., 0] = np.where(spill, np.minimum(r, lim), r)

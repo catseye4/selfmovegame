@@ -2,8 +2,10 @@
    PROJECT: MAD OVERLORD // 스테이지 데이터 (v2)
    챕터 1 = 구역 1 "지하 비밀 연구소" 1-1 ~ 1-5 + 보스전 (결정 D-018, D-021)
    챕터 2 = 구역 2 "하부 쓰레기 폐기 정착지" 2-1 ~ 2-5 + 보스전 (D-040) — 1-B를 깨면 열림
+   챕터 3·4 = 구역 3 "성왕국 수도" · 구역 4 "진화의 심연" 3-1 ~ 3-6 + 보스전, 4-1 ~ 4-6 + 보스전 (D-056)
 
-   챕터 항목: id, name, art { mid, final } (거점 그림 이름, bases_v2.js), stages
+   챕터 항목: id, zone, name, art { mid, final } (거점 그림 이름, bases_v2.js),
+             defense { mid|final: { range, every, dmg, color, label, puddle? } } (다가오면 거점이 쏨, 구역 3·4), stages
    스테이지는 앞에서부터 한 줄로 이어짐(1-1 … 1-B, 2-1 … 2-B): 앞 스테이지를 깨면 다음이 열리고, 결과 화면 "다음"도 이 순서
 
    스테이지 항목
@@ -16,6 +18,8 @@
      reward: DM { kill (기본 보병 1기, 종류별 배율은 enemies_v2.js), mid, final }
      boss  : 보스전 설정 { unit (보스 적 종류), artillery: { every, warn, stun, silence } (구역 1 EMP 포격)
                           또는 gas: { every, warn, sec (감속 시간), silence (증원 중단 초) } (구역 2 유독 가스) }  — 기획서 2-⑥ 광역 기믹
+                          afterBase: true → 최종 기지를 부수면 보스가 나오고, 보스를 쓰러뜨려야 승리 (구역 3)
+                          knights: { every, warn, unit } → 보스가 나온 뒤 every초마다 엘리트 소환 (구역 3 심연의 문 개방)
      map   : 메인 레이더에 찍을 위치 (레이더 중심 기준 -1~1)
    난이도 곡선은 tools/tests/balance_sim.py 결과(MD/밸런스_기록.md)를 보고 조정한다.
    ========================================================================== */
@@ -125,9 +129,126 @@ export const CHAPTER2 = {
     ]
 };
 
-export const CHAPTERS = [CHAPTER1, CHAPTER2];
-// 스테이지마다 챕터 정보(거점 그림 art, chapter id)를 붙여 둠 — 전투·메뉴가 stage.art / stage.chapter로 씀
-CHAPTERS.forEach(ch => ch.stages.forEach(st => { st.chapter = ch.id; st.art = ch.art; }));
+// 레이더 위 7판(6 + 보스) 자리 — 구역 3·4
+const MAP7 = [[-0.74, 0.56], [-0.48, 0.38], [-0.22, 0.2], [0.04, 0.0], [0.3, -0.2], [0.54, -0.44], [0.76, -0.74]];
+
+// 구역 3: 성왕국 이단심문소 & 타락 기사단 (D-056, MD/구역3_설계안.md) — 7판(6 + 보스).
+// 요새(심문소 통제탑)는 다가오면 화살·마법을 쏨(defense.mid), 3-B는 정문(최종 기지)을 부수면 대주교가 나오고 대주교를 쓰러뜨려야 승리(afterBase),
+// 보스전 기믹 = 심연의 문 개방: 정문을 부순 뒤 knights.every초마다 악마기사(엘리트)
+// 그림은 Gemini 전까지 임시(구역 1 통제탑 · 구역 2 관문 + 색조, ui_v2.css .v2-zone-3)
+export const CHAPTER3 = {
+    id: 'ch3',
+    zone: 3,
+    name: '구역 3 · 성왕국 수도: 진홍의 순례길',
+    art: { mid: 'tower', final: 'gate' },
+    defense: { mid: { range: 420, every: 2.2, dmg: 24, color: '255, 214, 120', label: '🏹 화살·마법', hitFx: 'arrowHit' } },
+    stages: [
+        {
+            id: '3-1', timeLimit: 210, starTime: 135, name: '무너진 처형대', desc: '처형대를 부수고 몰려드는 경비병들을 쓰러뜨리며 진격을 시작한다.',
+            distance: 1000, midAt: 450, finalAt: 900,
+            enemy: { hp: 2.9, dps: 2.1, spawn: 1.9, max: 8, mix: { soldier: 1 } }, elite: 0.06,
+            base: { mid: 7000, final: 12500 }, reward: { kill: 36, mid: 2100, final: 6000 }
+        },
+        {
+            id: '3-2', timeLimit: 220, starTime: 140, name: '배신자의 거리', desc: '돌을 던지던 시가지를 돌파한다. 정예 기사들이 막아선다.',
+            distance: 1050, midAt: 470, finalAt: 950,
+            enemy: { hp: 3.05, dps: 2.2, spawn: 2.0, max: 8, mix: { soldier: 3, inquisitor: 1 } }, elite: 0.08,
+            base: { mid: 7400, final: 13200 }, reward: { kill: 38, mid: 2200, final: 6300 }
+        },
+        {
+            id: '3-3', timeLimit: 230, starTime: 145, name: '굳건한 위선', desc: '방패로 겹겹이 장벽을 친 기사단과 정면으로 부딪친다.',
+            distance: 1100, midAt: 500, finalAt: 1000,
+            enemy: { hp: 3.2, dps: 2.3, spawn: 2.0, max: 8, mix: { soldier: 3, inquisitor: 1, holyshield: 1 } }, elite: 0.1,
+            base: { mid: 7800, final: 13900 }, reward: { kill: 40, mid: 2300, final: 6600 }
+        },
+        {
+            id: '3-4', timeLimit: 235, starTime: 150, name: '눈먼 맹신의 순례길', desc: '쓰러진 병사들을 끊임없이 치유하며 버티는 적진을 분쇄한다.',
+            distance: 1100, midAt: 500, finalAt: 1000,
+            enemy: { hp: 3.35, dps: 2.4, spawn: 1.95, max: 9, mix: { soldier: 3, inquisitor: 1, holyshield: 1, priest: 1 } }, elite: 0.11,
+            base: { mid: 8200, final: 14600 }, reward: { kill: 42, mid: 2400, final: 6900 }
+        },
+        {
+            id: '3-5', timeLimit: 240, starTime: 155, name: '빛과 불꽃의 세례', desc: '쉴 새 없이 쏟아지는 원소 마법을 뚫고 성문으로 전진한다.',
+            distance: 1150, midAt: 520, finalAt: 1050,
+            enemy: { hp: 3.5, dps: 2.45, spawn: 1.9, max: 9, mix: { soldier: 2, inquisitor: 1, holyshield: 1, priest: 1, mage: 2 } }, elite: 0.12,
+            base: { mid: 8600, final: 15300 }, reward: { kill: 44, mid: 2500, final: 7200 }
+        },
+        {
+            id: '3-6', timeLimit: 250, starTime: 160, name: '대성당의 계단', desc: '성문 앞 최후의 저지선. 성왕국의 모든 병력이 쏟아져 나온다.',
+            distance: 1200, midAt: 550, finalAt: 1100,
+            enemy: { hp: 3.65, dps: 2.5, spawn: 1.85, max: 9, mix: { soldier: 4, inquisitor: 1, holyshield: 1, priest: 1, mage: 2 } }, elite: 0.14,
+            base: { mid: 9000, final: 16000 }, reward: { kill: 46, mid: 2600, final: 7500 }
+        },
+        {
+            id: '3-B', timeLimit: 270, starTime: 185, name: '심판자의 성문', desc: '성문을 부수면 추악한 본성을 드러낸 대주교 베네딕트가 기다린다.',
+            distance: 1050, midAt: 470, finalAt: 950,
+            enemy: { hp: 3.8, dps: 2.6, spawn: 2.0, max: 9, mix: { soldier: 3, inquisitor: 2, holyshield: 1, priest: 1, mage: 2 } }, elite: 0.12,
+            base: { mid: 8800, final: 14000 }, reward: { kill: 50, mid: 2800, final: 8500 },
+            boss: { unit: 'archbishop', afterBase: true, knights: { every: 22, warn: 2, unit: 'demonknight' } }
+        }
+    ]
+};
+
+// 구역 4: 별의 사도들과 실패한 진화체들 (D-056, MD/구역4_설계안.md) — 7판(6 + 보스).
+// 요새(박동하는 유기질 벽)는 다가오면 독액(피해 + 독 웅덩이), 4-B 보스 오큘러스는 체력 50%에서 2페이즈(enemies_v2.js rage)
+// 그림은 Gemini 전까지 임시(구역 1 벙커 · 구역 2 소각탑 + 색조, ui_v2.css .v2-zone-4)
+export const CHAPTER4 = {
+    id: 'ch4',
+    zone: 4,
+    name: '구역 4 · 진화의 심연: 꿈틀대는 요람',
+    art: { mid: 'bunker', final: 'furnace' },
+    defense: { mid: { range: 300, every: 3.2, dmg: 16, color: '150, 255, 90', label: '☣ 독액', puddle: { sec: 3, width: 110 }, hitFx: 'venomSplash' } },
+    stages: [
+        {
+            id: '4-1', timeLimit: 220, starTime: 140, name: '찢어진 고치', desc: '깨어나자마자 몰려드는 광신도들을 밀어내며 탈주를 시작한다.',
+            distance: 1000, midAt: 450, finalAt: 900,
+            enemy: { hp: 3.2, dps: 2.3, spawn: 1.9, max: 8, mix: { cultist: 1 } }, elite: 0.06,
+            base: { mid: 7600, final: 13400 }, reward: { kill: 52, mid: 2900, final: 8000 }
+        },
+        {
+            id: '4-2', timeLimit: 225, starTime: 145, name: '변이의 복도', desc: '촉수를 휘두르는 짐승들과 근접 난전을 벌인다.',
+            distance: 1050, midAt: 470, finalAt: 950,
+            enemy: { hp: 3.3, dps: 2.35, spawn: 2.0, max: 8, mix: { cultist: 3, tentacle: 1 } }, elite: 0.08,
+            base: { mid: 8000, final: 14000 }, reward: { kill: 54, mid: 3000, final: 8300 }
+        },
+        {
+            id: '4-3', timeLimit: 230, starTime: 150, name: '갑각의 장벽', desc: '갑각으로 길을 막은 방패수들을 분쇄하며 돌파한다.',
+            distance: 1100, midAt: 500, finalAt: 1000,
+            enemy: { hp: 3.4, dps: 2.4, spawn: 2.0, max: 8, mix: { cultist: 3, tentacle: 1, carapace: 1 } }, elite: 0.1,
+            base: { mid: 8300, final: 14600 }, reward: { kill: 56, mid: 3100, final: 8600 }
+        },
+        {
+            id: '4-4', timeLimit: 240, starTime: 155, name: '끝없는 증식', desc: '쓰러뜨려도 다시 갈라지며 달라붙는 점액질들과 소모전을 벌인다.',
+            distance: 1100, midAt: 500, finalAt: 1000,
+            enemy: { hp: 3.5, dps: 2.45, spawn: 1.95, max: 9, mix: { cultist: 2, tentacle: 1, carapace: 1, slime: 2 } }, elite: 0.11,
+            base: { mid: 8600, final: 15200 }, reward: { kill: 58, mid: 3200, final: 8900 }
+        },
+        {
+            id: '4-5', timeLimit: 245, starTime: 160, name: '맹독의 정원', desc: '사방에서 날아오는 독 포자를 뚫고 진격한다.',
+            distance: 1150, midAt: 520, finalAt: 1050,
+            enemy: { hp: 3.6, dps: 2.5, spawn: 1.9, max: 9, mix: { cultist: 2, tentacle: 1, carapace: 1, slime: 1, sporer: 2 } }, elite: 0.12,
+            base: { mid: 9000, final: 15800 }, reward: { kill: 60, mid: 3300, final: 9200 }
+        },
+        {
+            id: '4-6', timeLimit: 255, starTime: 165, name: '제단의 입구', desc: '우주적 고치를 지키려 쏟아져 나오는 생명체들의 총공세.',
+            distance: 1200, midAt: 550, finalAt: 1100,
+            enemy: { hp: 3.7, dps: 2.55, spawn: 1.85, max: 9, mix: { cultist: 4, tentacle: 1, carapace: 1, slime: 2, sporer: 2 } }, elite: 0.14,
+            base: { mid: 9300, final: 16400 }, reward: { kill: 62, mid: 3400, final: 9500 }
+        },
+        {
+            id: '4-B', timeLimit: 260, starTime: 175, name: '설계자의 최후', desc: '관장자 오큘러스와의 전투. 체력이 절반이 되면 외눈 괴수로 변이한다.',
+            distance: 1050, midAt: 470, finalAt: 950,
+            enemy: { hp: 3.85, dps: 2.6, spawn: 2.0, max: 9, mix: { cultist: 3, tentacle: 2, carapace: 1, slime: 2, sporer: 2 } }, elite: 0.12,
+            base: { mid: 9000, final: 15600 }, reward: { kill: 66, mid: 3600, final: 11000 },
+            boss: { unit: 'oculus' }
+        }
+    ]
+};
+[CHAPTER3, CHAPTER4].forEach(ch => ch.stages.forEach((st, i) => { st.map = MAP7[i]; }));
+
+export const CHAPTERS = [CHAPTER1, CHAPTER2, CHAPTER3, CHAPTER4];
+// 스테이지마다 챕터 정보(거점 그림 art, 요새 사격 defense, chapter id, 구역 번호)를 붙여 둠 — 전투·메뉴가 stage.art / stage.chapter / stage.zone으로 씀
+CHAPTERS.forEach(ch => ch.stages.forEach(st => { st.chapter = ch.id; st.zone = ch.zone; st.art = ch.art; st.defense = ch.defense || null; }));
 export const STAGES = CHAPTERS.flatMap(ch => ch.stages);
 
 export function chapterOf(stageOrId) {

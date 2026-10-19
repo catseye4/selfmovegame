@@ -1,14 +1,25 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // VFX PLAYER (v2)
    데이터로 정의한 스킬 이펙트를 재생한다. 게임(battleFx.js)과 테스트 화면(rig_test.html)이 함께 사용.
+   constructor({style: 'glow'|'pixel'}): pixel은 이펙트만 1/3 해상도에 그리고 보간 없이 확대한다.
+   style은 재생 중에도 변경 가능. 원래 캔버스 변환·앞/바닥 레이어 순서를 유지한다.
 
    이펙트 정의 = { layers: [...], sfx?: '효과음 이름' }
      layer 공통: { type, at(시작 초), dur(길이 초), color('r, g, b'), layer?('ground'|'front'),
                   dy?(기준점 위아래 px), pos?('to' = 목표 지점에 표시) }
      type (모양)
+       sprite  : 그림 프레임 이펙트 (Gemini 손그림 시트, VFX_SHEETS) {sheet, size, angle?, flipX?, squash?, blend?, alpha?, glow?}
+       starburst: 윤곽 별 섬광 {r, points, inner, stretch?, angle?, outline?, width?} (처음 0.05초 최대)
+       speedlines: 삼각 속도선 {count, len, angle?, cone?, width, outline?}
+       ribbon  : 단색 불길/광선/기둥 {len, w, angle?, jag?, outline?, width?} (to가 있으면 두 점 연결)
+       tendrils: 재질 위주의 솟는 촉수 {count, h, w, spread, angular?, outline?, width?}
        flash   : 순간 섬광 {r}
        fireball: 부풀었다 사그라드는 불덩이 (흰 중심 → 노랑 → 색) {r}
        ring    : 퍼지는 고리 {r, width, ground?(바닥 타원), inward?(조여드는 고리)}
+       bolt    : 재점화하며 갈라지는 번개 {count, len?, angle?(라디안, 없으면 방사형), jag(px), branches(가닥당), width, flicker(초)} (to 우선)
+       slash   : 쓸고 지나가는 초승달 베기 + 잔상 {r, arc(라디안), angle(베는 방향), width, sweep(초), thick(두께 배수)}
+       shockwave: 밝은 안쪽에서 바깥으로 번지는 충격파 띠 {r, width(띠 두께), ground?(바닥 타원)}
+       rays    : 회전하며 길이가 출렁이는 빛살 {count, len, width, spin(초당 라디안)}
        glow    : 바닥 잔광 {r}
        pillar  : 바닥에서 솟는 빛기둥 {h, w}
        rune    : 바닥 마법진 (회전하는 룬 고리 + 별) {r, spin}
@@ -20,13 +31,23 @@
        jet     : 기준점 → 목표 지점 물줄기 (출렁이는 굵은 줄기 + 흰 심 + 끝의 물보라) {w, spray}  (play 옵션 to 필요)
        hands   : 바닥에서 솟아 움켜쥐는 유령 손 {count, h, spread}
        crystals: 바닥에서 솟는 얼음 결정 가시 (솟고 → 버티고 → 사라짐) {count, h, spread}
+       mist    : 낮게 흐르는 옅은 안개 띠 {r, h, life(초), drift(px/초), rim?(고정 바닥 경계)} (입자 0)
      type (입자)
+       flame   : 부채꼴로 뿜어져 커지고 식는 불길 {count, speed, angle?, cone?, size, grow, life:[min,max], drag, rise, color?, smoke?, matte?(비발광 재질)}
+       embers  : 날리다 붉게 식어 꺼지는 불씨 {count, speed, angle?, cone?, size, life:[min,max], drag, rise, color?}
        sparks  : 사방/부채꼴로 튀는 빛줄기 {count, speed, angle?, cone?}
+       streaks : 감속하는 불티 (흰 머리 + 속도 방향의 긴 꼬리) {count, speed, angle?, cone?, len, life(초 또는 [min,max])}
        motes   : 떠오르는 빛가루 {count, spread, rise:[min,max], life:[min,max], size}
-       smoke   : 퍼지며 흩어지는 연기 {count, spread, spreadY, size, life:[min,max], rise}
+       smoke   : 퍼지며 흩어지는 연기 {count, spread, spreadY, size, life:[min,max], rise, speed?, angle?(분출 방향)}
        debris  : 중력으로 떨어지는 파편 {count, speed, size, angle?, cone?}
        chevrons: 가라앉는 ▼ 표식 (디버프) {count, spread, fall, life:[min,max], size}
        drops   : 위로 튀었다 떨어지는 둥근 물방울 {count, speed, size, angle?, cone?}
+       shards  : 회전하는 3~5각 파편, 밝은 모서리·어두운 면 + 바닥에서 한 번 튕김
+                 {count, speed, angle?, cone?, size, spin, gravity?, life(초 또는 [min,max]), shape?('ice'|'rock'|'shell'), color}
+       goo     : 속도 방향으로 늘어지는 광택 덩어리 → 바닥 얼룩 + 작은 방울 2개
+                 {count, speed, angle?, cone?, size, life(초 또는 [min,max]), splat?(기본 true), color}
+                 shards·goo의 floor?: 발생점 아래 바닥 높이(px, 기본 32), dy로 공중 발생 시 그 높이만큼 지정
+       dust    : 바닥을 따라 굴러 커지고 흐려지는 낮은 흙먼지 {count, speed, dir?('both'|'left'|'right'), size, life, color}
    크기 단위: 게임 전장 px. play(..., {scale})로 배율 지정 (테스트 화면은 캐릭터가 커서 배율 ↑)
    좌표: 화면 좌표(y 아래로 증가). 바닥 이펙트는 발 높이 y 기준.
 
@@ -37,15 +58,19 @@
                           {rx, flat, dy, color, dark, haze, wisps(초당), origin(발밑 근원 위치), rune?}
                           targets() → [{key, x, y, w}]: 장판 안 대상의 발 위치 → 발목을 휘감는 촉수
      launchWave / launchOrb / launchMissile / launchChain / launchNeedle: 이동하는 투사체
+       orb: 흰 구체 심 + 색 테두리 + 리본 꼬리 / missile: 추진 불꽃(flame) + 연기 / needle: 긴 속도 꼬리
+       beam: 흰 심 + 맥박치는 색 띠 + 일렁이는 가장자리 (기존 w·to 유지)
      onSfx(name): 효과음 연결 지점 (지금은 비어 있음 — 효과 확정 후 사운드 매니저를 연결)
    ========================================================================== */
 
 const WHITE = '255, 255, 255';
-const GROUND_TYPES = new Set(['rune', 'glow', 'cracks']);
+const GROUND_TYPES = new Set(['rune', 'glow', 'cracks', 'mist']);
 const MAX_PARTS = 700;   // 입자 상한: 넘으면 오래된 것부터 버림 (스킬이 겹쳐도 프레임 유지)
 
 export class VfxPlayer {
-    constructor() {
+    constructor({ style = 'glow' } = {}) {
+        this.style = style;
+        this.pixelCanvas = null;
         this.items = [];
         this.parts = [];
         this.projectiles = [];
@@ -158,12 +183,39 @@ export class VfxPlayer {
             p.vy *= 1 - (p.drag || 0) * dt;
             p.vy += (p.g || 0) * dt;
             if (p.vr) p.rot += p.vr * dt;
+            if ((p.kind === 'shard' || p.kind === 'goo') && p.y >= p.floor && p.vy > 0) {
+                p.y = p.floor;
+                if (p.kind === 'shard') {
+                    if (!p.bounced) {
+                        p.vy *= -0.32;
+                        p.vx *= 0.65;
+                        p.vr *= 0.55;
+                        p.bounced = true;
+                    } else {
+                        p.vx = p.vy = p.g = p.vr = 0;
+                        p.t = Math.max(p.t, p.dur - 0.16);
+                    }
+                } else if (p.splat) {
+                    p.kind = 'splat';
+                    p.layer = 'ground';
+                    p.t = 0;
+                    p.dur = p.splatLife;
+                    p.vx = p.vy = p.g = 0;
+                    // 자식은 얼룩·재분열 없이 끝남. 작은 방울도 같은 700개 상한을 사용한다.
+                    for (let i = 0; i < 2 && this.parts.length < MAX_PARTS; i++) {
+                        this.parts.push({ kind: 'goo', x: p.x, y: p.y - p.r * 0.3, floor: p.floor,
+                            vx: (i ? 1 : -1) * (25 + this.rand() * 35) * p.s, vy: -(40 + this.rand() * 45) * p.s,
+                            g: 650 * p.s, drag: 1.8, t: 0, dur: 0.3, r: p.r * 0.28, s: p.s, color: p.color, splat: false });
+                    }
+                } else p.t = p.dur;
+            }
         }
         this.parts = this.parts.filter(p => p.t < p.dur);
         if (this.parts.length > MAX_PARTS) this.parts.splice(0, this.parts.length - MAX_PARTS);
 
         for (const pr of this.projectiles) this._updateProjectile(pr, dt);
         this.projectiles = this.projectiles.filter(pr => !pr.done);
+        if (this.parts.length > MAX_PARTS) this.parts.splice(0, this.parts.length - MAX_PARTS);
     }
 
     // 저주 장판: 장판 곳곳에서 기운이 피어오르고, 안에 들어온 대상마다 촉수가 자라남
@@ -215,6 +267,73 @@ export class VfxPlayer {
                 this.parts.push({ kind: 'spark', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0,
                     dur: 0.25 + this.rand() * 0.2, drag: 4, color: it.color, s });
             }
+        } else if (it.type === 'streaks') {
+            for (let i = 0; i < Math.min(it.count ?? 8, MAX_PARTS); i++) {
+                const a = this._cone(it);
+                const v = (it.speed ?? 380) * s * (0.65 + this.rand() * 0.7);
+                this.parts.push({ kind: 'streak', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0,
+                    dur: Array.isArray(it.life) ? this.range(it.life) : (it.life ?? this.range([0.3, 0.55])), drag: 3.5, color: it.color, s,
+                    len: (it.len ?? 32) * s * (0.8 + this.rand() * 0.4), layer: it.layer || 'front' });
+            }
+        } else if (it.type === 'shards' || it.type === 'goo') {
+            const shard = it.type === 'shards';
+            for (let i = 0; i < Math.min(it.count ?? 6, MAX_PARTS); i++) {
+                const a = this._cone({ angle: -Math.PI / 2, cone: 2.6, ...it });
+                const v = (it.speed ?? 190) * s * (0.65 + this.rand() * 0.55);
+                const p = { kind: shard ? 'shard' : 'goo', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v,
+                    t: 0, dur: Array.isArray(it.life) ? this.range(it.life) : (it.life ?? 0.85),
+                    g: (it.gravity ?? (shard ? 850 : 700)) * s, drag: shard ? 0.4 : 1.4,
+                    floor: y + (it.floor ?? 32) * s, r: (it.size ?? 6) * s * (0.75 + this.rand() * 0.5),
+                    color: it.color || (shard ? '150, 220, 255' : '150, 255, 90'), s, layer: it.layer || 'front' };
+                if (shard) {
+                    p.rot = this.rand() * Math.PI * 2;
+                    p.vr = (it.spin ?? 8) * (this.rand() < 0.5 ? -1 : 1);
+                    p.shape = it.shape || 'ice';
+                    p.points = [];
+                    const n = 3 + Math.floor(this.rand() * 3);
+                    for (let k = 0; k < n; k++) {
+                        const angle = k / n * Math.PI * 2;
+                        const r = p.r * (0.65 + this.rand() * 0.35);
+                        p.points.push([Math.cos(angle) * r, Math.sin(angle) * r]);
+                    }
+                } else {
+                    p.splat = it.splat !== false;
+                    p.splatLife = p.dur * 0.7;
+                }
+                this.parts.push(p);
+            }
+        } else if (it.type === 'dust') {
+            const n = Math.min(it.count ?? 5, MAX_PARTS);
+            for (let i = 0; i < n; i++) {
+                const dir = it.dir === 'left' ? -1 : it.dir === 'right' ? 1 : (i % 2 ? 1 : -1);
+                this.parts.push({ kind: 'dust', x: x + dir * this.rand() * 8 * s, y, vx: dir * (it.speed ?? 130) * s * (0.6 + this.rand() * 0.6),
+                    vy: 0, drag: 1.2, t: 0, dur: Array.isArray(it.life) ? this.range(it.life) : (it.life ?? 0.9),
+                    r: (it.size ?? 18) * s * (0.8 + this.rand() * 0.4), phase: this.rand() * Math.PI * 2,
+                    color: it.color || '145, 120, 90', layer: it.layer || 'ground' });
+            }
+        } else if (it.type === 'mist') {
+            it.dur = it.life ?? it.dur ?? 1;
+        } else if (it.type === 'bolt') {
+            it.seed = this.rand() * 10000;
+        } else if (it.type === 'flame') {
+            for (let i = 0; i < Math.min(it.count ?? 6, MAX_PARTS); i++) {
+                const a = this._cone({ angle: 0, cone: 0.3, ...it });
+                const v = (it.speed ?? 420) * s * (0.9 + this.rand() * 0.2);
+                this.parts.push({ kind: 'flame', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v,
+                    t: 0, dur: this.range(it.life || [0.5, 0.7]), drag: it.drag ?? 1.8, g: -(it.rise ?? 60) * s,
+                    r: (it.size ?? 10) * s * (0.85 + this.rand() * 0.3), grow: it.grow ?? 4,
+                    color: (it.color || '255, 125, 30').split(',').map(Number), smoke: it.smoke !== false, matte: it.matte,
+                    phase: this.rand() * Math.PI * 2, layer: it.layer || 'front' });
+            }
+        } else if (it.type === 'embers') {
+            for (let i = 0; i < Math.min(it.count ?? 3, MAX_PARTS); i++) {
+                const a = this._cone({ angle: -Math.PI / 2, cone: 1.8, ...it });
+                const v = (it.speed ?? 100) * s * (0.6 + this.rand() * 0.6);
+                this.parts.push({ kind: 'ember', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v,
+                    t: 0, dur: this.range(it.life || [0.4, 0.8]), drag: it.drag ?? 1.5, g: -(it.rise ?? 25) * s,
+                    r: (it.size ?? 1.5) * s * (0.7 + this.rand() * 0.6), color: it.color || '255, 175, 65',
+                    phase: this.rand() * Math.PI * 2, layer: it.layer || 'front' });
+            }
         } else if (it.type === 'motes') {
             for (let i = 0; i < (it.count || 8); i++) {
                 this.parts.push({ kind: 'mote', x: x + (this.rand() - 0.5) * 2 * (it.spread || 20) * s,
@@ -224,8 +343,8 @@ export class VfxPlayer {
         } else if (it.type === 'smoke') {
             for (let i = 0; i < (it.count || 5); i++) {
                 this.parts.push({ kind: 'smoke', x: x + (this.rand() - 0.5) * 2 * (it.spread || 20) * s,
-                    y: y - this.rand() * (it.spreadY || 10) * s, vx: (this.rand() - 0.5) * 30 * s,
-                    vy: -(it.rise || 25) * s * (0.5 + this.rand()), t: 0, dur: this.range(it.life || [0.7, 1.2]),
+                    y: y - this.rand() * (it.spreadY || 10) * s, vx: (this.rand() - 0.5) * 30 * s + (it.speed || 0) * Math.cos(it.angle || 0) * s,
+                    vy: -(it.rise || 25) * s * (0.5 + this.rand()) + (it.speed || 0) * Math.sin(it.angle || 0) * s, t: 0, dur: this.range(it.life || [0.7, 1.2]),
                     drag: 1.2, color: it.color, r: (it.size || 16) * s * (0.7 + this.rand() * 0.6),
                     layer: it.layer || 'front' });
             }
@@ -373,8 +492,9 @@ export class VfxPlayer {
                 const bx = pr.x - Math.cos(pr.angle) * 9 * s, by = pr.y - Math.sin(pr.angle) * 9 * s;
                 this.parts.push({ kind: 'smoke', x: bx, y: by, vx: (this.rand() - 0.5) * 20 * s, vy: -12 * s, t: 0,
                     dur: 0.45 + this.rand() * 0.25, drag: 2, color: '120, 110, 120', r: 7 * s, layer: 'front' });
-                this.parts.push({ kind: 'mote', x: bx, y: by, vx: -Math.cos(pr.angle) * 60 * s, vy: -Math.sin(pr.angle) * 60 * s,
-                    t: 0, dur: 0.12, color: pr.color, r: 2.4 * s, phase: 0 });
+                this.parts.push({ kind: 'flame', x: bx, y: by, vx: -Math.cos(pr.angle) * 85 * s, vy: -Math.sin(pr.angle) * 85 * s,
+                    t: 0, dur: 0.18, drag: 2, g: -20 * s, r: 4 * s, grow: 2.2,
+                    color: pr.color.split(',').map(Number), smoke: false, phase: this.rand() * Math.PI * 2, layer: 'front' });
             }
             if (u >= 1) {
                 pr.done = true;
@@ -386,6 +506,24 @@ export class VfxPlayer {
     // ------------------------------------------------------------------
     /** layer: 'ground'(캐릭터/적 아래) | 'front'(위) */
     draw(ctx, layer) {
+        if (this.style !== 'pixel') return this._draw(ctx, layer);
+        if (!this.pixelCanvas) this.pixelCanvas = document.createElement('canvas');
+        const canvas = this.pixelCanvas, w = ctx.canvas.width, h = ctx.canvas.height;
+        if (canvas.width !== Math.ceil(w / 3)) canvas.width = Math.ceil(w / 3);
+        if (canvas.height !== Math.ceil(h / 3)) canvas.height = Math.ceil(h / 3);
+        const low = canvas.getContext('2d'), m = ctx.getTransform();
+        low.setTransform(1, 0, 0, 1, 0, 0);
+        low.clearRect(0, 0, canvas.width, canvas.height);
+        low.setTransform(m.a / 3, m.b / 3, m.c / 3, m.d / 3, m.e / 3, m.f / 3);
+        this._draw(low, layer);
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(canvas, 0, 0, canvas.width * 3, canvas.height * 3);
+        ctx.restore();
+    }
+
+    _draw(ctx, layer) {
         ctx.save();
         for (const p of this.persistent.values()) {
             const [x, y] = p.follow();
@@ -433,6 +571,43 @@ export class VfxPlayer {
                 ctx.moveTo(p.x - (p.vx / n) * len, p.y - (p.vy / n) * len);
                 ctx.lineTo(p.x, p.y);
                 ctx.stroke();
+            } else if (p.kind === 'streak') {
+                const a = (1 - u) * tail(u, 0.65);
+                const n = Math.hypot(p.vx, p.vy) || 1;
+                const len = Math.min(p.len * (1 - u * 0.5), n * 0.09, p.t * n * 1.8);
+                const tx = p.x - p.vx / n * len, ty = p.y - p.vy / n * len;
+                ctx.save();
+                const opacity = ctx.globalAlpha;
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.lineCap = 'round';
+                const g = ctx.createLinearGradient(tx, ty, p.x + 0.01, p.y);
+                g.addColorStop(0, `rgba(${p.color}, 0)`);
+                g.addColorStop(0.7, `rgba(${p.color}, ${0.8 * a})`);
+                g.addColorStop(1, `rgba(${WHITE}, ${a})`);
+                for (const [w, alpha] of [[5, 0.22], [1.8, 1]]) {
+                    ctx.globalAlpha = opacity * alpha;
+                    ctx.strokeStyle = g;
+                    ctx.lineWidth = w * p.s * (0.5 + 0.5 * (1 - u));
+                    ctx.beginPath();
+                    ctx.moveTo(tx, ty);
+                    ctx.lineTo(p.x, p.y);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            } else if (p.kind === 'shard') {
+                drawShard(ctx, p, u);
+            } else if (p.kind === 'goo' || p.kind === 'splat') {
+                drawGoo(ctx, p, u);
+            } else if (p.kind === 'dust') {
+                drawDust(ctx, p, u);
+            } else if (p.kind === 'flame') {
+                drawFlame(ctx, p, u);
+            } else if (p.kind === 'ember') {
+                const a = (1 - u) * (0.75 + 0.25 * Math.sin(p.t * 32 + p.phase));
+                const r = p.r * (1 - u * 0.6);
+                ctx.globalCompositeOperation = 'lighter';
+                glow(ctx, p.x, p.y, r * 3, `rgba(220, 45, 10, ${0.5 * a})`);
+                glow(ctx, p.x, p.y, r, `rgba(${u < 0.45 ? p.color : '210, 55, 15'}, ${a})`);
             } else if (p.kind === 'mote') {
                 const a = Math.min(1, u / 0.15) * (1 - u);
                 const x = p.x + Math.sin(this.time * 6 + p.phase) * 3 * p.r;
@@ -480,6 +655,149 @@ export class VfxPlayer {
 }
 
 // ---- 그리기 ------------------------------------------------------------
+function drawShard(ctx, p, u) {
+    const a = tail(u, 0.65), ice = p.shape === 'ice', rock = p.shape === 'rock';
+    const shine = rock ? 0.25 : Math.pow(Math.max(0, Math.cos(p.rot * 2)), 6);
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    ctx.scale(0.5 + Math.abs(Math.cos(p.rot)) * 0.5, 1);
+    ctx.beginPath();
+    p.points.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${p.color}, ${(ice ? 0.58 : 0.95) * a})`;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(${rock ? p.color : WHITE}, ${(rock ? 0.4 : 0.65 + shine * 0.35) * a})`;
+    ctx.lineWidth = (rock ? 0.7 : 1.1) * p.s;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    for (let i = 0; i < 3; i++) ctx.lineTo(...p.points[i]);
+    ctx.closePath();
+    ctx.fillStyle = `rgba(15, 25, 40, ${(ice ? 0.22 : 0.38) * a})`;
+    ctx.fill();
+    if (!rock) {
+        ctx.beginPath();
+        ctx.moveTo(...p.points[0]);
+        ctx.lineTo(0, 0);
+        ctx.lineTo(...p.points[2]);
+        ctx.strokeStyle = `rgba(${WHITE}, ${(0.25 + shine * 0.7) * a})`;
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawGoo(ctx, p, u) {
+    const splat = p.kind === 'splat', a = tail(u, splat ? 0.3 : 0.75);
+    const r = p.r, stretch = Math.min(1.9, 1 + Math.hypot(p.vx, p.vy) / (220 * p.s));   // 꼬리를 짧게: 길면 바닥에 선 가시처럼 보임
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.translate(p.x, p.y);
+    if (splat) ctx.scale(1.5 + easeOut(u) * 1.1, 0.32 + easeOut(u) * 0.12);
+    else ctx.rotate(Math.atan2(p.vy, p.vx));
+    ctx.fillStyle = `rgba(${p.color}, ${0.85 * a})`;
+    ctx.beginPath();
+    if (splat) {
+        // 불규칙한 가장자리: 같은 원형 빛가루로 보이지 않게 한다.
+        for (let i = 0; i <= 16; i++) {
+            const ang = i / 16 * Math.PI * 2, rad = r * (1 + Math.sin(ang * 5 + p.r) * 0.14);
+            const x = Math.cos(ang) * rad, y = Math.sin(ang) * rad;
+            if (!i) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+    } else {
+        ctx.moveTo(-r * stretch * 1.25, 0);
+        ctx.bezierCurveTo(-r * 0.6, -r * 0.3, -r * 0.3, -r, r * 0.45, -r * 0.75);
+        ctx.bezierCurveTo(r * 1.4, -r * 0.4, r * 1.4, r * 0.65, r * 0.35, r * 0.8);
+        ctx.quadraticCurveTo(-r * 0.4, r * 0.65, -r * stretch * 1.25, 0);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = `rgba(25, 45, 35, ${0.35 * a})`;
+    ctx.lineWidth = 0.8 * p.s;
+    ctx.stroke();
+    ctx.fillStyle = `rgba(${WHITE}, ${(splat ? 0.4 : 0.75) * a})`;
+    ctx.beginPath();
+    ctx.ellipse(r * 0.2, -r * 0.35, r * 0.3, r * 0.14, -0.35, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+}
+
+function drawDust(ctx, p, u) {
+    const r = p.r * (0.65 + u * 1.6), a = Math.min(1, u / 0.08) * Math.pow(1 - u, 1.4);
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.translate(p.x, p.y - r * 0.45);
+    ctx.scale(1, 0.6);
+    glow(ctx, 0, 0, r * 1.5, `rgba(${p.color}, ${0.3 * a})`);
+    for (let i = 0; i < 3; i++) {
+        const angle = p.phase + p.t * (p.vx < 0 ? -5 : 5) + i * 2.1;
+        const x = Math.cos(angle) * r * 0.4, y = Math.sin(angle) * r * 0.25;
+        ctx.fillStyle = `rgba(${p.color}, ${(0.24 + i * 0.05) * a})`;
+        ctx.beginPath();
+        ctx.ellipse(x, y, r * (0.6 + i * 0.08), r * 0.65, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = `rgba(220, 205, 180, ${0.14 * a})`;
+        ctx.lineWidth = r * 0.06;
+        ctx.beginPath();
+        ctx.ellipse(x, y, r * (0.6 + i * 0.08), r * 0.65, 0, Math.PI * 1.12, Math.PI * 1.85);
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawFlame(ctx, p, u) {
+    const flick = Math.sin(p.t * 25 + p.phase);
+    const r = p.r * (1 + (p.grow - 1) * u) * (1 + flick * 0.08);
+    if (r <= 0.5) return;
+    const x = p.x + Math.sin(p.t * 13 + p.phase) * p.r * u * 0.3;
+    const y = p.y + flick * p.r * u * 0.2;
+    const a = Math.min(1, u / 0.04) * tail(u, 0.65) * (0.88 + flick * 0.12);
+    if (p.matte) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.translate(x, y);
+        ctx.rotate(Math.atan2(p.vy, p.vx));
+        ctx.scale(1.3, 0.7);
+        const heat = ctx.createRadialGradient(-r * 0.2, 0, r * 0.1, 0, 0, r);
+        heat.addColorStop(0, `rgba(${p.color.join(', ')}, ${a * 0.9})`);
+        heat.addColorStop(0.5, `rgba(${p.color.map(c => Math.round(c * 0.75)).join(', ')}, ${a * 0.7})`);
+        heat.addColorStop(0.85, `rgba(65, 60, 55, ${a * 0.35})`);
+        heat.addColorStop(1, 'rgba(65, 60, 55, 0)');
+        ctx.fillStyle = heat;
+        ctx.beginPath();
+        for (let i = 0; i < 12; i++) {
+            const angle = i * Math.PI / 6, rr = r * (0.85 + 0.15 * Math.sin(angle * 3 + p.phase));
+            const px = Math.cos(angle) * rr, py = Math.sin(angle) * rr;
+            if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        return;
+    }
+    const mix = (from, to, t) => from.map((c, i) => Math.round(c + (to[i] - c) * t)).join(', ');
+    const color = u < 0.4 ? mix([255, 245, 180], p.color, u / 0.4)
+        : mix(p.color, [165, 25, 12], Math.min(1, (u - 0.4) / 0.4));
+    const core = u < 0.4 ? mix([255, 252, 215], p.color, u / 0.4) : color;
+    const smoke = p.smoke ? Math.max(0, (u - 0.65) / 0.35) : 0;
+    // 불 중심은 밝게 겹치고, 식은 가장자리는 어두운 연기로 넘긴다.
+    ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(${core}, ${0.65 * a * (1 - smoke)})`);
+    g.addColorStop(0.35, `rgba(${color}, ${0.5 * a * (1 - smoke)})`);
+    g.addColorStop(0.7, `rgba(220, 45, 10, ${0.2 * a * (1 - smoke)})`);
+    g.addColorStop(1, 'rgba(100, 20, 10, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    if (smoke > 0) {
+        ctx.globalCompositeOperation = 'source-over';
+        glow(ctx, x, y, r, `rgba(55, 43, 46, ${0.55 * smoke * a})`);
+    }
+}
+
 function glow(ctx, x, y, r, color) {
     if (r <= 0.5) return;
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
@@ -503,7 +821,235 @@ const easeOut = u => 1 - (1 - u) * (1 - u);
 // 발동 후 여운: fadeFrom 이후 선형으로 사라짐
 const tail = (u, fadeFrom) => (u > fadeFrom ? 1 - (u - fadeFrom) / (1 - fadeFrom) : 1);
 
+// 번개는 재점화 간격에만 꺾임을 다시 계산한다. 입자는 만들지 않고 선을 캐시한다.
+function boltPaths(it, dx, dy, s, frame) {
+    const noise = n => {
+        const v = Math.sin(n * 127.1 + (it.seed || 0) + frame * 311.7) * 43758.5453;
+        return v - Math.floor(v);
+    };
+    const paths = [];
+    const count = Math.min(8, Math.max(0, it.count ?? 3));
+    for (let k = 0; k < count; k++) {
+        const angle = it.angle != null ? it.angle + (k - (count - 1) / 2) * 0.3 : k / count * Math.PI * 2 - Math.PI / 2;
+        const len = (it.len ?? 80) * s;
+        const ex = it.to ? dx : Math.cos(angle) * len, ey = it.to ? dy : Math.sin(angle) * len;
+        const dist = Math.hypot(ex, ey) || 1, nx = -ey / dist, ny = ex / dist;
+        const steps = Math.max(5, Math.min(18, Math.ceil(dist / (14 * s))));
+        const jag = (it.jag ?? 14) * s;
+        const pts = [[0, 0]];
+        for (let i = 1; i < steps; i++) {
+            const f = i / steps;
+            const off = (noise(k * 31 + i) * 2 - 1) * jag * Math.sin(f * Math.PI);
+            pts.push([ex * f + nx * off, ey * f + ny * off]);
+        }
+        pts.push([ex, ey]);
+        paths.push({ pts, branch: false });
+        for (let b = 0; b < Math.min(4, it.branches ?? 2); b++) {
+            const i = 1 + Math.floor(noise(k * 43 + b + 70) * (steps - 2));
+            const [bx, by] = pts[i];
+            const a = Math.atan2(ey, ex) + (b % 2 ? -1 : 1) * (0.55 + noise(b + k * 7) * 0.7);
+            const bl = dist * (0.18 + noise(b + k * 11 + 90) * 0.2);
+            const branch = [[bx, by]];
+            for (let j = 1; j <= 3; j++) {
+                const off = j === 3 ? 0 : (noise(k * 19 + b * 3 + j + 120) - 0.5) * jag;
+                branch.push([bx + Math.cos(a) * bl * j / 3 + nx * off, by + Math.sin(a) * bl * j / 3 + ny * off]);
+            }
+            paths.push({ pts: branch, branch: true });
+        }
+    }
+    return paths;
+}
+
+// 양끝이 가늘고 가운데가 두꺼운 초승달 면. 뒤에 남는 잔상도 같은 윤곽을 쓴다.
+function slashRibbon(ctx, r, arc, reveal, width, offset = 0) {
+    const end = -arc / 2 + arc * reveal;
+    ctx.beginPath();
+    for (let side = 1; side >= -1; side -= 2) {
+        for (let i = 0; i <= 28; i++) {
+            const f = side > 0 ? i / 28 : 1 - i / 28;
+            const a = -arc / 2 + (end + arc / 2) * f;
+            const rr = r + offset + side * width * Math.pow(Math.sin(f * Math.PI), 0.7) / 2;
+            const px = Math.cos(a) * rr - r * (1 + Math.cos(arc / 2)) / 2, py = Math.sin(a) * rr;
+            if (side > 0 && i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+    }
+    ctx.closePath();
+    ctx.fill();
+}
+
+// 새 단색 모양만 윤곽을 사용한다. 기존 모양의 발광·합성 방식은 그대로 둔다.
+function solid(ctx, it, s, alpha) {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha *= alpha;
+    ctx.fillStyle = `rgb(${it.color})`;
+    ctx.fill();
+    if (it.outline) {
+        ctx.strokeStyle = `rgb(${it.outline})`;
+        ctx.lineWidth = (it.width ?? 3) * s;
+        ctx.lineJoin = 'miter';
+        ctx.stroke();
+    }
+}
+
+function impactAlpha(it, u) {
+    return it.t <= 0.05 ? 1 : Math.max(0, (1 - u) / (1 - Math.min(0.9, 0.05 / it.dur)));
+}
+
+// 그림 프레임 이펙트 (D-060): assets/sprites/vfx/<sheet>.png = 정사각 프레임을 가로로 이어 붙인 띠, 알파 = 밝기
+// (tools/images/build_vfx_sheet.py가 Gemini 검은 배경 시트에서 만듦). 처음 쓸 때 불러오고, 다 불러오기 전에는 건너뜀
+export const VFX_SHEETS = {
+    slash_violet: { src: 'assets/sprites/vfx/slash_violet.png', frames: 9 },       // 타락 히어로 베기
+    punch_cyan: { src: 'assets/sprites/vfx/punch_cyan.png', frames: 9 },           // 거대로봇 주먹 (전기)
+    bite_green: { src: 'assets/sprites/vfx/bite_green.png', frames: 9 },           // 거대괴수 물기 (산성)
+    claw_fire: { src: 'assets/sprites/vfx/claw_fire.png', frames: 9 },             // 합성괴인 할퀴기
+    punch_fire: { src: 'assets/sprites/vfx/punch_fire.png', frames: 9 },           // 합성괴인 주먹
+    orbital_beam: { src: 'assets/sprites/vfx/orbital_beam.png', frames: 9 },       // 궤도 폭격 (바닥 기준)
+    roar_green: { src: 'assets/sprites/vfx/roar_green.png', frames: 9 },           // 대지 포효 (왼쪽 기준, 오른쪽으로)
+    judgment_violet: { src: 'assets/sprites/vfx/judgment_violet.png', frames: 9 }, // 심판의 일격 (바닥 기준)
+    breath_fire: { src: 'assets/sprites/vfx/breath_fire.png', frames: 9 },         // 용의 숨결 (입 기준, 오른쪽으로)
+    hands_teal: { src: 'assets/sprites/vfx/hands_teal.png', frames: 9 },           // 길잡이 심연의 손 (바닥 기준)
+    revive_crimson: { src: 'assets/sprites/vfx/revive_crimson.png', frames: 9 },   // 봉합 성녀 억지 부활 (바닥 기준)
+    ice_shatter: { src: 'assets/sprites/vfx/ice_shatter.png', frames: 9 },         // 서리의 무희 얼음 깨짐 (바닥 기준)
+    xcut_cyan: { src: 'assets/sprites/vfx/xcut_cyan.png', frames: 9 },             // 인형사 가위 X자
+    pillar_gold: { src: 'assets/sprites/vfx/pillar_gold.png', frames: 9 },         // 천상의 심판·정의의 일격 (바닥 기준)
+    tentacle_void: { src: 'assets/sprites/vfx/tentacle_void.png', frames: 9 },     // 심연의 파동 촉수 (바닥 기준)
+    hellgate_red: { src: 'assets/sprites/vfx/hellgate_red.png', frames: 9 },       // 지옥문 (바닥 기준)
+    explosion_big: { src: 'assets/sprites/vfx/explosion_big.png', frames: 9 },     // 거점 대폭발 (바닥 기준, 연기는 보통 섞기)
+    defeat_puff: { src: 'assets/sprites/vfx/defeat_puff.png', frames: 9 }          // 적 처치 연기 (바닥 기준, 보통 섞기)
+};
+const sheetImages = new Map();
+function sheetImage(name) {
+    const sheet = VFX_SHEETS[name];
+    if (!sheet || typeof Image === 'undefined') return null;
+    let img = sheetImages.get(name);
+    if (!img) {
+        img = new Image();
+        img.src = sheet.src;
+        sheetImages.set(name, img);
+    }
+    return img.complete && img.naturalWidth ? img : null;
+}
+/** 시트를 미리 불러 둠 (첫 재생에 그림이 늦게 뜨지 않게) */
+export function preloadVfxSheets() {
+    Object.keys(VFX_SHEETS).forEach(sheetImage);
+}
+
 const DRAW = {
+    // 그림 프레임 재생 {sheet, size(px), anchorX?·anchorY?(프레임 안 기준점 0~1, 기본 0.5 — 바닥 기준 그림은 anchorY 0.9,
+    //   입에서 뿜는 그림은 anchorX 0.03), angle?, flipX?, squash?, blend?('lighter' 기본 | 'normal'), alpha?, glow?(뒤에 퍼지는 빛 배수)}
+    sprite(ctx, x, y, it, u, s) {
+        const img = sheetImage(it.sheet);
+        if (!img) return;
+        const n = VFX_SHEETS[it.sheet].frames, fw = img.naturalWidth / n, fh = img.naturalHeight;
+        const f = Math.min(n - 1, Math.floor(u * n));
+        const size = (it.size ?? 160) * s;
+        ctx.save();
+        ctx.globalCompositeOperation = it.blend === 'normal' ? 'source-over' : 'lighter';
+        ctx.globalAlpha = it.alpha ?? 1;
+        ctx.translate(x, y);
+        ctx.rotate(it.angle || 0);
+        ctx.scale(it.flipX ? -1 : 1, it.squash ?? 1);
+        const ax = it.anchorX ?? 0.5, ay = it.anchorY ?? 0.5;
+        if (it.glow) {                                   // 뒤로 번지는 빛: 같은 프레임을 크게·옅게 한 번 더
+            ctx.globalAlpha = (it.alpha ?? 1) * 0.35;
+            const g = size * it.glow;
+            ctx.drawImage(img, f * fw, 0, fw, fh, -g * ax, -g * ay, g, g);
+            ctx.globalAlpha = it.alpha ?? 1;
+        }
+        ctx.drawImage(img, f * fw, 0, fw, fh, -size * ax, -size * ay, size, size);
+        ctx.restore();
+    },
+    starburst(ctx, x, y, it, u, s) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(it.angle || 0);
+        ctx.scale(1, it.ground ? 0.3 : (it.stretch ?? 1));
+        const n = it.points ?? 7, r = it.r * s * (1 - u * 0.3);
+        ctx.beginPath();
+        for (let i = 0; i < n * 2; i++) {
+            const a = i * Math.PI / n, rr = r * (i % 2 ? it.inner ?? 0.34 : 1);
+            const px = Math.cos(a) * rr, py = Math.sin(a) * rr;
+            if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+        }
+        ctx.closePath();
+        solid(ctx, it, s, impactAlpha(it, u));
+        ctx.restore();
+    },
+    speedlines(ctx, x, y, it, u, s) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.beginPath();
+        const n = it.count ?? 8;
+        for (let i = 0; i < n; i++) {
+            const a = it.angle == null ? i * Math.PI * 2 / n : it.angle + ((i + 0.5) / n - 0.5) * (it.cone ?? 1);
+            const start = (15 + u * 60) * s, end = start + it.len * s * (1 - u * 0.6);
+            const w = (it.width ?? 3) * s;
+            ctx.moveTo(Math.cos(a) * start, Math.sin(a) * start);
+            ctx.lineTo(Math.cos(a) * end - Math.sin(a) * w, Math.sin(a) * end + Math.cos(a) * w);
+            ctx.lineTo(Math.cos(a) * end + Math.sin(a) * w, Math.sin(a) * end - Math.cos(a) * w);
+            ctx.closePath();
+        }
+        solid(ctx, it, s, impactAlpha(it, u));
+        ctx.restore();
+    },
+    ribbon(ctx, x, y, it, u, s) {
+        ctx.save();
+        ctx.translate(x, y);
+        const len = it.to ? Math.hypot(it.to[0] - x, it.to[1] - y) : it.len * s;
+        ctx.rotate(it.to ? Math.atan2(it.to[1] - y, it.to[0] - x) : it.angle || 0);
+        const w = it.w * s * (1 - u * 0.35);
+        ctx.beginPath();
+        ctx.moveTo(0, -w * 0.25);
+        for (let i = 1; i <= 8; i++) ctx.lineTo(len * i / 8, -w * (0.25 + i / 16) - (i % 2 ? (it.jag || 0) * s : 0));
+        ctx.lineTo(len * 1.04, 0);
+        for (let i = 8; i >= 1; i--) ctx.lineTo(len * i / 8, w * (0.25 + i / 16) + (i % 2 ? (it.jag || 0) * s : 0));
+        ctx.lineTo(0, w * 0.25);
+        ctx.closePath();
+        solid(ctx, it, s, impactAlpha(it, u));
+        ctx.restore();
+    },
+    tendrils(ctx, x, y, it, u, s) {
+        ctx.save();
+        const grow = Math.min(1, it.t / (it.angular ? 0.03 : 0.18)) * tail(u, 0.6);
+        const n = it.count ?? 3;
+        for (let i = 0; i < n; i++) {
+            const dx = (i - (n - 1) / 2) * it.spread * s, h = it.h * s * grow * (i % 2 ? 1 : 0.8);
+            const w = it.w * s, lean = Math.sin(i * 2 + it.t * 2) * h * 0.25;
+            ctx.beginPath();
+            ctx.moveTo(x + dx - w / 2, y);
+            if (it.angular) ctx.lineTo(x + dx - w, y - h * 0.6);
+            else ctx.quadraticCurveTo(x + dx - w + lean, y - h * 0.55, x + dx + lean, y - h);
+            ctx.lineTo(x + dx + lean, y - h);
+            if (it.angular) ctx.lineTo(x + dx + w / 2, y - h * 0.55);
+            else ctx.quadraticCurveTo(x + dx + w / 2 + lean, y - h * 0.5, x + dx + w / 2, y);
+            ctx.lineTo(x + dx + w / 2, y);
+            ctx.closePath();
+            ctx.save();
+            solid(ctx, it, s, it.angular ? impactAlpha(it, u) : tail(u, 0.8));
+            ctx.restore();
+        }
+        ctx.restore();
+    },
+    mist(ctx, x, y, it, u, s) {
+        const r = (it.r ?? 60) * s, h = (it.h ?? 14) * s;
+        const a = Math.min(1, u / 0.08) * tail(u, 0.75);
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over';
+        for (let i = 0; i < 3; i++) {
+            const phase = i * 2.1 + it.t * 0.8;
+            const dx = Math.sin(phase) * r * 0.14 + Math.sin(it.t * 0.5) * (it.drift ?? 12) * s * 2;
+            ellipseGlow(ctx, x + dx, y - h * (0.3 + i * 0.24), r * (0.8 + i * 0.08), h * (0.55 + i * 0.15), `rgba(${it.color}, ${0.2 * a})`);
+        }
+        if (it.rim) {
+            ctx.strokeStyle = `rgba(${it.color}, ${0.9 * tail(u, 0.94)})`;
+            ctx.lineWidth = 2.5 * s;
+            ctx.beginPath();
+            ctx.ellipse(x, y, r, r * 0.28, 0, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        ctx.restore();
+    },
     flash(ctx, x, y, it, u, s) {
         ctx.globalCompositeOperation = 'lighter';
         const r = it.r * s * (0.6 + 0.4 * (1 - u));
@@ -528,6 +1074,107 @@ const DRAW = {
         if (it.ground) ctx.ellipse(x, y, r, r * 0.28, 0, 0, Math.PI * 2);
         else ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.stroke();
+    },
+    bolt(ctx, x, y, it, u, s) {
+        const frame = Math.floor(it.t / Math.max(0.016, it.flicker ?? 0.055));
+        const dx = it.to ? it.to[0] - x : 0, dy = it.to ? it.to[1] - y : 0;
+        if (!it.bolts || frame !== it.boltFrame || dx !== it.boltDx || dy !== it.boltDy) {
+            it.bolts = boltPaths(it, dx, dy, s, frame);
+            it.boltFrame = frame;
+            it.boltDx = dx;
+            it.boltDy = dy;
+        }
+        const a = tail(u, 0.35) * (frame % 3 === 1 ? 0.55 : 1);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        for (const [mul, color, alpha] of [[4.5, it.color, 0.14], [1.8, it.color, 0.6], [0.55, WHITE, 1]]) {
+            ctx.strokeStyle = `rgba(${color}, ${alpha * a})`;
+            for (const { pts, branch } of it.bolts) {
+                ctx.lineWidth = (it.width ?? 2.5) * s * mul * (branch ? 0.5 : 1);
+                ctx.beginPath();
+                pts.forEach(([px, py], i) => i ? ctx.lineTo(px, py) : ctx.moveTo(px, py));
+                ctx.stroke();
+            }
+        }
+        ctx.restore();
+    },
+    slash(ctx, x, y, it, u, s) {
+        const reveal = easeOut(Math.min(1, it.t / Math.max(0.01, it.sweep ?? 0.12)));
+        const a = tail(u, 0.28);
+        const r = (it.r ?? 65) * s;
+        const arc = Math.min(Math.PI * 1.9, Math.abs(it.arc ?? 2.5));
+        const w = (it.width ?? 18) * (it.thick ?? 1) * s;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate((it.angle ?? 0.8) - Math.PI / 2);
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = 2; i >= 1; i--) {
+            ctx.save();
+            ctx.rotate(-i * 0.1);
+            ctx.fillStyle = `rgba(${it.color}, ${0.1 * a / i})`;
+            slashRibbon(ctx, r, arc, reveal, w * (1 + i * 0.3), -i * w * 0.4);
+            ctx.restore();
+        }
+        ctx.fillStyle = `rgba(${it.color}, ${0.15 * a})`;
+        slashRibbon(ctx, r, arc, reveal, w * 1.8);
+        ctx.fillStyle = `rgba(${it.color}, ${0.85 * a})`;
+        slashRibbon(ctx, r, arc, reveal, w);
+        ctx.fillStyle = `rgba(${WHITE}, ${0.95 * a})`;
+        slashRibbon(ctx, r, arc, reveal, w * 0.22, w * 0.22);
+        ctx.restore();
+    },
+    shockwave(ctx, x, y, it, u, s) {
+        const r = (it.r ?? 100) * s * (0.06 + 0.94 * easeOut(u));
+        const w = Math.min(r * 0.8, (it.width ?? 28) * s * (1 - u * 0.35));
+        const a = tail(u, 0.12);
+        ctx.save();
+        ctx.translate(x, y);
+        if (it.ground) ctx.scale(1, 0.28);
+        ctx.globalCompositeOperation = 'lighter';
+        const g = ctx.createRadialGradient(0, 0, Math.max(0, r - w), 0, 0, r);
+        g.addColorStop(0, `rgba(${it.color}, 0)`);
+        g.addColorStop(0.12, `rgba(${WHITE}, ${0.95 * a})`);
+        g.addColorStop(0.28, `rgba(${it.color}, ${0.8 * a})`);
+        g.addColorStop(0.65, `rgba(${it.color}, ${0.25 * a})`);
+        g.addColorStop(1, `rgba(${it.color}, 0)`);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    },
+    rays(ctx, x, y, it, u, s) {
+        const n = Math.min(24, Math.max(0, it.count ?? 10));
+        const reach = easeOut(Math.min(1, u / 0.16));
+        const a = tail(u, 0.2);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < n; i++) {
+            const angle = i / n * Math.PI * 2 + it.t * (it.spin ?? 0.6);
+            const len = (it.len ?? 100) * s * reach * (0.72 + 0.15 * Math.sin(i * 7.3) + 0.13 * Math.sin(it.t * 18 + i * 2));
+            const w = (it.width ?? 8) * s * (0.7 + 0.3 * Math.sin(i * 4.7 + 1));
+            ctx.save();
+            ctx.rotate(angle);
+            const g = ctx.createLinearGradient(0, 0, len + 0.01, 0);
+            g.addColorStop(0, `rgba(${WHITE}, ${0.8 * a})`);
+            g.addColorStop(0.2, `rgba(${it.color}, ${0.65 * a})`);
+            g.addColorStop(1, `rgba(${it.color}, 0)`);
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(len * 0.2, -w);
+            ctx.lineTo(len, 0);
+            ctx.lineTo(len * 0.2, w);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+        glow(ctx, 0, 0, (it.len ?? 100) * s * 0.22, `rgba(${it.color}, ${0.5 * a})`);
+        ctx.restore();
     },
     glow(ctx, x, y, it, u, s) {
         ctx.globalCompositeOperation = 'lighter';
@@ -586,19 +1233,41 @@ const DRAW = {
         const [tx, ty] = it.to;
         const grow = Math.min(1, u / 0.12);
         const fade = tail(u, 0.55);
-        const w = it.w * s * grow * (0.55 + 0.45 * fade) * (0.85 + 0.15 * Math.sin(time * 70));
+        const w = it.w * s * grow * (0.55 + 0.45 * fade) * (0.92 + 0.08 * Math.sin(it.t * 42));
+        const len = Math.hypot(tx - x, ty - y);
+        if (len < 0.01 || w <= 0) return;
+        const detail = Math.min(1, it.w / 7);   // 가는 실·예고선은 가장자리 흔들림도 작게
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Math.atan2(ty - y, tx - x));
         ctx.globalCompositeOperation = 'lighter';
-        ctx.lineCap = 'round';
-        for (const [mul, color, alpha] of [[2.6, it.color, 0.22], [1, it.color, 0.85], [0.35, WHITE, 0.95]]) {
-            ctx.strokeStyle = `rgba(${color}, ${alpha * fade})`;
-            ctx.lineWidth = Math.max(0.5, w * mul);
+        const g = ctx.createLinearGradient(0, -w * 2.6, 0, w * 2.6);
+        g.addColorStop(0, `rgba(${it.color}, 0)`);
+        g.addColorStop(0.3, `rgba(${it.color}, ${0.18 * fade})`);
+        g.addColorStop(0.5, `rgba(${it.color}, ${0.7 * fade})`);
+        g.addColorStop(0.7, `rgba(${it.color}, ${0.18 * fade})`);
+        g.addColorStop(1, `rgba(${it.color}, 0)`);
+        ctx.fillStyle = g;
+        ctx.fillRect(0, -w * 2.6, len, w * 5.2);
+        for (const [mul, color, alpha] of [[1, it.color, 0.75], [0.3, WHITE, 0.98]]) {
+            ctx.fillStyle = `rgba(${color}, ${alpha * fade})`;
             ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(tx, ty);
-            ctx.stroke();
+            for (let side = 1; side >= -1; side -= 2) {
+                for (let i = 0; i <= 24; i++) {
+                    const f = side > 0 ? i / 24 : 1 - i / 24;
+                    const wob = Math.sin(f * 26 - time * 45 + side) * w * 0.1 * detail * Math.sin(f * Math.PI);
+                    const py = side * (w * mul / 2 + wob);
+                    if (side > 0 && i === 0) ctx.moveTo(0, py);
+                    else ctx.lineTo(len * f, py);
+                }
+            }
+            ctx.closePath();
+            ctx.fill();
         }
-        glow(ctx, x, y, w * 2.4, `rgba(${it.color}, ${0.6 * fade})`);
-        glow(ctx, tx, ty, w * 3, `rgba(${it.color}, ${0.7 * fade})`);
+        glow(ctx, 0, 0, w * 2.8, `rgba(${it.color}, ${0.65 * fade})`);
+        glow(ctx, len, 0, w * 3.5, `rgba(${it.color}, ${0.7 * fade})`);
+        glow(ctx, len, 0, w * 0.8, `rgba(${WHITE}, ${0.9 * fade})`);
+        ctx.restore();
     },
     jet(ctx, x, y, it, u, s, time) {
         // 물줄기: 0~15% 뻗어 나감, 굵기가 출렁이고 줄기가 살짝 물결침. 끝에 물보라
@@ -994,18 +1663,58 @@ function drawWave(ctx, pr) {
     ctx.restore();
 }
 
-// 세뇌 구체: 보라 구체 + 나선 꼬리
+// 구체 꼬리: 지나온 위치를 이은 부드러운 리본 (추가 입자 없음)
+function orbRibbon(ctx, pr, time, width, alpha) {
+    if (pr.trail.length < 2) return;
+    const points = [];
+    for (let i = 0; i < pr.trail.length; i++) {
+        const f = i / (pr.trail.length - 1);
+        const [x, y] = pr.trail[i];
+        const prev = pr.trail[Math.max(0, i - 1)], next = pr.trail[Math.min(pr.trail.length - 1, i + 1)];
+        const dx = next[0] - prev[0], dy = next[1] - prev[1], len = Math.hypot(dx, dy) || 1;
+        const wob = Math.sin(time * 22 + f * 7) * 3 * pr.scale * (1 - f);
+        points.push({ x: x - dy / len * wob, y: y + dx / len * wob, nx: -dy / len, ny: dx / len, w: width * f });
+    }
+    const first = points[0], last = points[points.length - 1];
+    const g = ctx.createLinearGradient(first.x, first.y, last.x + 0.01, last.y);
+    g.addColorStop(0, `rgba(${pr.color}, 0)`);
+    g.addColorStop(0.65, `rgba(${pr.color}, ${alpha * 0.55})`);
+    g.addColorStop(1, `rgba(${pr.color}, ${alpha})`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    for (const side of [1, -1]) {
+        const edge = points.map(p => [p.x + p.nx * p.w * side, p.y + p.ny * p.w * side]);
+        if (side < 0) edge.reverse();
+        ctx.lineTo(edge[0][0], edge[0][1]);
+        for (let i = 1; i < edge.length; i++) {
+            const [px, py] = edge[i - 1], [ex, ey] = edge[i];
+            ctx.quadraticCurveTo(px, py, (px + ex) / 2, (py + ey) / 2);
+        }
+        const end = edge[edge.length - 1];
+        ctx.lineTo(end[0], end[1]);
+    }
+    ctx.closePath();
+    ctx.fill();
+}
+
+// 세뇌 구체: 색이 남는 둥근 테두리 + 밝은 심 + 유선형 리본 꼬리
 function drawOrb(ctx, pr, time) {
     const s = pr.scale;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    pr.trail.forEach(([x, y], i) => {
-        const f = i / pr.trail.length;
-        const off = Math.sin(time * 30 + i) * 4 * s;
-        glow(ctx, x, y + off, (3 + 8 * f) * s, `rgba(${pr.color}, ${0.25 * f})`);
-    });
-    glow(ctx, pr.x, pr.y, 22 * s, `rgba(${pr.color}, 0.6)`);
-    glow(ctx, pr.x, pr.y, 8 * s, `rgba(${WHITE}, 0.95)`);
+    orbRibbon(ctx, pr, time, 15 * s, 0.2);
+    orbRibbon(ctx, pr, time, 7 * s, 0.8);
+    const r = 10 * s * (0.95 + 0.05 * Math.sin(time * 20));
+    glow(ctx, pr.x, pr.y, r * 3.2, `rgba(${pr.color}, 0.5)`);
+    const g = ctx.createRadialGradient(pr.x - r * 0.25, pr.y - r * 0.25, 0, pr.x, pr.y, r);
+    g.addColorStop(0, `rgba(${WHITE}, 1)`);
+    g.addColorStop(0.3, `rgba(${WHITE}, 0.95)`);
+    g.addColorStop(0.7, `rgba(${pr.color}, 0.9)`);
+    g.addColorStop(1, `rgba(${pr.color}, 0.15)`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(pr.x, pr.y, r, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
 }
 
@@ -1017,12 +1726,17 @@ function drawNeedle(ctx, pr) {
     ctx.rotate(pr.angle);
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineCap = 'round';
-    for (const [w, color, a, len] of [[6, pr.color, 0.35, 26], [2.6, pr.color, 0.9, 20], [1.1, WHITE, 0.95, 12]]) {
-        ctx.strokeStyle = `rgba(${color}, ${a})`;
+    const len = Math.min(95 * s, Math.hypot(pr.x - pr.from[0], pr.y - pr.from[1]) + 12 * s);
+    for (const [w, color, a, reach] of [[10, pr.color, 0.18, 1], [3.2, pr.color, 0.85, 1], [1.1, WHITE, 1, 0.6]]) {
+        const g = ctx.createLinearGradient(-len * reach, 0, 6 * s, 0);
+        g.addColorStop(0, `rgba(${color}, 0)`);
+        g.addColorStop(0.85, `rgba(${color}, ${a})`);
+        g.addColorStop(1, `rgba(${WHITE}, ${a})`);
+        ctx.strokeStyle = g;
         ctx.lineWidth = w * s;
         ctx.beginPath();
-        ctx.moveTo(-len * s, 0);
-        ctx.lineTo(4 * s, 0);
+        ctx.moveTo(-len * reach, 0);
+        ctx.lineTo(6 * s, 0);
         ctx.stroke();
     }
     glow(ctx, 2 * s, 0, 7 * s, `rgba(${pr.color}, 0.7)`);
@@ -1087,6 +1801,17 @@ function drawMissile(ctx, pr, time) {
     ctx.rotate(pr.angle);
     ctx.globalCompositeOperation = 'lighter';
     const flick = 0.8 + 0.2 * Math.sin(time * 90);
+    const exhaust = ctx.createLinearGradient(-48 * s * flick, 0, -8 * s, 0);
+    exhaust.addColorStop(0, `rgba(${pr.color}, 0)`);
+    exhaust.addColorStop(0.6, `rgba(${pr.color}, 0.65)`);
+    exhaust.addColorStop(1, `rgba(${WHITE}, 0.95)`);
+    ctx.fillStyle = exhaust;
+    ctx.beginPath();
+    ctx.moveTo(-8 * s, -3 * s);
+    ctx.quadraticCurveTo(-24 * s, -9 * s * flick, -48 * s * flick, 0);
+    ctx.quadraticCurveTo(-24 * s, 9 * s * flick, -8 * s, 3 * s);
+    ctx.closePath();
+    ctx.fill();
     glow(ctx, -12 * s, 0, 14 * s * flick, `rgba(${pr.color}, 0.8)`);
     glow(ctx, -10 * s, 0, 5 * s, `rgba(${WHITE}, 0.95)`);
     ctx.globalCompositeOperation = 'source-over';

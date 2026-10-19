@@ -9,7 +9,7 @@ import { monsterControllerV2 } from '../monster_v2.js';
 import { HERO_ORB } from '../vfx/heroVfx.js';
 import { HERO_VFX, CHIMERA_VFX } from '../vfx/vfxDefs.js';
 import { ensureEnemyStyles } from '../enemies_v2.js';
-import { BABY, EGG, FOOT_B } from './tuning.js';
+import { BABY, EGG, FOOT_B, MINION } from './tuning.js';
 
 export const AllyMethods = {
     // [세뇌 스마트 구속구]: 적 보병 소멸 시 아군 미니언 징집 소환
@@ -19,10 +19,14 @@ export const AllyMethods = {
     //      'rabbit': 뒤틀린 인형사의 토끼 인형 — opts { hp, dps, speed(px/초) } (battle/doll.js), 쓰러지면 onAllyDown
     spawnAllyMinion(startX, kind = 'mind', opts = {}) {
         if (!this.domEnemies) return;
+        // 거점 너머에서 부활·소환돼도 가장 왼쪽 거점 앞에 배치한다.
+        const bases = this.enemies.filter(e => e.isBuilding);
+        if (bases.length) startX = Math.min(startX, Math.min(...bases.map(e => e.x)) - 40);
         ensureEnemyStyles();   // 세뇌 보병·졸개 그림 CSS (적보다 먼저 나올 수 있음 — 합성괴인 졸개는 출격 직후)
         const baby = kind === 'baby_kaiju';
-        const maxHp = opts.hp ?? (baby ? BABY.hp : 350);
-        const dps = opts.dps ?? (baby ? BABY.dps : 17.5); // 세뇌 미니언은 적 보병 데미지의 절반
+        const minion = kind === 'chimera';   // 합성괴인 졸개: 주인공 능력치 비례 (tuning.js MINION)
+        const maxHp = opts.hp ?? (baby ? BABY.hp : minion ? Math.round(this.maxPlayerHp * MINION.hp) : 350);
+        const dps = opts.dps ?? (baby ? BABY.dps : minion ? this.playerDps * MINION.dps : 17.5); // 세뇌 미니언은 적 보병 데미지의 절반
         const allyId = `ally_${Date.now()}_${Math.random()}`;
 
         const el = document.createElement('div');

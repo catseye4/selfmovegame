@@ -1,0 +1,17 @@
+{
+  "frameWidth": 111,
+  "frameHeight": 98,
+  "anchorX": 64.3,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/tentacle/tentacle_walk.png",
+      "frames": 12,
+      "duration": 0.8
+    },
+    "attack": {
+      "src": "assets/sprites/rig/tentacle/tentacle_attack.png",
+      "frames": 10,
+      "duration": 0.85
+    }
+  }
+}

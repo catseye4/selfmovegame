@@ -1,0 +1,17 @@
+{
+  "frameWidth": 126,
+  "frameHeight": 108,
+  "anchorX": 62.4,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/carapace/carapace_walk.png",
+      "frames": 12,
+      "duration": 0.95
+    },
+    "attack": {
+      "src": "assets/sprites/rig/carapace/carapace_attack.png",
+      "frames": 10,
+      "duration": 0.9
+    }
+  }
+}

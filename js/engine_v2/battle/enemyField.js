@@ -3,6 +3,7 @@
    적 소환·이동(종류별 행동은 enemies_v2.js), 피해·처치·보상, 피격 반응과 상태 외형(기절·감속·저주·산성),
    거점(요새·최종 기지) 출현·파손·잔해(그림은 bases_v2.js), 보스전 EMP 포격·유독 가스,
    구역 2 장애물: 바리케이드(방벽병이 세움, 부숴야 진격), 늪 장판(오물 투척병, 위에 있으면 감속).
+   구역 3·4 (D-056): 거점 사격(stage.defense), 정문 → 보스전(boss.afterBase)·심연의 문 개방(boss.knights), 슬라임 분열(split).
    battle_v2.js의 BattleEngine에 메서드로 붙는다 (this = 전투 엔진).
    ========================================================================== */
 
@@ -10,8 +11,8 @@ import { gameState } from '../../engine/state.js';
 import { monsterControllerV2 } from '../monster_v2.js';
 import { gameTime } from '../gameTime.js';
 import { sound } from '../audio/sound_v2.js';
-import { KAIJU_VFX, BATTLE_VFX } from '../vfx/vfxDefs.js';
-import { spawnEnemy, updateEnemy, pickType, killReward, ENEMY_TYPES } from '../enemies_v2.js';
+import { KAIJU_VFX, BATTLE_VFX, ZONE_VFX, ELITE_VFX } from '../vfx/vfxDefs.js';
+import { spawnEnemy, updateEnemy, pickType, killReward, ENEMY_TYPES, ELITE_AFFIXES } from '../enemies_v2.js';
 import { icon } from '../../ui_v2/icons.js';
 import { GROUND_SPEED, BASE_STATE, baseArt, baseArtName, baseSize, aimAt as aimOf, dressBase, setBaseState } from '../bases_v2.js';
 import { HERO, HIT_REACT, ACID, POPUP, FOOT_B, BASE_X } from './tuning.js';
@@ -67,6 +68,40 @@ export const EnemyMethods = {
             }
             if (!enemy.isBuilding && !enemy.isBarricade) updateEnemy(this, enemy, dt, frontX);   // 이동·공격·종류별 능력
         });
+        this.tickBaseDefense(dt, frontX);
+    },
+
+    /**
+     * 거점 사격 (구역 3·4, stage.defense[kind]): 주인공이 range 안에 오면 every초마다 꼭대기에서 쏨
+     * — 심문소 통제탑 화살·마법 / 유기질 벽 독액(+ 독 웅덩이). 구역 1·2 거점은 붙어야 피해 (tickAdvance)
+     */
+    tickBaseDefense(dt, frontX) {
+        const def = this.stage.defense;
+        if (!def) return;
+        this.enemies.forEach(e => {
+            const d = e.isBuilding && e.hp > 0 && def[e.kind];
+            if (!d) return;
+            e.defCd = (e.defCd ?? d.every * 0.5) + dt;
+            if (e.x - frontX > d.range || e.defCd < d.every) return;
+            e.defCd = 0;
+            const s = e.size || { w: 100, h: 200 };
+            const from = { x: e.x + s.w * 0.45, bottom: FOOT_B + Math.min(s.h, 280) * 0.85 };
+            const tx = this.monsterX + 60;
+            if (!e.defShown) {   // 처음 쏠 때 한 번 무엇인지 표시
+                e.defShown = true;
+                this.createDamagePopup(e.x + 10, from.bottom + 10, d.label, false);
+            }
+            sound.play(d.puddle ? 'zone_venom' : 'zone_arrow', { rate: 1.25, vol: 0.4 });
+            const onArrive = () => {
+                if (!this.isActive) return;
+                if (d.hitFx) this.fx.play(ZONE_VFX[d.hitFx], tx, d.puddle ? FOOT_B + 10 : 120);
+                const k = this.rangedMul();   // 자기장 방벽: 원거리 피해·효과 절반
+                this.damagePlayer(d.dmg * this.stage.enemy.dps * k, 0);
+                if (d.puddle) this.addPuddle(tx - d.puddle.width / 2, d.puddle.width, d.puddle.sec * k);
+            };
+            if (d.puddle) this.fx.launchOrb(from, () => ({ x: tx, b: FOOT_B + 6 }), d.color, 0.5, onArrive, null);
+            else this.fx.launchNeedle(from, () => ({ x: tx, b: 120 }), onArrive, { color: d.color, dur: 0.3, sfx: null });
+        });
     },
 
     // ---- 피해와 처치 ----
@@ -74,9 +109,37 @@ export const EnemyMethods = {
     // react: { knock(넉백 배율), stop(히트스톱), pierce(방어 무시 비율) } — 몬스터/스킬의 직접 타격일 때만 (지속 피해는 생략)
     // react.dot: 지속 피해 — 피격 반응 없이 합산해 0.5초마다 숫자 표시
     dealDamageToEnemy(enemy, damage, isCrit, react = null) {
+        if (damage > 0) enemy.lastHit = this.stats.time;
         if (enemy.armor && damage > 0) damage *= 1 - enemy.armor * (1 - (react?.pierce || 0));   // 방패병·보스: 받는 피해 감소 (인형사 가위는 일부 무시)
+        if (enemy.barrierT > 0 && damage > 0) damage *= 1 - enemy.t.barrier.cut;
         if (enemy.frozenT > 0 && damage > 0) damage *= 1 + this.shatterBonus();   // 서리의 무희 다리 '빙판 걸음' (frost.js)
+        if (enemy.affixes?.includes('iron') && damage > 0) {
+            damage *= 1 - ELITE_AFFIXES.iron.cut;
+            if (this.stats.time - (enemy.ironFxAt ?? -Infinity) >= 0.3) {
+                enemy.ironFxAt = this.stats.time;
+                this.fx.play(ELITE_VFX.ironSpark, enemy.x + 38, FOOT_B + 55);
+            }
+        }
+        if (enemy.shield > 0 && damage > 0) {
+            const absorbed = Math.min(enemy.shield, damage);
+            enemy.shield -= absorbed;
+            damage -= absorbed;
+            if (enemy.shield <= 0) {
+                this.fx.play(ELITE_VFX.shieldBreak, enemy.x + 38, FOOT_B + 55);
+                this.createDamagePopup(enemy.x, 180, '보호막 깨짐', false);
+                this.updateEnemyFilter(enemy);
+            }
+        }
+        if (enemy.affixes?.includes('thorns') && react && !react.dot && damage > 0) {
+            const thorns = ELITE_AFFIXES.thorns;
+            this.damagePlayer(Math.min(damage * thorns.reflect, this.maxPlayerHp * thorns.cap), 0);
+            if (this.stats.time - (enemy.thornsFxAt ?? -Infinity) >= 0.3) {
+                enemy.thornsFxAt = this.stats.time;
+                this.fx.play(ELITE_VFX.thornsSpark, enemy.x + 38, FOOT_B + 55);
+            }
+        }
         enemy.hp -= damage;
+        if (enemy.isBuilding && damage > 0 && this.stats.time - (enemy.baseHitFxAt ?? -Infinity) >= 0.25) { enemy.baseHitFxAt = this.stats.time; this.fx.play(BATTLE_VFX.baseHit, aimOf(enemy).x, aimOf(enemy).b); }
         if (react && !react.dot) this.lifesteal(damage);           // 피의 서약 (battle/sets.js)
         if (react && !react.dot && enemy.hp > 0) this.hitReact(enemy, react);
         if (react && react.dot) {
@@ -99,6 +162,7 @@ export const EnemyMethods = {
 
         if (enemy.hp <= 0) {
             if (!this.enemies.includes(enemy)) return;   // 같은 프레임에 두 번 처리되지 않게
+            if (!enemy.isBuilding && !enemy.isBarricade) this.fx.play(BATTLE_VFX.enemyDefeat, enemy.x + 38, FOOT_B, { scale: enemy.boss ? 1.8 : 1 });
             // 거점 건물은 파괴 연출이 무너뜨린 뒤 치움
             if (enemy.dom && !enemy.isBuilding) enemy.dom.remove();
             this.enemies = this.enemies.filter(e => e.id !== enemy.id);
@@ -109,6 +173,10 @@ export const EnemyMethods = {
 
     /** 거점 파괴: 요새 = 별 1·보상·잔해 / 최종 기지 = 별 2·보상 → 남은 적 패주 → 승리 연출 → 결과 */
     onBaseDestroyed(enemy) {
+        if (enemy.isFinal && this.stage.boss && this.stage.boss.afterBase && !this.bossPhase) {
+            this.openBossGate(enemy);   // 구역 3: 정문을 부수면 보스전
+            return;
+        }
         if (enemy.isFinal) {
             this.finalBaseDestroyed = true;
             this.starFlags[1] = true;
@@ -141,6 +209,73 @@ export const EnemyMethods = {
         }
     },
 
+    // ---- 구역 3 보스전: 정문 → 보스 (stage.boss.afterBase) ----
+    /** 정문(최종 기지) 붕괴: 별 2·보상 → 잔해는 요새처럼 흘러감 → 잠시 뒤 보스 출현. 승리는 보스를 쓰러뜨릴 때 */
+    openBossGate(gate) {
+        this.bossPhase = true;
+        this.starFlags[1] = true;
+        gameState.addDarkMatter(this.stage.reward.final);
+        gate.isFinal = false;   // collapseBase가 요새 잔해처럼 바닥과 함께 흘려보냄
+        this.ruinHoldT = BASE_STATE.ruinHold;
+        const unit = ENEMY_TYPES[this.stage.boss.unit];
+        this.director.baseDestroyed(gate, false, { stamp: ['GATE BROKEN', `정문 붕괴 — ${unit.name}이(가) 모습을 드러낸다`] });
+        const x = gate.x + (gate.size ? gate.size.w / 2 : 60) - 40;
+        this.schedule(1.3, () => {
+            if (!this.isActive || this.finalBaseDestroyed) return;
+            this.director.warning('final', `${unit.name} 출현 — 쓰러뜨리면 승리`);
+            this.boss = this.spawnMinion(this.stage.boss.unit, { x, elite: false });   // 체력은 HUD 보스 막대 (battleHud_v2.js)
+            this.knightTimer = 0;
+            this.knightWarned = false;
+            this.updateHud();
+        });
+        this.updateHud();
+    },
+
+    /** 정문 뒤 보스 격파 = 승리: 남은 적 패주 → 격파 연출 → MISSION COMPLETE → 결과 */
+    bossVictory(boss) {
+        this.finalBaseDestroyed = true;   // 전투 정지 (loop)
+        this.enemies.forEach(e => {
+            if (!e.dom || e.isBuilding) return;
+            e.dom.classList.add('v2-rout');
+            setTimeout(() => e.dom.remove(), 600);
+        });
+        this.enemies = [];
+        this.cinematic = true;
+        monsterControllerV2.setState('victory');
+        const run = this.runId;
+        this.director.baseDestroyed({ x: boss.x - 20, size: { w: 120, h: 200 } }, true, { stamp: ['MISSION COMPLETE', `${boss.t.name} 격파`] }).then(() => {
+            if (this.runId === run && this.isActive) this.finishBattle(true);
+        });
+    },
+
+    /** 심연의 문 개방 (구역 3 보스전 기믹, stage.boss.knights): 보스가 있는 동안 every초마다 경보 → 엘리트 소환 + 배경 진홍 점멸 */
+    tickKnights(dt) {
+        const k = this.stage.boss && this.stage.boss.knights;
+        if (!k || !this.bossPhase || !this.boss) return;
+        this.knightTimer += dt;
+        if (!this.knightWarned && this.knightTimer >= k.every - k.warn) {
+            this.knightWarned = true;
+            this.director.alarm('심연의 문 개방', `${k.warn.toFixed(0)}초 뒤 ${ENEMY_TYPES[k.unit].name} 소환`, k.warn);
+        }
+        if (this.knightTimer < k.every) return;
+        this.knightTimer = 0;
+        this.knightWarned = false;
+        const x = Math.min(this.boss.x + 50, 1150);
+        this.director.flash('#a0102a', 600, 0.45);
+        this.crimsonPulse(1.4);
+        this.fx.play(ZONE_VFX.abyssGate, x + 38, FOOT_B + 40);
+        this.spawnMinion(k.unit, { x, elite: true });
+    },
+
+    /** 배경을 잠깐 진홍빛으로 (ui_v2.css .v2-crimson) */
+    crimsonPulse(sec) {
+        const screen = document.getElementById('screen-battle-v2');
+        if (!screen) return;
+        screen.classList.add('v2-crimson');
+        clearTimeout(this.crimsonTimer);
+        this.crimsonTimer = setTimeout(() => screen.classList.remove('v2-crimson'), sec * 1000);
+    },
+
     /** 적 처치: 처치 수·보상, 보스 격파 연출, 타락 히어로 머리면 확률로 세뇌 징집 */
     onEnemyKilled(enemy) {
         if (enemy.isBarricade) {   // 바리케이드: 터지며 사라짐 (처치 수·징집 없음)
@@ -155,10 +290,38 @@ export const EnemyMethods = {
         sound.play('enemy_die');
         if (enemy.stitchT > 0) this.addCorpse(enemy);   // 봉합 성녀: 봉합된 채 쓰러지면 시체 (battle/saint.js)
         gameState.addDarkMatter(killReward(this, enemy));
+        if (enemy.affixes?.includes('toxic')) {
+            const toxic = ELITE_AFFIXES.toxic;
+            this.addPuddle(enemy.x + 38 - toxic.width / 2, toxic.width, toxic.sec);
+            this.fx.play(ELITE_VFX.toxicCloud, enemy.x + 38, FOOT_B + 10);
+        }
+        if (enemy.affixes?.includes('volatile')) {
+            const volatile = ELITE_AFFIXES.volatile;
+            const x = enemy.x + 38;
+            this.fx.play(ELITE_VFX.volatileWarn, x, FOOT_B);
+            this.schedule(volatile.delay, () => {
+                if (!this.isActive || this.finalBaseDestroyed) return;
+                this.fx.play(ELITE_VFX.volatileBlast, x, FOOT_B);
+                this.director.shake(7, 350);
+                if (Math.abs(this.monsterX + 60 - x) <= volatile.radius) this.damagePlayer(this.maxPlayerHp * volatile.dmg, 0);
+            });
+        }
         if (enemy.boss) {
             this.boss = null;
+            if (this.bossPhase) {   // 구역 3: 정문 뒤 보스 = 승리
+                this.updateHud();
+                this.bossVictory(enemy);
+                return;
+            }
             this.director.stamp('BOSS DOWN', `${enemy.t.name} 격파`, 'is-gold', 1500);
             this.fx.play(BATTLE_VFX.baseFinale, enemy.x + 38, FOOT_B, { scale: 0.6 });
+        }
+        // 키메라 슬라임 (구역 4): 쓰러지면 작은 슬라임으로 갈라짐 (작은 슬라임은 split이 없어 한 번만)
+        const split = enemy.t && enemy.t.split;
+        if (split && !this.finalBaseDestroyed) {
+            this.fx.play(ZONE_VFX.slimeSplit, enemy.x + 38, FOOT_B + 20);
+            for (let i = 0; i < split.n; i++) this.spawnMinion(split.into, { x: enemy.x - 14 + i * 34, elite: false });
+            this.createDamagePopup(enemy.x, 140, '분열!', false);
         }
         this.updateHud();
 
@@ -212,7 +375,8 @@ export const EnemyMethods = {
         this.updateStatusIcons(e, states);
         if (e.flashing) return;
         // 종류 색조(enemies_v2.js baseFilter) + 상태 색
-        e.dom.style.filter = [e.baseFilter, states.length ? ENEMY_TINT[states[0]] || '' : ''].filter(Boolean).join(' ');
+        e.dom.style.filter = [e.baseFilter, states.length ? ENEMY_TINT[states[0]] || '' : '',
+            e.shield > 0 ? `drop-shadow(0 0 10px rgb(${ELITE_AFFIXES.shielded.color}))` : ''].filter(Boolean).join(' ');
     },
 
     // 체력바 옆 상태 아이콘 (저주/감속/기절) — 바뀔 때만 다시 그림
@@ -268,10 +432,12 @@ export const EnemyMethods = {
         const base = this.spawnBase('final');
 
         const boss = this.stage.boss;
-        this.director.warning('final', boss ? `${ENEMY_TYPES[boss.unit].name} 출현 — 최종 기지를 지키고 있다` : null);
+        const name = boss && ENEMY_TYPES[boss.unit].name;
+        this.director.warning('final', !boss ? null
+            : boss.afterBase ? `최종 기지를 부수면 ${name}이(가) 나타난다` : `${name} 출현 — 최종 기지를 지키고 있다`);
         sound.playBgm('boss', 0.8);
-        // 보스전: 기지 앞에 보스 영웅
-        if (boss) this.boss = this.spawnMinion(boss.unit, { x: base.x - 70, elite: false });
+        // 보스전: 기지 앞에 보스 (구역 3은 기지를 부순 뒤 — openBossGate)
+        if (boss && !boss.afterBase) this.boss = this.spawnMinion(boss.unit, { x: base.x - 70, elite: false });
         this.updateHud();
     },
 
@@ -356,7 +522,7 @@ export const EnemyMethods = {
 
     // ---- 구역 2 장애물 ----
     /** 바리케이드 (방벽병이 세움): 체력 있는 작은 벽 — 주인공·아군이 부숴야 지나감, 수리공이 고침 */
-    spawnBarricade(x, hp) {
+    spawnBarricade(x, hp, label = '🚧 바리케이드!') {
         if (!this.domEnemies) return null;
         const el = document.createElement('div');
         el.className = 'enemy-entity v2-barricade';
@@ -378,7 +544,7 @@ export const EnemyMethods = {
         this.enemies.push(b);
         this.fx.play(BATTLE_VFX.shieldBash, x + b.size.w / 2, FOOT_B + 30, { scale: 0.7 });
         sound.play('mech_fist_hit', { rate: 0.7, vol: 0.7 });
-        this.createDamagePopup(x + 20, 160, '🚧 바리케이드!', false);
+        this.createDamagePopup(x + 20, 160, label, false);
         return b;
     },
 
@@ -421,6 +587,7 @@ export const EnemyMethods = {
     // 경보 → 발사: 주인공 기절, 대신 전장의 적 보병 전멸 + 잠시 소환 중단
     tickArtillery(dt) {
         this.tickGas(dt);
+        this.tickKnights(dt);
         const art = this.stage.boss && this.stage.boss.artillery;
         const base = this.enemies.find(e => e.isBuilding && e.isFinal);
         if (!art || !base) return;
@@ -463,7 +630,7 @@ export const EnemyMethods = {
         this.gasTimer = 0;
         this.gasWarned = false;
         const muzzle = baseArt(base.art) && baseArt(base.art).muzzle;
-        this.fx.play(BATTLE_VFX.emp, muzzle ? base.x + muzzle[0] : base.x + 100, muzzle ? muzzle[1] : 300, { scale: 0.8 });
+        this.fx.play(ZONE_VFX.toxicBurst, muzzle ? base.x + muzzle[0] : base.x + 100, muzzle ? muzzle[1] : 300, { scale: 0.8 });
         this.director.flash('#c8ff60', 420, 0.45);
         this.director.gas(gas.sec);
         this.applyPlayerSlow(gas.sec);

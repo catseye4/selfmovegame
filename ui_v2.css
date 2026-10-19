@@ -899,6 +899,22 @@
 #screen-battle-v2.v2-zone-2.v2-stage-boss #bg-sky-v2 { background-image: url('assets/sprites/stage/bg2/dump_fire.png'); filter: brightness(0.62) saturate(0.9); }
 #screen-battle-v2.v2-zone-2 #bg-city-v2 { background-image: url('assets/sprites/stage/bg2/shanty.png'); bottom: 30px; filter: brightness(0.55) saturate(0.8); }
 #screen-battle-v2.v2-zone-2 #bg-ground-v2 { background-image: url('assets/sprites/stage/bg2/ground.png'); }
+/* 구역 3 · 성왕국 수도 (D-056, MD/구역3_설계안.md) — 임시: 구역 1 그림을 어두운 진홍·바랜 금빛으로 (Gemini 그림 전까지).
+   보스전 = 금빛 핀조명, 악마기사 소환 때 진홍 점멸 (.v2-crimson, enemyField.js crimsonPulse) */
+#screen-battle-v2.v2-zone-3 #bg-sky-v2 { filter: brightness(0.4) sepia(0.7) saturate(1.5) hue-rotate(-28deg); transition: filter 0.25s; }
+#screen-battle-v2.v2-zone-3.v2-stage-boss #bg-sky-v2 { background-image: url('assets/sprites/stage/bg/hall.png'); filter: brightness(0.5) sepia(0.9) saturate(1.3) hue-rotate(-8deg); }
+#screen-battle-v2.v2-zone-3.v2-crimson #bg-sky-v2 { filter: brightness(0.55) sepia(1) saturate(3.5) hue-rotate(-45deg); }
+#screen-battle-v2.v2-zone-3 #bg-city-v2 { filter: brightness(0.45) sepia(0.8) saturate(1.2) hue-rotate(-20deg); }
+#screen-battle-v2.v2-zone-3 #bg-ground-v2 { filter: brightness(0.7) sepia(0.6) saturate(1.1) hue-rotate(-15deg); }
+/* 구역 4 · 진화의 심연 (D-056, MD/구역4_설계안.md) — 임시: 구역 2 그림을 보랏빛으로. 보스 2페이즈(.v2-boss-rage, enemies_v2.js enrage)는 진홍 */
+#screen-battle-v2.v2-zone-4 #bg-sky-v2 { background-image: url('assets/sprites/stage/bg2/dump.png'); filter: brightness(0.38) hue-rotate(230deg) saturate(1.4); transition: filter 0.6s; }
+#screen-battle-v2.v2-zone-4.v2-stage-boss #bg-sky-v2 { background-image: url('assets/sprites/stage/bg2/dump.png'); filter: brightness(0.32) hue-rotate(245deg) saturate(1.5); }
+#screen-battle-v2.v2-zone-4.v2-boss-rage #bg-sky-v2 { filter: brightness(0.42) sepia(1) saturate(3.5) hue-rotate(-40deg); }
+#screen-battle-v2.v2-zone-4 #bg-city-v2 { background-image: url('assets/sprites/stage/bg2/shanty.png'); bottom: 30px; filter: brightness(0.4) hue-rotate(240deg) saturate(1.3); }
+#screen-battle-v2.v2-zone-4 #bg-ground-v2 { background-image: url('assets/sprites/stage/bg2/ground.png'); filter: hue-rotate(250deg) saturate(1.3) brightness(0.8); }
+/* 구역 3·4 거점·장벽 임시 색조 (빌린 그림: 통제탑·관문 / 벙커·소각탑 / 바리케이드) */
+#screen-battle-v2.v2-zone-3 .building-entity.v2-base, #screen-battle-v2.v2-zone-3 .v2-barricade { filter: sepia(0.6) saturate(1.4) hue-rotate(-12deg) brightness(1.05); }
+#screen-battle-v2.v2-zone-4 .building-entity.v2-base, #screen-battle-v2.v2-zone-4 .v2-barricade { filter: hue-rotate(235deg) saturate(1.4) brightness(0.85); }
 
 /* 구역 2 장애물: 바리케이드 (방벽병이 세움, battle/enemyField.js spawnBarricade) */
 #screen-battle-v2 .enemy-entity.v2-barricade {
@@ -1261,7 +1277,7 @@ div.v2-settings__row > span { flex: 1; }
     right: 24px;
     height: 440px;
     display: grid;
-    grid-template-columns: 600px 1fr;
+    grid-template-columns: 600px minmax(0, 1fr);
     gap: 18px;
 }
 
@@ -1383,6 +1399,7 @@ div.v2-settings__row > span { flex: 1; }
 .v2-hazard-btn--alt:hover { filter: brightness(1.12) drop-shadow(0 0 12px rgba(62, 230, 255, 0.6)); }
 
 /* ② 전술 레이더 */
+.v2-radar { min-width: 0; }
 .v2-radar__screen {
     position: relative;
     height: 272px;

@@ -1,0 +1,17 @@
+{
+  "frameWidth": 94,
+  "frameHeight": 94,
+  "anchorX": 54.6,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/cultist/cultist_walk.png",
+      "frames": 12,
+      "duration": 0.6
+    },
+    "attack": {
+      "src": "assets/sprites/rig/cultist/cultist_attack.png",
+      "frames": 10,
+      "duration": 0.8
+    }
+  }
+}

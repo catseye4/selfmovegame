@@ -1,0 +1,17 @@
+{
+  "frameWidth": 126,
+  "frameHeight": 103,
+  "anchorX": 48.6,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/holyshield/holyshield_walk.png",
+      "frames": 12,
+      "duration": 0.85
+    },
+    "attack": {
+      "src": "assets/sprites/rig/holyshield/holyshield_attack.png",
+      "frames": 10,
+      "duration": 0.9
+    }
+  }
+}

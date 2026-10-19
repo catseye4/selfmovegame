@@ -1,21 +1,36 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // RIG TEST — 테스트 화면 컨트롤러
-   rig_test.html 전용. 게임과 같은 리그 엔진(js/engine_v2/rig/)을 사용해 동작만 따로 확인한다.
+   rig_test.html 전용. 게임과 같은 리그 엔진(js/engine_v2/rig/)·이펙트 정의로 동작·스킬·적 이펙트를 따로 확인한다.
+   - 캐릭터 · 스킬 탭: 캐릭터 카드, 고유 동작, 부위별 파츠·스킬 (PART_CATALOG, 장착하면 세트·강화 그림),
+                      ▶ 스킬 미리보기는 skillPreviews.js (previewApi로 무대를 다룸)
+   - 적 · 이펙트 탭: 무대 오른쪽의 적(게임의 구운 그림 ENEMY_ART + 색조), 그 적의 기술·엘리트 속성·구역 기믹 이펙트
+   - 스프라이트 굽기(tools/rig/bake_sprite.py, ?bake=1)는 window.rigTest와 캔버스만 씀 — 굽기 때는 적을 그리지 않음
    ========================================================================== */
 
 import { Animator, Spring, Mat } from '../engine_v2/rig/rig.js';
 import { RIG_CHARACTERS, RIG_ENEMIES, RIG_NEW, attackClipOf, hitSocketOf } from '../engine_v2/rig/characters.js';
-import { loadRigAssets, applyRigEvent, applyUpgrades, buildSkeleton, restBounds, shieldGeom, ScaleTween, PHASE2_SCALE }
+import { loadRigAssets, applyRigEvent, applyUpgrades, buildSkeleton, restBounds, shieldGeom, ScaleTween, PHASE2_SCALE, variantAlias }
     from '../engine_v2/rig/rigAvatar.js';
 import { RigEffects } from '../engine_v2/rig/rigEffects.js';
-import { VfxPlayer } from '../engine_v2/vfx/vfxPlayer.js';
+import { VfxPlayer, preloadVfxSheets } from '../engine_v2/vfx/vfxPlayer.js';
 import { HERO_WAVE, HERO_ORB } from '../engine_v2/vfx/heroVfx.js';
 import { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX, DIVER_VFX, SAINT_VFX, FROST_VFX } from '../engine_v2/vfx/vfxDefs.js';
 import { ICE, MIST } from '../engine_v2/vfx/frostVfx.js';
 import { DOLL_VFX } from '../engine_v2/vfx/vfxDefs.js';
+import { BATTLE_VFX, ZONE_VFX, BOSS_VFX, ELITE_VFX } from '../engine_v2/vfx/vfxDefs.js';
 import { BLOOD } from '../engine_v2/vfx/saintVfx.js';
 import { WATER, ABYSS } from '../engine_v2/vfx/diverVfx.js';
+import { ENEMY_TYPES, ELITE_AFFIXES } from '../engine_v2/enemies_v2.js';
+import { ENEMY_ART } from '../engine_v2/enemyArt_v2.js';
+import { ROSTER } from '../engine_v2/roster_v2.js';
+import { PART_CATALOG } from './partSkills.gen.js';
+import { SKILL_PREVIEWS } from './skillPreviews.js';
+import { VFX_VARIANTS, applyVfxVariant, applyVfxChoices, readVfxChoices, readVfxStyle } from '../engine_v2/vfx/vfxVariants.js';
 
+const BAKE = new URLSearchParams(location.search).has('bake');   // 스프라이트 굽기: 적을 그리지 않음
+const CAPTURE = new URLSearchParams(location.search).get('capture') === '1';
+const vfxChoices = readVfxChoices();
+applyVfxChoices(vfxChoices);
 const STAGE_W = 960;
 const STAGE_H = 600;
 const GROUND_Y = 520;
@@ -29,18 +44,24 @@ const FADE_SEC = 0.18;
 
 // bg/fx: 배경·HUD와 이펙트 그리기 (스프라이트 굽기용으로 끌 수 있음, tools/rig/bake_sprite.py)
 const opts = { crossfade: true, springs: true, pixel: false, stepped: false, bones: false, scroll: true, speed: 1,
-    bg: true, fx: true, dummies: false };
+    bg: true, fx: true, dummies: !BAKE };
 const state = { char: 'mech', mode: 'idle', arm: 'cannon', paused: false,
-    upgrades: { head: false, body: false, arm: false, leg: false } };   // 새 캐릭터 강화 그림 (D-044)
+    upgrades: { head: false, body: false, arm: false, leg: false },   // 새 캐릭터 강화 그림 (D-044)
+    equip: {},                                                        // 부위 → 파츠 id (PART_CATALOG)
+    enemy: 'guard', enemyCount: 3, enemyMode: 'walk', elite: false, affixes: [], raged: false, tab: 'char' };
 
-let character, skeleton, animator, effects, springs, bounds;
+let character, skeleton, animator, effects, springs, bounds, layout;
 let onceClip = null;               // 점프/변신처럼 한 번 재생 중인 클립
 
 // ---- 스킬 이펙트 확인용: 전장 VFX + 고블린 더미 (게임 전투와 같은 비율) ----
 const vfx = new VfxPlayer();
+preloadVfxSheets();
+vfx.style = readVfxStyle();
 const VFX_SCALE = CHAR_SCALE / 0.235;            // 게임 전투 배율 대비 (캐릭터가 약 1.8배 큼)
 const GOBLIN_SRC = 'assets/sprites/enemy/goblin_walk_sheet.png';
-const dummies = [330, 440, 550].map(dx => ({ x: CHAR_X + dx * VFX_SCALE * 0.56, flash: 0, slow: 0 }));
+const SPREAD_X = [310, 410, 510].map(dx => CHAR_X + dx * VFX_SCALE * 0.56);   // 적 3마리 자리
+const dummies = SPREAD_X.map(x => ({ x, flash: 0, slow: 0 }));
+const timers = [];                 // 미리보기 예약 (시뮬레이션 시간 기준, previewApi.later)
 const skill = { curse: false, wave: false, seal: false, blizzard: false, curseTimer: 0, castCb: null };
 let goblinImg = null;
 const giant = new ScaleTween();    // 2페이즈 거대화 배율
@@ -49,6 +70,9 @@ let groundOffset = 0;
 let simTime = 0;
 let dirty = true;
 const eventLog = [];
+let showcase = null;
+let showcaseRequest = 0;
+let showcaseLoad = Promise.resolve();
 
 let stageM = Mat.trs(CHAR_X, GROUND_Y, 0, CHAR_SCALE, CHAR_SCALE);
 const toStage = p => Mat.apply(stageM, p[0], p[1]);
@@ -72,19 +96,32 @@ async function init() {
 
     await setCharacter(state.char);
     bindUI();
+    loadEnemyArt(enemyArtKey());
+    placeEnemies();
+    renderEnemyTab();
+    renderVfxVariants();
+    renderWho();
+    syncButtons();
     document.getElementById('rig-loading').remove();
     requestAnimationFrame(loop);
 }
 
 /** 캐릭터 교체: 에셋 로드 후 뼈대/스프링/애니메이터를 새로 구성하고 현재 상태 동작을 이어서 재생 */
 async function setCharacter(id) {
+    showcase = null;
     const next = RIG_CHARACTERS[id] || RIG_ENEMIES[id] || RIG_NEW[id];
-    const { layout, images } = await loadRigAssets(next);
+    const assets = await loadRigAssets(next);
+    const images = assets.images;
+    layout = assets.layout;
     character = next;
     state.char = id;
     if (character.arms && !character.arms[state.arm]) state.arm = character.defaultArm;
     skeleton = buildSkeleton(character, layout, images, state.arm);
     applyUpgrades(skeleton, character, state.upgrades);
+    if (PART_CATALOG[id]) {
+        state.equip = defaultEquip(id);
+        applyEquip();
+    }
     bounds = restBounds(layout);
     springs = character.springs.map(s => new Spring(s));
     effects.clear();
@@ -102,8 +139,9 @@ async function setCharacter(id) {
     skill.seal = false;
     skill.blizzard = false;
     skill.wave = false;
-    buildPreviewButtons();
-    buildSkillClipButtons();
+    timers.length = 0;
+    skill.castCb = null;
+    renderCharTab();
     tick(0);
     syncButtons();
     dirty = true;
@@ -113,12 +151,18 @@ async function setCharacter(id) {
 // 시뮬레이션
 // ---------------------------------------------------------------------------
 function tick(h) {
+    if (showcase) showcase.age += h;
     animator.update(h);
     if (onceClip && animator.currentTime >= character.clips[onceClip].duration) {
         onceClip = null;
         animator.play(clipFor(state.mode), opts.crossfade ? FADE_SEC : 0);
     }
     if (giant.update(h)) applyScale();
+    // 예약된 미리보기는 이펙트 갱신 전에 (그 안에서 쏜 투사체가 위치를 받은 뒤 그려지게)
+    for (let i = timers.length - 1; i >= 0; i--) {
+        timers[i].t -= h;
+        if (timers[i].t <= 0) timers.splice(i, 1)[0].fn();
+    }
     vfx.update(h);
     for (const d of dummies) {
         d.flash = Math.max(0, d.flash - h);
@@ -167,7 +211,7 @@ function onEvent(name, data) {
     // 공격 타격 순간: 첫 더미 피격 반응 (+ 어둠 파동 팔이면 파동 발사)
     if (name === 'impact' && data.hit && showDummies()) {
         const d = dummies[0];
-        if (character.id === 'hero') {
+        if (character.id === 'hero' && !showcase) {
             vfx.play(HERO_VFX.slashHit, dummyCenterX(d), dummyCenterY(), { scale: VFX_SCALE });
             if (skill.wave) launchWave();
         }
@@ -477,43 +521,660 @@ function previewVfx(i) {
     dirty = true;
 }
 
-/** 새 캐릭터 동작 버튼 (캐릭터 정의의 skillClips: [[이름, 클립]]) */
-function buildSkillClipButtons() {
-    const row = document.getElementById('newchar-skill-row');
-    if (!row) return;
-    row.innerHTML = '';
-    (character.skillClips || []).forEach(([label, clip]) => {
-        const btn = document.createElement('button');
-        btn.textContent = label;
-        btn.addEventListener('click', () => playOnce(clip));
-        row.appendChild(btn);
-    });
+// ---------------------------------------------------------------------------
+// 캐릭터 · 스킬 탭: 캐릭터 카드, 고유 동작, 부위별 파츠·스킬 (PART_CATALOG — node tools/data/export_parts.mjs MD로 다시 만듦)
+// ---------------------------------------------------------------------------
+const SLOTS = [['arm', '팔', '스킬 1'], ['body', '몸통', '스킬 2'], ['head', '머리', '필살기'], ['leg', '다리', '패시브']];
+const ALLIES = [['minion', '합성괴인 졸개'], ['rabbit', '토끼 인형']];
+// 캐릭터 고유 동작 [이름, 클립 이름 | 함수] — 새 캐릭터는 리그 정의의 skillClips를 더함
+const CHAR_ACTIONS = {
+    mech: [['출격 점프', 'jump'], ['반사 실드 → 파괴', () => { shieldOn(); previewApi.later(1.2, breakShield); }]],
+    kaiju: [['포효', 'roar']],
+    hero: [['시전 동작', 'cast']],
+    chimera: [['2페이즈 변신', phase2]]
+};
+
+const catalogOf = (id = state.char) => PART_CATALOG[id] || null;
+const partById = id => (catalogOf() || []).find(p => p.id === id) || null;
+
+/** 처음 장착: 부위마다 기본 파츠 (세트·강화가 아닌 첫 파츠) */
+function defaultEquip(id) {
+    const eq = {};
+    for (const [slot] of SLOTS) {
+        const list = (PART_CATALOG[id] || []).filter(p => p.slot === slot);
+        const base = list.find(p => !p.variant && !p.upgrade) || list[0];
+        if (base) eq[slot] = base.id;
+    }
+    return eq;
 }
 
-function buildPreviewButtons() {
-    const row = document.getElementById('vfx-preview-row');
-    if (!row) return;
+/** 장착한 파츠대로 그림: 세트(a·b·dragon) 부위 그림·색, 새 캐릭터 강화 그림, 거대로봇 무기 팔(근접 = 주먹, 나머지 = 캐논) */
+function applyEquip() {
+    if (!catalogOf()) return;
+    const parts = Object.fromEntries(SLOTS.map(([slot]) => [slot, partById(state.equip[slot])]));
+    const variants = {};
+    for (const [slot, p] of Object.entries(parts)) if (p && p.variant) variants[slot] = p.variant;
+    const { alias, tint } = variantAlias(character.id, layout, variants);
+    skeleton.partAlias = alias;
+    skeleton.partFilters = Object.keys(tint).length ? tint : null;
+    if (character.upgrade) {
+        SLOTS.forEach(([slot]) => { state.upgrades[slot] = !!(parts[slot] && parts[slot].upgrade); });
+        applyUpgrades(skeleton, character, state.upgrades);
+    }
+    if (character.arms && parts.arm) {
+        const kind = parts.arm.attackType === 'melee' ? 'fist' : 'cannon';
+        if (character.arms[kind] && kind !== state.arm) setArm(kind);
+    }
+    renderWho();
+    dirty = true;
+}
+
+function equip(id) {
+    const p = partById(id);
+    if (!p) return;
+    state.equip[p.slot] = id;
+    applyEquip();
+    syncButtons();
+}
+
+const previewOf = p => (p && p.skill && SKILL_PREVIEWS[p.skill]) || null;
+
+/** 파츠 스킬 미리보기: 그 파츠를 장착하고(그림) 스킬 이펙트를 적에게 */
+function playSkill(id) {
+    const p = partById(id);
+    const fn = previewOf(p);
+    if (!fn) return false;
+    if (state.equip[p.slot] !== id) equip(id);
+    opts.dummies = true;
+    fn(previewApi);
+    syncButtons();
+    dirty = true;
+    return true;
+}
+
+/** 스킬 미리보기(skillPreviews.js)가 무대를 다루는 도구 */
+const previewApi = {
+    vfx, VFX_SCALE, GROUND_Y, CHAR_X, dummies,
+    get character() { return character; },
+    enemyChestY: () => dummyCenterY(),
+    selfChest: () => [CHAR_X + 60, GROUND_Y - 180],
+    at: vfxAtDummy,                    // (정의, 적 번호, 바닥?) 적 몸 / 발밑
+    atEach: vfxAtEachDummy,            // (정의, 바닥?) 적마다
+    atSelf: vfxAtSelf,                 // (정의) 캐릭터 발밑
+    seq,
+    muzzle: muzzlePoint,               // 무기 끝 (공격 소켓)
+    socket: (socket, bone) => toStage(skeleton.socketWorld(socket, bone)),
+    /** 클립 재생 + 'cast' 이벤트 순간에 onCast (클립에 cast가 없거나 클립이 없으면 바로/조금 뒤) */
+    playClip(name, onCast) {
+        if (onCast) skill.castCb = onCast;
+        const ok = playOnce(name);
+        if (onCast && !ok) {
+            skill.castCb = null;
+            onCast();
+        } else if (onCast) {
+            previewApi.later(character.clips[name].duration * 0.6, () => {
+                if (skill.castCb !== onCast) return;
+                skill.castCb = null;
+                onCast();
+            });
+        }
+        return ok;
+    },
+    later: (sec, fn) => timers.push({ t: sec, fn }),
+    hit: (i = 0, slow = 0) => { dummies[i].flash = 0.08; if (slow) dummies[i].slow = slow; },
+    shake: (amp = 6, dur = 0.25) => effects.shake(amp, dur),
+    previews: {
+        laser: previewLaser, missiles: previewMissiles, jet: previewJet, anchor: previewAnchor, surge: previewSurge,
+        needles: previewNeedles, frostWave: previewFrostWave, puppet: previewPuppet, mindWave, launchWave,
+        toggleCurse, toggleWave, toggleSeal, toggleBlizzard, shield: shieldOn, breakShield, phase2
+    }
+};
+
+function el(tag, cls, html) {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (html != null) node.innerHTML = html;
+    return node;
+}
+
+function renderCharTab() {
+    // 캐릭터 카드 (선택창과 같은 8명) + 아군
+    const grid = document.getElementById('char-grid');
+    if (grid && !grid.childElementCount) {
+        ROSTER.forEach(c => {
+            const b = el('button', null, (RIG_CHARACTERS[c.id] || RIG_NEW[c.id] || {}).name || c.faction);
+            b.dataset.char = c.id;
+            b.style.setProperty('--cc', c.color);
+            b.addEventListener('click', () => setCharacter(c.id));
+            grid.appendChild(b);
+        });
+        const allies = document.getElementById('ally-row');
+        ALLIES.forEach(([id, name]) => {
+            if (!(RIG_ENEMIES[id] || RIG_NEW[id])) return;
+            const b = el('button', null, name);
+            b.dataset.char = id;
+            b.addEventListener('click', () => setCharacter(id));
+            allies.appendChild(b);
+        });
+    }
+    // 고유 동작
+    const actions = [...(CHAR_ACTIONS[character.id] || []), ...(character.skillClips || [])]
+        .filter(([, act]) => typeof act === 'function' || character.clips[act]);
+    const row = document.getElementById('action-row');
     row.innerHTML = '';
+    actions.forEach(([label, act]) => {
+        const b = el('button', null, label);
+        b.addEventListener('click', () => (typeof act === 'function' ? act() : playOnce(act)));
+        row.appendChild(b);
+    });
+    document.getElementById('action-group').hidden = !actions.length;
+    renderPartsList();
+    // 기본 공격 · 그 밖의 이펙트 (예전 미리보기)
+    const prev = document.getElementById('vfx-preview-row');
+    prev.innerHTML = '';
     (PREVIEWS[character.id] || []).forEach(([label], i) => {
-        const btn = document.createElement('button');
-        btn.textContent = label;
-        btn.addEventListener('click', () => previewVfx(i));
-        row.appendChild(btn);
+        const b = el('button', null, label);
+        b.addEventListener('click', () => previewVfx(i));
+        prev.appendChild(b);
     });
+    document.getElementById('common-group').hidden = !(PREVIEWS[character.id] || []).length;
+    renderWho();
 }
 
-function drawDummies(ctx, view) {
-    if (!showDummies() || !goblinImg || !goblinImg.complete || !goblinImg.naturalHeight) return;
+const SET_TAG = p => (p.upgrade ? '<span class="tag up">강화</span>'
+    : p.variant === 'a' ? '<span class="tag a">A</span>' : p.variant === 'b' ? '<span class="tag b">B</span>'
+        : p.variant ? '<span class="tag a">추가</span>' : '');
+
+function renderPartsList() {
+    const box = document.getElementById('parts-list');
+    const list = catalogOf();
+    document.getElementById('parts-group').hidden = !list;
+    box.innerHTML = '';
+    if (!list) return;
+    for (const [slot, label, kind] of SLOTS) {
+        const parts = list.filter(p => p.slot === slot);
+        if (!parts.length) continue;
+        const sec = el('div', 'slot', `<div class="slot-head"><span>${label} · ${kind}</span><small>${parts.length}개</small></div>`);
+        parts.forEach(p => {
+            const fn = previewOf(p);
+            const row = el('div', 'part-row', `<div><div class="name">${SET_TAG(p)}${p.name}<small>${p.set || ''}</small></div>
+                <span class="skill">${p.skillName || '—'}${p.cd ? ` · ${p.cd}초` : ''}</span>
+                <div class="desc">${p.desc || ''}</div></div>`);
+            row.dataset.part = p.id;
+            const play = el('button', 'play', '▶');
+            play.disabled = !fn;
+            play.title = fn ? '스킬 이펙트 보기' : '미리보기 없음 (게임에서 확인)';
+            play.addEventListener('click', ev => { ev.stopPropagation(); playSkill(p.id); });
+            row.appendChild(play);
+            row.addEventListener('click', () => equip(p.id));
+            sec.appendChild(row);
+        });
+        box.appendChild(sec);
+    }
+}
+
+/** 무대 아래 줄: 캐릭터(장착 파츠) VS 적 */
+function renderWho() {
+    const set = (id, text) => { const n = document.getElementById(id); if (n) n.textContent = text; };
+    if (!character) return;
+    set('who-char', character.name);
+    const list = catalogOf();
+    set('who-parts', list ? SLOTS.map(([slot]) => (partById(state.equip[slot]) || {}).name).filter(Boolean).join(' · ')
+        : (RIG_ENEMIES[state.char] ? '적 리그 (동작 확인)' : ''));
+    const t = enemyType();
+    const affix = state.affixes.map(a => ELITE_AFFIXES[a].name).join('·');
+    set('who-enemy', `${state.elite || affix ? '엘리트 ' : ''}${affix ? `[${affix}] ` : ''}${enemyName(state.enemy)}`);
+    const key = enemyArtKey();
+    const zone = ENEMY_GROUPS.find(([, ids]) => ids.includes(state.enemy));
+    set('who-enemy-sub', [zone && zone[0], key && key !== state.enemy && t ? `임시 그림: ${enemyName(key)}` : '',
+        !showDummies() ? '숨김 (설정 탭)' : ''].filter(Boolean).join(' · '));
+}
+
+// ---------------------------------------------------------------------------
+// 적 · 이펙트 탭: 무대 오른쪽의 적 (게임과 같은 구운 그림 ENEMY_ART, 그림이 없는 종류는 빌린 그림 artAs + 색조)
+// ---------------------------------------------------------------------------
+const ENEMY_GROUPS = [
+    ['구역 1 · 지하 비밀 연구소', ['guard', 'shield', 'tranq', 'shock', 'medic', 'guardian']],
+    ['구역 2 · 하부 쓰레기 폐기 정착지', ['raider', 'builder', 'sludge', 'netter', 'mechanic', 'scrapking']],
+    ['구역 3 · 성왕국 수도', ['soldier', 'inquisitor', 'holyshield', 'priest', 'mage', 'demon', 'demonknight', 'archbishop']],
+    ['구역 4 · 진화의 심연', ['cultist', 'tentacle', 'carapace', 'slime', 'slimelet', 'sporer', 'oculus']],
+    ['그 밖', ['goblin']]
+];
+const BOSS_X = CHAR_X + 330 * VFX_SCALE * 0.56;   // 보스는 크니 한 마리만, 조금 앞에
+const enemyImages = {};   // 그림 이름 → { walk: Image, attack: Image, ... }
+const enemyType = (id = state.enemy) => ENEMY_TYPES[id] || null;
+const enemyName = id => (id === 'goblin' ? '연습용 더미 (고블린)' : (ENEMY_TYPES[id] || {}).name || id);
+
+function enemyArtKey(id = state.enemy) {
+    if (ENEMY_ART[id]) return id;
+    const t = ENEMY_TYPES[id];
+    return t && t.artAs && ENEMY_ART[t.artAs] ? t.artAs : null;
+}
+
+function loadEnemyArt(key) {
+    if (!key || enemyImages[key]) return;
+    const a = ENEMY_ART[key];
+    enemyImages[key] = {};
+    for (const clip of Object.keys(a).filter(k => a[k] && a[k].src)) {
+        const img = new Image();
+        img.onload = () => { dirty = true; };
+        img.src = a[clip].src;
+        enemyImages[key][clip] = img;
+    }
+}
+
+/** 적 자리: 3마리면 나란히, 1마리·보스면 세 자리를 한 곳에 모음 (스킬 미리보기가 셋을 노려도 한 적에게) */
+function placeEnemies() {
+    const t = enemyType();
+    const single = state.enemyCount === 1 || (t && t.boss);
+    dummies.forEach((d, i) => { d.x = single ? (t && t.boss ? BOSS_X : SPREAD_X[0]) : SPREAD_X[i]; });
+}
+
+const frontEnemy = () => dummies[0];
+
+function setEnemy(id) {
+    showcase = null;
+    state.enemy = id;
+    state.affixes = [];
+    state.raged = false;
+    loadEnemyArt(enemyArtKey(id));
+    placeEnemies();
+    opts.dummies = true;
+    renderEnemyTab();
+    renderWho();
+    syncButtons();
+    dirty = true;
+}
+
+// 적 쪽에서 캐릭터 쪽으로 (화면 좌표)
+function enemyFrom() {
+    const t = enemyType();
+    return [frontEnemy().x - 30, GROUND_Y - (t && t.boss ? 190 : 95)];
+}
+const selfChest = () => [CHAR_X + 60, GROUND_Y - 180];
+const atSelfChest = def => vfx.play(def, ...selfChest(), { scale: VFX_SCALE });
+const atSelfGround = def => vfx.play(def, CHAR_X + 60, GROUND_Y, { scale: VFX_SCALE });
+function atEnemy(def, ground = true) {
+    vfx.play(def, frontEnemy().x, ground ? GROUND_Y : dummyCenterY(), { scale: VFX_SCALE });
+}
+function shoot(color, onHit = null, dur = 0.45) {
+    vfx.launchOrb({ from: enemyFrom(), to: selfChest, color, dur, scale: VFX_SCALE, onArrive: () => onHit && onHit() });
+}
+function lob(color, onHit) {
+    vfx.launchMissile({ from: enemyFrom(), to: () => [CHAR_X + 60, GROUND_Y - 60], dur: 0.95, apex: 150, color, scale: VFX_SCALE,
+        onArrive: () => onHit && onHit() });
+}
+const warnHit = (warn, hit, delay) => vfx.play(seq(warn, hit, delay), CHAR_X + 60, GROUND_Y, { scale: VFX_SCALE });
+const enemyFront = def => vfx.play(def, frontEnemy().x - 90, GROUND_Y - 40, { scale: VFX_SCALE * 0.7 });   // 적 바로 앞 (장벽 세우기)
+
+// 적 기술: [이름, 설명, 재생] — 게임의 enemies_v2.js·battle/enemyField.js와 같은 이펙트
+const ENEMY_SKILLS = {
+    tranq: [['마취탄', '맞으면 감속', () => shoot('90, 230, 255')]],
+    shock: [['감전', '근접 타격 — 짧은 기절', () => atSelfChest(BATTLE_VFX.shockHit)]],
+    medic: [['치유 분사', '다친 적·거점 치유', () => atEnemy(KAIJU_VFX.regen)]],
+    guardian: [
+        ['방패 강타', '7초마다 — 기절', () => atSelfChest(BATTLE_VFX.shieldBash)],
+        ['정의의 일격', '11초마다 예고 → 큰 피해', () => warnHit(BATTLE_VFX.smiteWarn, BATTLE_VFX.smiteHit, 1.2)],
+        ['수호의 결계', '15초마다 3초 동안 피해 70% 감소 (D-057)', () => atEnemy(BOSS_VFX.guardianBarrier, false)]
+    ],
+    builder: [['바리케이드 세우기', '부숴야 진격', () => enemyFront(BATTLE_VFX.shieldBash)]],
+    sludge: [['오물 투척', '발밑에 늪 장판 (감속)', () => shoot('190, 230, 40')]],
+    netter: [['그물', '속박 — 진격만 막힘', () => shoot('210, 190, 140')]],
+    mechanic: [['수리', '거점·바리케이드 수리', () => atEnemy(KAIJU_VFX.regen)]],
+    scrapking: [
+        ['자석', '붙잡아 뒤로 내던짐', () => shoot('120, 200, 255', null, 0.25)],
+        ['고철 낙하', '예고 원 → 큰 피해', () => warnHit(BATTLE_VFX.smiteWarn, BATTLE_VFX.baseBlast, 1.3)],
+        ['고철 방벽 투하', '16초마다 자기 앞에 바리케이드 (D-057)', () => enemyFront(BATTLE_VFX.shieldBash)]
+    ],
+    holyshield: [['방패 장벽', '부숴야 진격', () => enemyFront(BATTLE_VFX.shieldBash)]],
+    priest: [['신관 치유', '병사만 조금 치유', () => atEnemy(ZONE_VFX.holyHeal)]],
+    mage: [
+        ['원소탄 · 불', '화상 3초 (D-057)', () => shoot('255, 140, 40', () => atSelfChest(ZONE_VFX.spellFire), 0.36)],
+        ['원소탄 · 번개', '짧은 기절 0.4초', () => shoot('255, 240, 120', () => atSelfChest(ZONE_VFX.spellBolt), 0.36)],
+        ['원소탄 · 얼음', '감속 1.5초', () => shoot('150, 220, 255', () => atSelfChest(ZONE_VFX.spellIce), 0.36)]
+    ],
+    demonknight: [['도끼 내려찍기', '5초마다 — 최대 내구도 5%', () => atSelfChest(ZONE_VFX.axeCleave)]],
+    archbishop: [
+        ['천상의 심판', '9초마다 예고 → 빛의 기둥', () => warnHit(ZONE_VFX.judgmentWarn, ZONE_VFX.heavenPillar, 1.4)],
+        ['악마병 소환 (지옥문)', '체력 50% 아래 — 악마병 2기', () => [0, 1].forEach(i =>
+            vfx.play(ZONE_VFX.hellGate, frontEnemy().x - 110 - i * 60, GROUND_Y, { scale: VFX_SCALE }))],
+        ['속죄의 사슬', '13초마다 속박 1.6초 (D-057)', () => vfx.launchChain({
+            from: enemyFrom, to: selfChest, color: '255, 214, 120', scale: VFX_SCALE,
+            onHook: (x, y) => vfx.play(BOSS_VFX.chainHit, x, y, { scale: VFX_SCALE })
+        })]
+    ],
+    slime: [['분열', '쓰러지면 작은 슬라임 2기', () => atEnemy(ZONE_VFX.slimeSplit)]],
+    sporer: [['포자 덩어리', '곡사', () => lob('150, 255, 90', () => atSelfGround(ZONE_VFX.sporeBurst))]],
+    oculus: [
+        ['심연의 파동', '8초마다 예고 → 촉수', () => {
+            atSelfGround(ZONE_VFX.abyssWarn);
+            [-38, 0, 38].forEach((dx, i) => previewApi.later(1 + i * 0.06, () =>
+                vfx.play(BATTLE_VFX.abyssSpike, CHAR_X + 60 + dx, GROUND_Y, { scale: VFX_SCALE * (0.8 + i * 0.15) })));
+        }],
+        ['유전자 붕괴', '긴 감속 4초', () => shoot('150, 255, 90', () => atSelfGround(ZONE_VFX.gooSplat), 0.5)],
+        ['극한의 변이', '체력 50% — 2페이즈 (다시 누르면 원래대로)', () => {
+            state.raged = !state.raged;
+            if (state.raged) atEnemy(ZONE_VFX.mutationBurst, false);
+            renderWho();
+        }],
+        ['2페이즈 돌진', '7초마다 달려들어 밀어냄', () => atSelfChest(ZONE_VFX.chargeImpact)],
+        ['진홍 시선', '2페이즈 9초마다 광선 (D-057)', () =>
+            vfx.play(seq(BOSS_VFX.gazeWarn, BOSS_VFX.gaze, 1), frontEnemy().x - 20, GROUND_Y - 300, { scale: VFX_SCALE, to: selfChest() })]
+    ]
+};
+// 구역 기믹·거점 사격 (적 종류와 상관없이)
+const ZONE_FX = [
+    ['구역 1 · EMP 포격', '보스전 기지 — 주인공 기절, 적 보병 전멸', () => vfx.play(BATTLE_VFX.emp, frontEnemy().x, GROUND_Y - 250, { scale: VFX_SCALE * 0.6 })],
+    ['구역 2 · 유독 가스', '보스전 소각탑 — 전장 전체 감속', () => vfx.play(ZONE_VFX.toxicBurst, frontEnemy().x, GROUND_Y - 280, { scale: 0.8 })],
+    ['구역 3 · 심연의 문 개방', '3-B 보스전 — 악마기사(엘리트) 소환', () => atEnemy(ZONE_VFX.abyssGate)],
+    ['구역 3 · 통제탑 화살', '요새가 다가오면 사격', () => vfx.launchNeedle({
+        from: [frontEnemy().x, GROUND_Y - 330], to: selfChest, color: '255, 214, 120', dur: 0.3, scale: VFX_SCALE,
+        onArrive: () => atSelfChest(ZONE_VFX.arrowHit) })],
+    ['구역 4 · 유기질 벽 독액', '피해 + 독 웅덩이', () => vfx.launchOrb({
+        from: [frontEnemy().x, GROUND_Y - 250], to: () => [CHAR_X + 60, GROUND_Y - 10], color: '150, 255, 90', dur: 0.5,
+        scale: VFX_SCALE, onArrive: () => atSelfGround(ZONE_VFX.venomSplash) })]
+];
+// 엘리트 속성: 누르면 이 적에 붙이고(최대 2개) 그 속성 이펙트
+const AFFIX_FX = {
+    swift: () => atEnemy({ layers: [{ type: 'motes', at: 0, count: 16, spread: 40, rise: [5, 20], life: [0.3, 0.6], size: 2.5,
+        color: ELITE_AFFIXES.swift.color }] }),
+    shielded: () => atEnemy(ELITE_VFX.shieldBreak, false),
+    thorns: () => atEnemy(ELITE_VFX.thornsSpark, false),
+    regen: () => atEnemy(ELITE_VFX.regenMotes),
+    frost: () => atSelfChest(ELITE_VFX.frostHit),
+    toxic: () => atEnemy(ELITE_VFX.toxicCloud),
+    volatile: () => atEnemy(seq(ELITE_VFX.volatileWarn, ELITE_VFX.volatileBlast, 1)),
+    iron: () => atEnemy(ELITE_VFX.ironSpark, false)
+};
+
+function playEnemyFx(fn) {
+    opts.dummies = true;
+    fn();
+    dummies.forEach(d => { d.flash = 0.08; });
+    syncButtons();
+    dirty = true;
+}
+
+function toggleAffix(id) {
+    const i = state.affixes.indexOf(id);
+    if (i >= 0) state.affixes.splice(i, 1);
+    else {
+        state.affixes.push(id);
+        if (state.affixes.length > 2) state.affixes.shift();
+        state.elite = true;
+        playEnemyFx(AFFIX_FX[id]);
+    }
+    renderWho();
+    syncButtons();
+    dirty = true;
+}
+
+function fxRow(name, desc, fn) {
+    const row = el('div', 'fx-row', `<div class="name">${name}<small>${desc || ''}</small></div>`);
+    const play = el('button', 'play', '▶');
+    play.addEventListener('click', () => playEnemyFx(fn));
+    row.appendChild(play);
+    return row;
+}
+
+function renderEnemyTab() {
+    const list = document.getElementById('enemy-list');
+    if (list && !list.childElementCount) {
+        ENEMY_GROUPS.forEach(([zone, ids]) => {
+            const block = el('div', 'zone-block', `<div class="zone-name">${zone}</div>`);
+            const chips = el('div', 'enemy-chips');
+            ids.forEach(id => {
+                const t = ENEMY_TYPES[id];
+                const b = el('button', t && t.boss ? 'boss' : '', `${t && t.boss ? '★ ' : ''}${enemyName(id)}`);
+                b.dataset.enemy = id;
+                b.addEventListener('click', () => setEnemy(id));
+                chips.appendChild(b);
+            });
+            block.appendChild(chips);
+            list.appendChild(block);
+        });
+        const affixes = document.getElementById('affix-row');
+        Object.entries(ELITE_AFFIXES).forEach(([id, a]) => {
+            const b = el('button', null, a.name);
+            b.dataset.affix = id;
+            b.style.borderLeft = `3px solid rgb(${a.color})`;
+            b.addEventListener('click', () => toggleAffix(id));
+            affixes.appendChild(b);
+        });
+        const zoneList = document.getElementById('zone-fx-list');
+        ZONE_FX.forEach(([name, desc, fn]) => zoneList.appendChild(fxRow(name, desc, fn)));
+    }
+    const skills = document.getElementById('enemy-skill-list');
+    skills.innerHTML = '';
+    const rows = ENEMY_SKILLS[state.enemy] || [];
+    rows.forEach(([name, desc, fn]) => skills.appendChild(fxRow(name, desc, fn)));
+    if (!rows.length) skills.appendChild(el('div', 'empty', '특수 기술 없음 — 근접 공격만 (아래 "적" 공격 동작으로 확인)'));
+    const rig = document.getElementById('btn-enemy-rig');
+    if (rig) rig.disabled = !RIG_ENEMIES[enemyArtKey()];
+}
+
+function vfxVariantKeys() {
+    return Object.entries(VFX_VARIANTS).map(([key, e]) => ({ key, name: e.name,
+        variants: Object.entries(e.variants).map(([id, v]) => ({ id, label: v.label })) }));
+}
+
+function setVfxVariant(key, id) {
+    if (!applyVfxVariant(key, id)) return false;
+    const full = VFX_VARIANTS[key] ? key : Object.keys(VFX_VARIANTS).find(k => k.split('.')[1] === key);
+    vfxChoices[full] = id;
+    try { localStorage.setItem('vfxChoices', JSON.stringify(vfxChoices)); } catch { /* 저장 불가여도 미리보기 가능 */ }
+    syncVfxButtons();
+    dirty = true;
+    return true;
+}
+
+function setVfxStyle(style) {
+    if (!['glow', 'pixel'].includes(style)) return false;
+    vfx.style = style;
+    try { localStorage.setItem('vfxStyle', style); } catch { /* 저장 불가여도 미리보기 가능 */ }
+    syncVfxButtons();
+    dirty = true;
+    return true;
+}
+
+function syncVfxButtons() {
+    document.querySelectorAll('[data-vfx-key]').forEach(b =>
+        b.classList.toggle('active', (vfxChoices[b.dataset.vfxKey] || 'A') === b.dataset.vfxId));
+    const pixel = document.getElementById('vfx-pixel');
+    if (pixel) pixel.checked = vfx.style === 'pixel';
+}
+
+function renderVfxVariants() {
+    const list = document.getElementById('vfx-variant-list');
+    for (const { key, name, variants } of vfxVariantKeys()) {
+        const row = el('div', 'vfx-variant-row');
+        row.appendChild(el('span', 'name', name));
+        for (const { id, label } of variants) {
+            const b = el('button', null, id);
+            b.title = label;
+            b.dataset.vfxKey = key;
+            b.dataset.vfxId = id;
+            b.addEventListener('click', () => setVfxVariant(key, id));
+            row.appendChild(b);
+        }
+        const play = el('button', 'play', '▶');
+        play.title = `${name} 재생`;
+        play.addEventListener('click', async () => {
+            try { await vfxShowcase(key); state.paused = false; syncButtons(); }
+            catch (err) { console.error(err); }
+        });
+        row.appendChild(play);
+        list.appendChild(row);
+    }
+    document.getElementById('vfx-pixel').addEventListener('change', e => setVfxStyle(e.target.checked ? 'pixel' : 'glow'));
+    syncVfxButtons();
+}
+
+function vfxDuration(def) {
+    return Math.max(0.1, ...def.layers.map(l => {
+        const life = Array.isArray(l.life) ? Math.max(...l.life) : l.life;
+        return (l.at || 0) + Math.max(l.dur || 0, life || 0.9) * (l.type === 'goo' ? 1.7 : 1);
+    }));
+}
+
+/** 장면 에셋 준비 후 초 단위 길이를 반환. 재호출하면 예약·입자·포즈를 처음부터 시작한다. */
+async function vfxShowcase(key) {
+    const full = VFX_VARIANTS[key] ? key : Object.keys(VFX_VARIANTS).find(k => k.split('.')[1] === key);
+    const entry = VFX_VARIANTS[full];
+    if (!entry) throw new Error(`알 수 없는 이펙트: ${key}`);
+    const request = ++showcaseRequest, scene = entry.scene;
+    vfx.clear();
+    timers.length = 0;
+    state.mode = 'idle';
+    const loading = showcaseLoad.catch(() => {}).then(() => setCharacter(scene.character));
+    showcaseLoad = loading;
+    await loading;
+    if (request !== showcaseRequest) return 0;
+    if (scene.arm) setArm(scene.arm);
+    if (scene.part) equip(scene.part);
+    state.enemyCount = 1;
+    state.enemyMode = 'walk';
+    state.elite = scene.kind === 'spawn';
+    setEnemy(scene.enemy || 'guard');
+    const images = enemyImages[enemyArtKey()] || {};
+    await Promise.all(Object.values(images).map(img => img.decode().catch(() => {})));
+    if (request !== showcaseRequest) return 0;
+    opts.fx = opts.dummies = true;
+    opts.bones = opts.pixel = opts.stepped = false;
+    opts.speed = 1;
+    effects.clear();
+    vfx.clear();
+    vfx.seed = 7331;
+    vfx.time = simTime = acc = 0;
+    groundOffset = 0;
+    springs.forEach(s => s.reset());
+    dummies.forEach(d => { d.flash = d.slow = 0; });
+    const kind = scene.kind, target = dummies[0];
+    if (['melee', 'defeat', 'baseHit', 'charge'].includes(kind)) dummies.forEach(d => { d.x = CHAR_X + 170; });
+    const clip = scene.clip === 'attack' ? clipFor('attack') : scene.clip;
+    const clipDef = character.clips[clip];
+    let hitAt = (clipDef?.events || []).find(([, name]) => name === 'impact' || name === 'fire' || name === 'cast')?.[0] ?? 0.2;
+    if (kind === 'breath') hitAt = 0.4;
+    if (['enemyGround', 'enemyHit', 'finale', 'spawn'].includes(kind)) hitAt = 0.1;
+    showcase = { key: full, kind, age: 0, hitAt };
+    const selected = entry.variants[vfxChoices[full] || 'A'].def;
+    if (kind === 'breath') {
+        playSkill(scene.part);
+    } else {
+        if (clip) playOnce(clip);
+        if (kind === 'shatter') {
+            vfx.play({ layers: [{ type: 'crystals', at: 0, dur: hitAt, count: 4, h: 95, spread: 28, color: ICE }] },
+                target.x, GROUND_Y, { scale: VFX_SCALE });
+        }
+        if (kind === 'enemyHit' || kind === 'enemyGround') state.enemyMode = 'attack';
+        previewApi.later(hitAt, () => {
+            const point = kind === 'enemyHit' ? selfChest() : kind === 'enemyGround' ? [CHAR_X + 60, GROUND_Y]
+                : ['shatter', 'charge', 'defeat', 'spawn', 'finale'].includes(kind) ? [target.x, GROUND_Y]
+                : [target.x, dummyCenterY()];
+            const play = () => {
+                const from = kind === 'beam' ? muzzlePoint() : point;
+                vfx.play(selected, ...from, { scale: VFX_SCALE, ...(kind === 'beam' ? { to: point } : {}) });
+                target.flash = 0.08;
+            };
+            if (kind === 'missile') vfx.launchMissile({ from: muzzlePoint(), to: () => point, dur: 0.45, apex: 55,
+                scale: VFX_SCALE, onArrive: play });
+            else play();
+        });
+    }
+    const duration = kind === 'breath' ? 6.8 : Math.max(clipDef?.duration || 0,
+        hitAt + (kind === 'missile' ? 0.45 : 0) + vfxDuration(selected)) + 0.2;
+    tick(0);
+    syncButtons();
+    render();
+    return duration;
+}
+
+// 처치/등장 비교 장면에서만 스프라이트를 쓰러뜨리거나 솟으며 사라지고 나타나게 한다.
+function transformShowcaseEnemy(ctx, d) {
+    if (!showcase) return;
+    const t = Math.max(0, showcase.age - showcase.hitAt);
+    if (showcase.kind === 'defeat') {
+        const u = Math.min(1, t / 0.4);
+        ctx.globalAlpha *= 1 - u;
+        ctx.translate(d.x, GROUND_Y);
+        ctx.rotate(u * Math.PI * 0.35);
+        ctx.scale(1 - u * 0.25, 1 - u * 0.2);
+        ctx.translate(-d.x, -GROUND_Y);
+    } else if (showcase.kind === 'spawn') {
+        const u = Math.min(1, t / 0.45);
+        ctx.globalAlpha *= u;
+        ctx.translate(0, (1 - u) * 35);
+    } else if (showcase.kind === 'finale') {
+        ctx.globalAlpha *= 1 - Math.min(1, t / 0.5);
+        ctx.translate(0, Math.min(1, t / 0.5) * 25);
+    }
+}
+
+/** 적 그리기: 구운 스프라이트(걷기·공격) + 종류 색조·엘리트 금빛·속성 색, 맞으면 번쩍 */
+function drawEnemies(ctx, view) {
+    if (!showDummies()) return;
+    if (state.enemy === 'goblin') return drawGoblins(ctx, view);
+    const key = enemyArtKey();
+    const a = key && ENEMY_ART[key];
+    const imgs = key && enemyImages[key];
+    if (!a || !imgs) return;
+    const t = enemyType();
+    const clip = state.enemyMode === 'attack' && a.attack ? 'attack' : 'walk';
+    const img = imgs[clip];
+    if (!img || !img.complete || !img.naturalWidth) return;
+    const c = a[clip];
+    const own = key === state.enemy;
+    const rage = state.raged && t.rage;
+    const k = VFX_SCALE * (own ? 1 : t.scale || 1) * (state.elite && !t.boss ? 1.3 : 1) * (rage ? t.rage.scale : 1);
+    const w = a.frameWidth * k, h = a.frameHeight * k;
+    const sw = img.naturalWidth / c.frames;
+    const base = [rage ? t.rage.tint : own ? '' : t.tint || '', state.elite && !t.boss ? 'drop-shadow(0 0 5px #ffd24a)' : '',
+        state.affixes.length ? `drop-shadow(0 0 7px rgb(${ELITE_AFFIXES[state.affixes[0]].color}))` : ''].filter(Boolean).join(' ');
+    const seen = new Set();
+    ctx.save();
+    ctx.setTransform(view[0], view[1], view[2], view[3], view[4], view[5]);
+    dummies.forEach((d, i) => {
+        if (seen.has(d.x)) return;   // 한 자리에 모였으면 한 번만
+        seen.add(d.x);
+        ctx.save();
+        transformShowcaseEnemy(ctx, d);
+        ctx.filter = d.flash > 0 ? 'brightness(2.4) saturate(0.2)'
+            : d.slow > 0 ? `${base} drop-shadow(0 0 6px #b050ff) saturate(0.55)` : (base || 'none');
+        const f = (Math.floor(((simTime % c.duration) / c.duration) * c.frames) + i * 3) % c.frames;   // 발걸음이 모두 같지 않게
+        ctx.drawImage(img, f * sw, 0, sw, img.naturalHeight, d.x - a.anchorX * k, GROUND_Y - h + 3 * VFX_SCALE, w, h);
+        ctx.restore();
+    });
+    ctx.restore();
+}
+
+function drawGoblins(ctx, view) {
+    if (!goblinImg || !goblinImg.complete || !goblinImg.naturalHeight) return;
     ctx.save();
     ctx.setTransform(view[0], view[1], view[2], view[3], view[4], view[5]);
     const fh = goblinImg.naturalHeight;
     const size = 76 * VFX_SCALE * 0.56 * 1.8;
+    const seen = new Set();
     for (const d of dummies) {
+        if (seen.has(d.x)) continue;
+        seen.add(d.x);
         ctx.filter = d.flash > 0 ? 'brightness(2.4) saturate(0.2)'
             : d.slow > 0 ? 'drop-shadow(0 0 6px #b050ff) saturate(0.55) brightness(0.9)' : 'none';
         ctx.drawImage(goblinImg, 0, 0, fh, fh, d.x - size / 2, GROUND_Y - size + 8, size, size);
     }
     ctx.restore();
+}
+
+/** 적의 리그를 크게 (동작 확인·굽기용) — 캐릭터 · 스킬 탭의 카드를 누르면 돌아감 */
+function viewEnemyRig() {
+    const key = enemyArtKey();
+    if (!RIG_ENEMIES[key]) return;
+    setCharacter(key);
+}
+
+function setTab(tab) {
+    state.tab = tab;
+    document.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    ['char', 'enemy', 'vfx', 'opt'].forEach(t => { const n = document.getElementById(`tab-${t}`); if (n) n.hidden = t !== tab; });
 }
 
 function setArm(id) {
@@ -567,7 +1228,7 @@ function render() {
         vfx.draw(ctx, 'ground');
         ctx.restore();
     }
-    drawDummies(ctx, view);
+    drawEnemies(ctx, view);
     if (opts.fx) effects.drawBack(ctx, view);
     skeleton.draw(ctx, Mat.mul(view, stageM));
     if (opts.fx) {
@@ -587,7 +1248,7 @@ function render() {
         const sockets = character.arms ? [hitSocket(), ...character.debugSockets] : character.debugSockets;
         skeleton.drawDebug(mainCtx, Mat.mul([1, 0, 0, 1, sx, sy], stageM), sockets);
     }
-    if (opts.bg) drawHud();
+    if (opts.bg && !CAPTURE) drawHud();
 }
 
 function drawBackground(ctx, view) {
@@ -667,7 +1328,11 @@ function loop(now) {
     last = now;
     if (!state.paused) simulate(real * opts.speed);
     if (dirty || !opts.stepped || sinceRender >= 1 / STEP_FPS) {
-        render();
+        try {
+            render();
+        } catch (err) {   // 이펙트 하나가 잘못돼도 화면이 멈추지 않게 (오류는 콘솔에 — 검사가 잡음)
+            console.error(err);
+        }
         sinceRender = 0;
         dirty = false;
     }
@@ -678,18 +1343,28 @@ function loop(now) {
 // UI
 // ---------------------------------------------------------------------------
 function bindUI() {
-    document.querySelectorAll('[data-char]').forEach(btn =>
-        btn.addEventListener('click', () => setCharacter(btn.dataset.char)));
+    document.querySelectorAll('[data-tab]').forEach(btn => btn.addEventListener('click', () => setTab(btn.dataset.tab)));
     document.querySelectorAll('[data-mode]').forEach(btn =>
         btn.addEventListener('click', () => setMode(btn.dataset.mode)));
-    const specials = { jump: () => playOnce('jump'), phase2, shieldBreak: breakShield,
-        cast: () => playOnce('cast'), curse: toggleCurse, mind: mindWave, wave: toggleWave };
-    document.querySelectorAll('[data-special]').forEach(btn =>
-        btn.addEventListener('click', () => specials[btn.dataset.special]()));
-    document.querySelectorAll('[data-arm]').forEach(btn =>
-        btn.addEventListener('click', () => setArm(btn.dataset.arm)));
-    document.querySelectorAll('[data-upgrade]').forEach(btn =>
-        btn.addEventListener('click', () => setUpgrades(btn.dataset.upgrade)));
+    document.querySelectorAll('[data-enemy-mode]').forEach(btn => btn.addEventListener('click', () => {
+        state.enemyMode = btn.dataset.enemyMode;
+        syncButtons();
+        dirty = true;
+    }));
+    document.querySelectorAll('[data-enemy-count]').forEach(btn => btn.addEventListener('click', () => {
+        state.enemyCount = Number(btn.dataset.enemyCount);
+        placeEnemies();
+        syncButtons();
+        dirty = true;
+    }));
+    document.getElementById('btn-elite').addEventListener('click', () => {
+        state.elite = !state.elite;
+        if (!state.elite) state.affixes = [];
+        renderWho();
+        syncButtons();
+        dirty = true;
+    });
+    document.getElementById('btn-enemy-rig').addEventListener('click', viewEnemyRig);
     document.querySelectorAll('[data-opt]').forEach(input =>
         input.addEventListener('change', () => setOption(input.dataset.opt, input.checked)));
 
@@ -699,10 +1374,12 @@ function bindUI() {
         opts.speed = Number(speed.value);
         speedLabel.textContent = `${opts.speed.toFixed(2)}x`;
     });
-    document.getElementById('btn-pause').addEventListener('click', () => {
+    const togglePause = () => {
         state.paused = !state.paused;
         syncButtons();
-    });
+    };
+    document.getElementById('btn-pause').addEventListener('click', togglePause);
+    document.getElementById('btn-pause-2').addEventListener('click', togglePause);
     document.getElementById('btn-step').addEventListener('click', () => {
         state.paused = true;
         simulate(1 / STEP_FPS);
@@ -713,23 +1390,22 @@ function bindUI() {
 }
 
 function syncButtons() {
-    document.querySelectorAll('[data-char]').forEach(b => b.classList.toggle('active', b.dataset.char === state.char));
-    document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('active', b.dataset.mode === state.mode));
-    document.querySelectorAll('[data-arm]').forEach(b => b.classList.toggle('active', b.dataset.arm === state.arm));
+    const on = (sel, test) => document.querySelectorAll(sel).forEach(b => b.classList.toggle('active', test(b)));
+    on('[data-char]', b => b.dataset.char === state.char);
+    on('[data-mode]', b => b.dataset.mode === state.mode);
+    on('[data-enemy-mode]', b => b.dataset.enemyMode === state.enemyMode);
+    on('[data-enemy-count]', b => Number(b.dataset.enemyCount) === state.enemyCount);
+    on('[data-enemy]', b => b.dataset.enemy === state.enemy);
+    on('[data-affix]', b => state.affixes.includes(b.dataset.affix));
+    on('#btn-elite', () => state.elite);
     document.querySelectorAll('[data-opt]').forEach(i => { i.checked = !!opts[i.dataset.opt]; });
-    document.querySelectorAll('[data-special="curse"]').forEach(b => b.classList.toggle('active', skill.curse));
-    document.querySelectorAll('[data-special="wave"]').forEach(b => b.classList.toggle('active', skill.wave));
-    const heroGroup = document.getElementById('hero-skill-group');
-    if (heroGroup && character) heroGroup.hidden = character.id !== 'hero';
-    const newGroup = document.getElementById('newchar-skill-group');
-    if (newGroup && character) newGroup.hidden = !character.skillClips;
-    const armGroup = document.getElementById('arm-group');
-    if (armGroup && character) armGroup.hidden = !character.arms;
-    document.querySelectorAll('[data-upgrade]').forEach(b => b.classList.toggle('active', !!state.upgrades[b.dataset.upgrade]));
-    const upGroup = document.getElementById('upgrade-group');
-    if (upGroup && character) upGroup.hidden = !character.upgrade;
+    document.querySelectorAll('.part-row').forEach(r => r.classList.toggle('is-on', state.equip[(partById(r.dataset.part) || {}).slot] === r.dataset.part));
+    const boss = enemyType() && enemyType().boss;
+    document.querySelectorAll('[data-enemy-count]').forEach(b => { b.disabled = !!boss; });
     const pause = document.getElementById('btn-pause');
     if (pause) pause.textContent = state.paused ? '▶ 재생' : '❚❚ 일시정지';
+    const pause2 = document.getElementById('btn-pause-2');
+    if (pause2) pause2.textContent = state.paused ? '▶' : '❚❚';
 }
 
 function renderLog() {
@@ -757,7 +1433,22 @@ window.rigTest = {
     mindWave,
     toggleWave,
     previewVfx,
+    vfxVariantKeys,
+    setVfxVariant,
+    setVfxStyle,
+    vfxShowcase,
     previews: () => (PREVIEWS[character.id] || []).map(([label]) => label),
+    // 캐릭터 · 스킬 / 적 · 이펙트 탭 (자동 검사·콘솔)
+    equip,
+    playSkill,
+    skills: () => (catalogOf() || []).map(p => ({ id: p.id, slot: p.slot, skill: p.skill, name: p.skillName, preview: !!previewOf(p) })),
+    setEnemy,
+    setTab,
+    toggleAffix,
+    enemySkills: () => (ENEMY_SKILLS[state.enemy] || []).map(([name]) => name),
+    playEnemySkill: i => { const r = (ENEMY_SKILLS[state.enemy] || [])[i]; if (r) playEnemyFx(r[2]); return !!r; },
+    playZoneFx: i => { const r = ZONE_FX[i]; if (r) playEnemyFx(r[2]); return !!r; },
+    api: previewApi,
     phase2,
     breakShield,
     pause() { state.paused = true; syncButtons(); },
@@ -766,6 +1457,8 @@ window.rigTest = {
     render,
     get info() {
         return { char: state.char, clip: animator.currentName, time: animator.currentTime, simTime,
-            opts: { ...opts }, events: [...eventLog] };
+            vfxStyle: vfx.style, vfxChoices: { ...vfxChoices }, showcase: showcase && { ...showcase },
+            opts: { ...opts }, events: [...eventLog], equip: { ...state.equip }, enemy: state.enemy,
+            enemyX: dummies.map(d => d.x), elite: state.elite, affixes: [...state.affixes], alias: skeleton.partAlias };
     }
 };

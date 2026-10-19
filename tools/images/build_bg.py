@@ -29,7 +29,7 @@ SRC = 'assets/sprites/stage/src/{name}_gemini.png'   # name = bg/<층> (구역 1
 OUT = 'assets/sprites/stage/{name}.png'
 PREVIEW = 'tools/images/_out/{name}_tiled.png'
 
-# tile_w: 게임에서 그림 한 장의 가로(px), seam: 이음매를 섞는 폭(원본 px, 0이면 안 섞음), key: 단색 배경을 투명하게 (True = 초록, 'magenta' = 분홍)
+# tile_w: 게임에서 그림 한 장의 가로(px), seam: 이음매를 섞는 폭(원본 px, 0이면 안 섞음), key: 단색 배경을 투명하게 (True = 초록, 'magenta' = 분홍, 'yellow' = 노랑 — 구역 4)
 # feet: (원본 줄, 화면 바닥에서 px) — 캐릭터 발이 디딜 원본 줄이 게임 발 높이에 오도록, 띠 맨 위부터 화면 바닥까지만 잘라 냄
 LAYERS = {
     'bg/hall': {'tile_w': 1280, 'seam': 0},          # 먼 배경: 연구소 대형 홀 (가장 느리게)
@@ -65,7 +65,7 @@ def blend_seam(a, px):
 def build(name, cfg):
     rgb, unlogoed = load_clean(SRC.format(name=name))
     key = cfg.get('key')
-    a = key_out(rgb, 'magenta' if key == 'magenta' else 'green')[0] if key else rgb
+    a = key_out(rgb, key if key in ('magenta', 'yellow') else 'green')[0] if key else rgb
     edge, inner = seam_diff(a)
     if cfg['seam'] and edge > inner * 2:
         a = blend_seam(a, cfg['seam'])

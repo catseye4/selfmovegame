@@ -170,6 +170,7 @@ export class BattleHud {
     // ------------------------------------------------------------------
     update() {
         const b = this.b;
+        this.set('speedVal', gameTime.speed, () => this.renderSpeed());
         // 체력 / 실드
         const hpPct = Math.max(0, Math.min(1, b.playerHp / b.maxPlayerHp));
         this.set('hp', Math.round(hpPct * 1000), v => {

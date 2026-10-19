@@ -29,7 +29,10 @@ export const HERO_VFX = {
             { type: 'rune', at: 0, dur: 1.1, r: 170, color: VIOLET, spin: 1.8 },
             { type: 'ring', at: 0.1, dur: 0.5, r: 190, ground: true, color: PINK, width: 6 },
             { type: 'flash', at: 0.1, dur: 0.2, r: 60, color: VIOLET, dy: -40 },
-            { type: 'motes', at: 0.1, count: 16, spread: 150, rise: [60, 140], life: [0.7, 1.2], size: 3, color: PINK }
+            { type: 'pillar', at: 0.1, dur: 0.6, h: 130, w: 36, color: VIOLET },
+            { type: 'glow', at: 0.1, dur: 1.2, r: 110, color: VIOLET },
+            { type: 'motes', at: 0.1, count: 12, spread: 150, rise: [60, 140], life: [0.7, 1.2], size: 3, color: PINK },
+            { type: 'smoke', at: 0.24, count: 4, spread: 70, spreadY: 12, size: 22, life: [0.7, 1.1], rise: 22, color: DEEP, layer: 'ground' }
         ]
     },
 
@@ -46,10 +49,11 @@ export const HERO_VFX = {
     castRelease: {
         sfx: 'hero_cast',
         layers: [
-            { type: 'fireball', at: 0, dur: 0.3, r: 20, color: VIOLET },
+            { type: 'flash', at: 0, dur: 0.16, r: 22, color: PINK },
+            { type: 'swirl', at: 0, dur: 0.4, r: 26, arms: 3, spin: 14, color: VIOLET },
             { type: 'ring', at: 0, dur: 0.32, r: 38, color: VIOLET, width: 4 },
             { type: 'ring', at: 0.05, dur: 0.35, r: 52, color: PINK, width: 2 },
-            { type: 'sparks', at: 0, count: 12, speed: 240, color: PINK },
+            { type: 'motes', at: 0.03, count: 8, spread: 18, rise: [25, 65], life: [0.45, 0.8], size: 2.2, color: PINK },
             { type: 'smoke', at: 0.04, count: 3, spread: 8, spreadY: 8, size: 12, life: [0.4, 0.7], rise: 20, color: DEEP }
         ]
     },
@@ -71,9 +75,10 @@ export const HERO_VFX = {
     waveHit: {
         sfx: 'hero_wave_hit',
         layers: [
-            { type: 'claw', at: 0, dur: 0.35, count: 1, len: 78, angle: Math.PI / 2, width: 9, bend: 14, color: VIOLET },
+            { type: 'slash', at: 0, dur: 0.35, r: 61, arc: 2.7, sweep: 0.12, thick: 1, angle: Math.PI / 2, width: 15, color: VIOLET },
             { type: 'flash', at: 0, dur: 0.14, r: 24, color: VIOLET },
-            { type: 'sparks', at: 0, count: 10, speed: 230, angle: 0, cone: 1.4, color: PINK },
+            { type: 'streaks', at: 0, count: 5, speed: 230, len: 34, life: [0.3, 0.55], angle: 0, cone: 1.0, color: PINK },
+            { type: 'motes', at: 0.05, count: 4, spread: 14, rise: [30, 70], life: [0.4, 0.75], size: 2, color: PINK },
             { type: 'pillar', at: 0.02, dur: 0.4, h: 70, w: 14, color: VIOLET, dy: 32 },
             { type: 'glow', at: 0.02, dur: 2.2, r: 26, color: VIOLET, dy: 32 },
             { type: 'smoke', at: 0.05, count: 4, spread: 10, spreadY: 30, size: 14, life: [0.5, 0.9], rise: 15, color: DEEP }
@@ -84,12 +89,12 @@ export const HERO_VFX = {
     slashHit: {
         sfx: 'hero_slash_hit',
         layers: [
-            { type: 'claw', at: 0, dur: 0.38, count: 1, len: 100, angle: 0.85, width: 12, bend: 16, color: VIOLET },
-            { type: 'claw', at: 0.03, dur: 0.3, count: 1, len: 70, angle: 0.85, width: 5, bend: 10, color: PINK },
+            { type: 'slash', at: 0, dur: 0.44, r: 90, arc: 2.7, sweep: 0.12, thick: 1, angle: 0.85, width: 20, color: VIOLET },
+            { type: 'slash', at: 0.03, dur: 0.4, r: 64, arc: 2.7, sweep: 0.12, thick: 1, angle: 0.85, width: 8, color: PINK },
             { type: 'flash', at: 0.02, dur: 0.14, r: 28, color: VIOLET },
             { type: 'ring', at: 0.02, dur: 0.3, r: 40, color: VIOLET, width: 4 },
-            { type: 'sparks', at: 0.02, count: 12, speed: 280, angle: 0.6, cone: 1.8, color: PINK },
-            { type: 'smoke', at: 0.08, count: 3, spread: 10, spreadY: 14, size: 14, life: [0.5, 0.8], rise: 20, color: DEEP }
+            { type: 'streaks', at: 0.02, count: 6, speed: 250, len: 34, life: [0.32, 0.44], angle: 0.6, cone: 1.8, color: PINK },
+            { type: 'smoke', at: 0.08, count: 2, spread: 10, spreadY: 14, size: 14, life: [0.5, 0.8], rise: 20, color: DEEP }
         ]
     }
 };
