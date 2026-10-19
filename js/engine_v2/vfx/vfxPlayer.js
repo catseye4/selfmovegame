@@ -896,27 +896,43 @@ function impactAlpha(it, u) {
     return it.t <= 0.05 ? 1 : Math.max(0, (1 - u) / (1 - Math.min(0.9, 0.05 / it.dur)));
 }
 
-// 그림 프레임 이펙트 (D-060): assets/sprites/vfx/<sheet>.png = 정사각 프레임을 가로로 이어 붙인 띠, 알파 = 밝기
+// 그림 프레임 이펙트 (D-060): assets/sprites/vfx/<sheet>.webp = 정사각 프레임을 가로로 이어 붙인 띠, 알파 = 밝기
+// WebP 품질 90 (D-062) — 무손실 원본 띠는 png/, Gemini 원본은 src/
 // (tools/images/build_vfx_sheet.py가 Gemini 검은 배경 시트에서 만듦). 처음 쓸 때 불러오고, 다 불러오기 전에는 건너뜀
 export const VFX_SHEETS = {
-    slash_violet: { src: 'assets/sprites/vfx/slash_violet.png', frames: 9 },       // 타락 히어로 베기
-    punch_cyan: { src: 'assets/sprites/vfx/punch_cyan.png', frames: 9 },           // 거대로봇 주먹 (전기)
-    bite_green: { src: 'assets/sprites/vfx/bite_green.png', frames: 9 },           // 거대괴수 물기 (산성)
-    claw_fire: { src: 'assets/sprites/vfx/claw_fire.png', frames: 9 },             // 합성괴인 할퀴기
-    punch_fire: { src: 'assets/sprites/vfx/punch_fire.png', frames: 9 },           // 합성괴인 주먹
-    orbital_beam: { src: 'assets/sprites/vfx/orbital_beam.png', frames: 9 },       // 궤도 폭격 (바닥 기준)
-    roar_green: { src: 'assets/sprites/vfx/roar_green.png', frames: 9 },           // 대지 포효 (왼쪽 기준, 오른쪽으로)
-    judgment_violet: { src: 'assets/sprites/vfx/judgment_violet.png', frames: 9 }, // 심판의 일격 (바닥 기준)
-    breath_fire: { src: 'assets/sprites/vfx/breath_fire.png', frames: 9 },         // 용의 숨결 (입 기준, 오른쪽으로)
-    hands_teal: { src: 'assets/sprites/vfx/hands_teal.png', frames: 9 },           // 길잡이 심연의 손 (바닥 기준)
-    revive_crimson: { src: 'assets/sprites/vfx/revive_crimson.png', frames: 9 },   // 봉합 성녀 억지 부활 (바닥 기준)
-    ice_shatter: { src: 'assets/sprites/vfx/ice_shatter.png', frames: 9 },         // 서리의 무희 얼음 깨짐 (바닥 기준)
-    xcut_cyan: { src: 'assets/sprites/vfx/xcut_cyan.png', frames: 9 },             // 인형사 가위 X자
-    pillar_gold: { src: 'assets/sprites/vfx/pillar_gold.png', frames: 9 },         // 천상의 심판·정의의 일격 (바닥 기준)
-    tentacle_void: { src: 'assets/sprites/vfx/tentacle_void.png', frames: 9 },     // 심연의 파동 촉수 (바닥 기준)
-    hellgate_red: { src: 'assets/sprites/vfx/hellgate_red.png', frames: 9 },       // 지옥문 (바닥 기준)
-    explosion_big: { src: 'assets/sprites/vfx/explosion_big.png', frames: 9 },     // 거점 대폭발 (바닥 기준, 연기는 보통 섞기)
-    defeat_puff: { src: 'assets/sprites/vfx/defeat_puff.png', frames: 9 }          // 적 처치 연기 (바닥 기준, 보통 섞기)
+    slash_violet: { src: 'assets/sprites/vfx/slash_violet.webp', frames: 9 },       // 타락 히어로 베기
+    punch_cyan: { src: 'assets/sprites/vfx/punch_cyan.webp', frames: 9 },           // 거대로봇 주먹 (전기)
+    bite_green: { src: 'assets/sprites/vfx/bite_green.webp', frames: 9 },           // 거대괴수 물기 (산성)
+    claw_fire: { src: 'assets/sprites/vfx/claw_fire.webp', frames: 9 },             // 합성괴인 할퀴기
+    punch_fire: { src: 'assets/sprites/vfx/punch_fire.webp', frames: 9 },           // 합성괴인 주먹
+    orbital_beam: { src: 'assets/sprites/vfx/orbital_beam.webp', frames: 9 },       // 궤도 폭격 (바닥 기준)
+    roar_green: { src: 'assets/sprites/vfx/roar_green.webp', frames: 9 },           // 대지 포효 (왼쪽 기준, 오른쪽으로)
+    judgment_violet: { src: 'assets/sprites/vfx/judgment_violet.webp', frames: 9 }, // 심판의 일격 (바닥 기준)
+    breath_fire: { src: 'assets/sprites/vfx/breath_fire.webp', frames: 9 },         // 용의 숨결 (입 기준, 오른쪽으로)
+    hands_teal: { src: 'assets/sprites/vfx/hands_teal.webp', frames: 9 },           // 길잡이 심연의 손 (바닥 기준)
+    revive_crimson: { src: 'assets/sprites/vfx/revive_crimson.webp', frames: 9 },   // 봉합 성녀 억지 부활 (바닥 기준)
+    ice_shatter: { src: 'assets/sprites/vfx/ice_shatter.webp', frames: 9 },         // 서리의 무희 얼음 깨짐 (바닥 기준)
+    xcut_cyan: { src: 'assets/sprites/vfx/xcut_cyan.webp', frames: 9 },             // 인형사 가위 X자
+    pillar_gold: { src: 'assets/sprites/vfx/pillar_gold.webp', frames: 9 },         // 천상의 심판·정의의 일격 (바닥 기준)
+    tentacle_void: { src: 'assets/sprites/vfx/tentacle_void.webp', frames: 9 },     // 심연의 파동 촉수 (바닥 기준)
+    hellgate_red: { src: 'assets/sprites/vfx/hellgate_red.webp', frames: 9 },       // 지옥문 (바닥 기준)
+    explosion_big: { src: 'assets/sprites/vfx/explosion_big.webp', frames: 9 },     // 거점 대폭발 (바닥 기준, 연기는 보통 섞기)
+    defeat_puff: { src: 'assets/sprites/vfx/defeat_puff.webp', frames: 9 },         // 적 처치 연기 (바닥 기준, 보통 섞기)
+    // 2차 (나머지 스킬·적 기술) — 가운데에서 터지는 폭발류
+    fire_burst: { src: 'assets/sprites/vfx/fire_burst.webp', frames: 9 },           // 불 폭발 (미사일·불 원소탄·자폭)
+    lightning_burst: { src: 'assets/sprites/vfx/lightning_burst.webp', frames: 9 }, // 번개 폭발 (전기 충격·번개 원소탄)
+    acid_burst: { src: 'assets/sprites/vfx/acid_burst.webp', frames: 9 },           // 산성 튀김 (산성 돌진·독액)
+    ice_burst: { src: 'assets/sprites/vfx/ice_burst.webp', frames: 9 },             // 얼음 폭발 (서리 칼날·얼음 원소탄)
+    dark_burst: { src: 'assets/sprites/vfx/dark_burst.webp', frames: 9 },           // 보라 암흑 폭발 (암흑 구체·드론 자폭)
+    cleave_crimson: { src: 'assets/sprites/vfx/cleave_crimson.webp', frames: 9 },   // 진홍 초승달 베기 (악마기사 도끼)
+    water_burst: { src: 'assets/sprites/vfx/water_burst.webp', frames: 9 },         // 물보라 (길잡이 물줄기·물살)
+    needle_crimson: { src: 'assets/sprites/vfx/needle_crimson.webp', frames: 9 },   // 진홍 찌르기 섬광 (성녀 바늘·외눈 시선)
+    golden_burst: { src: 'assets/sprites/vfx/golden_burst.webp', frames: 9 },       // 금빛 섬광 (속죄의 사슬·통제탑 화살)
+    mutation_burst: { src: 'assets/sprites/vfx/mutation_burst.webp', frames: 9 },   // 보라 소용돌이 → 변이 폭발 (구역 4·세뇌 변환)
+    ground_impact: { src: 'assets/sprites/vfx/ground_impact.webp', frames: 9 },     // 지면 강타 (바닥 기준, 먼지는 가장자리 옅게)
+    spore_burst: { src: 'assets/sprites/vfx/spore_burst.webp', frames: 9 },         // 독 포자 주머니 터짐 (가운데 기준)
+    power_aura: { src: 'assets/sprites/vfx/power_aura.webp', frames: 9 },           // 주황·금빛 기운 불꽃 (바닥 기준, 아드레날린·2페이즈)
+    summon_portal: { src: 'assets/sprites/vfx/summon_portal.webp', frames: 9 }      // 주황·금빛 소환진 + 빛기둥 (원 가운데가 anchorY 0.76)
 };
 const sheetImages = new Map();
 function sheetImage(name) {

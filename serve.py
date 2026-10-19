@@ -6,6 +6,7 @@ H = http.server.SimpleHTTPRequestHandler
 H.extensions_map['.js']  = 'text/javascript'
 H.extensions_map['.mjs'] = 'text/javascript'
 H.extensions_map['.css'] = 'text/css'
+H.extensions_map['.webp'] = 'image/webp'   # 이펙트 그림 시트 (D-062)
 
 
 # 브라우저가 이미지를 한꺼번에 요청해도 연결이 거부되지 않도록 요청마다 스레드로 처리하고 대기열을 늘린다.

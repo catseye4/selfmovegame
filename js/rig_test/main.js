@@ -1055,7 +1055,7 @@ async function vfxShowcase(key) {
     const clipDef = character.clips[clip];
     let hitAt = (clipDef?.events || []).find(([, name]) => name === 'impact' || name === 'fire' || name === 'cast')?.[0] ?? 0.2;
     if (kind === 'breath') hitAt = 0.4;
-    if (['enemyGround', 'enemyHit', 'finale', 'spawn'].includes(kind)) hitAt = 0.1;
+    if (['enemyGround', 'enemyHit', 'enemyBeam', 'finale', 'spawn'].includes(kind)) hitAt = 0.1;
     showcase = { key: full, kind, age: 0, hitAt };
     const selected = entry.variants[vfxChoices[full] || 'A'].def;
     if (kind === 'breath') {
@@ -1066,14 +1066,17 @@ async function vfxShowcase(key) {
             vfx.play({ layers: [{ type: 'crystals', at: 0, dur: hitAt, count: 4, h: 95, spread: 28, color: ICE }] },
                 target.x, GROUND_Y, { scale: VFX_SCALE });
         }
-        if (kind === 'enemyHit' || kind === 'enemyGround') state.enemyMode = 'attack';
+        if (['enemyHit', 'enemyGround', 'enemyBeam'].includes(kind)) state.enemyMode = 'attack';
         previewApi.later(hitAt, () => {
-            const point = kind === 'enemyHit' ? selfChest() : kind === 'enemyGround' ? [CHAR_X + 60, GROUND_Y]
+            // self: 캐릭터 몸(시전·회전 베기) / selfGround: 캐릭터 발밑(착지·오라) / enemyBeam: 적 → 캐릭터 가슴 광선
+            const point = ['enemyHit', 'enemyBeam', 'self'].includes(kind) ? selfChest()
+                : ['enemyGround', 'selfGround'].includes(kind) ? [CHAR_X + 60, GROUND_Y]
                 : ['shatter', 'charge', 'defeat', 'spawn', 'finale'].includes(kind) ? [target.x, GROUND_Y]
                 : [target.x, dummyCenterY()];
             const play = () => {
-                const from = kind === 'beam' ? muzzlePoint() : point;
-                vfx.play(selected, ...from, { scale: VFX_SCALE, ...(kind === 'beam' ? { to: point } : {}) });
+                const from = kind === 'beam' ? muzzlePoint() : kind === 'enemyBeam' ? [target.x - 20, dummyCenterY() - 20] : point;
+                const to = kind === 'beam' || kind === 'enemyBeam' ? { to: point } : {};
+                vfx.play(selected, ...from, { scale: VFX_SCALE, ...to });
                 target.flash = 0.08;
             };
             if (kind === 'missile') vfx.launchMissile({ from: muzzlePoint(), to: () => point, dur: 0.45, apex: 55,

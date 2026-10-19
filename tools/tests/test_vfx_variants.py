@@ -1,4 +1,4 @@
-"""15종 × A/B/C 장면, 원본 복원, 게임 선택·연결, 픽셀풍 및 비교 시트."""
+"""83종 (A/B/C·그림 D) 장면, 원본 복원, 게임 선택·연결, 픽셀풍 및 비교 시트."""
 import base64
 import io
 import os
@@ -22,11 +22,20 @@ def run(ctx):
         page.evaluate('async () => { await rigTest.ready; rigTest.pause(); }')
         keys = page.evaluate('rigTest.vfxVariantKeys()')
         # A·B·C는 모든 이펙트에, D(그림 프레임 던파풍, D-060)는 만든 이펙트에만 덧붙음
-        # 처음 15개는 A·B·C(+ D), D-060으로 더한 10개는 A(지금) + D(그림 프레임)만
+        # 처음 15개는 A·B·C(+ D), D-060·D-061로 더한 68개는 A(지금) + D(그림 프레임)만
         ids = [[v['id'] for v in e['variants']] for e in keys]
-        ctx.check(len(keys) == 25 and sum(1 for i in ids if i[:3] == ['A', 'B', 'C']) == 15
-                  and all(i[0] == 'A' for i in ids) and sum(1 for i in ids if 'D' in i) >= 18,
-                  '이펙트 25개: 15개 A/B/C + 그림 프레임 D 18개 이상')
+        ctx.check(len(keys) == 83 and sum(1 for i in ids if i[:3] == ['A', 'B', 'C']) == 15
+                  and all(i[0] == 'A' for i in ids) and sum(1 for i in ids if 'D' in i) >= 82,
+                  '이펙트 83개: 15개 A/B/C + 그림 프레임 D 82개 이상')
+        sheets_ok = page.evaluate("""async () => {
+            const { VFX_SHEETS } = await import('/js/engine_v2/vfx/vfxPlayer.js');
+            const { VFX_VARIANTS } = await import('/js/engine_v2/vfx/vfxVariants.js');
+            const used = new Set(Object.values(VFX_VARIANTS).flatMap(e => Object.values(e.variants))
+                .flatMap(v => v.def.layers).filter(l => l.type === 'sprite').map(l => l.sheet));
+            const ok = await Promise.all(Object.values(VFX_SHEETS).map(s => fetch(s.src).then(r => r.ok)));
+            return [...used].every(s => VFX_SHEETS[s]) && ok.every(Boolean);
+        }""")
+        ctx.check(sheets_ok, '그림 D가 쓰는 시트는 모두 VFX_SHEETS에 있고 파일이 있음')
         baseline = page.evaluate("""async () => {
             const defs = await import('/js/engine_v2/vfx/vfxDefs.js');
             const { VFX_VARIANTS } = await import('/js/engine_v2/vfx/vfxVariants.js');
@@ -64,7 +73,7 @@ def run(ctx):
                 }""", [key, variant])
                 ctx.check(isinstance(length, (int, float)) and length > 0, f'{key}/{variant}: 장면 재생·길이 > 0')
                 hit = page.evaluate('rigTest.info.showcase.hitAt')
-                if key.endswith('.missileBlast'):
+                if page.evaluate('rigTest.info.showcase.kind') == 'missile':
                     hit += 0.45
                 # 동작 준비 뒤 첫 타격부터 0.1초 간격. B의 첫 0.05초도 포함한다.
                 page.evaluate('sec => rigTest.step(sec)', hit + 0.025)
@@ -104,7 +113,7 @@ def run(ctx):
         ctx.check(restored, '전부 B/C/D → A: 객체 참조·효과음·원본 정의 그대로 복원')
         for entry in keys:
             page.evaluate('async key => { rigTest.setVfxStyle("pixel"); await rigTest.vfxShowcase(key); rigTest.step(0.8); }', entry['key'])
-        ctx.check(page.evaluate('rigTest.info.vfxStyle') == 'pixel', '25종 픽셀풍 렌더링 오류 없음')
+        ctx.check(page.evaluate('rigTest.info.vfxStyle') == 'pixel', '83종 픽셀풍 렌더링 오류 없음')
         replay = page.evaluate("""async () => {
             await rigTest.vfxShowcase('enemyDefeat');
             rigTest.step(1);
@@ -127,7 +136,7 @@ def run(ctx):
                 && rest.every(k => choices[k] === DEFAULT_VFX_CHOICES[k]) && !('bad' in choices) && readVfxStyle() === 'pixel';
         }""")
         ctx.check(parsed, '주소별 선택·축약 키·저장값 우선순위·픽셀풍 읽기')
-        ctx.check(not errors, '45안 전체 재생·픽셀풍 페이지/콘솔 오류 없음', '; '.join(errors[:5]))
+        ctx.check(not errors, '전체 안 재생·픽셀풍 페이지/콘솔 오류 없음', '; '.join(errors[:5]))
     finally:
         browser.close()
 
@@ -158,7 +167,7 @@ def run(ctx):
             return JSON.stringify(defs[t][n].layers) === JSON.stringify(VFX_VARIANTS[k].variants[id].def.layers)
                 && defs[t][n].sfx === VFX_VARIANTS[k].variants.A.def.sfx;
         });""")
-    ctx.check(selected, '게임 ?vfx=B: B가 있는 15개는 B + 픽셀풍, 효과음 유지')
+    ctx.check(selected, '게임 ?vfx=B: B가 있는 15개는 B, 나머지는 기본값 + 픽셀풍, 효과음 유지')
     g.battle('mech', wait_ms=100)
     linked = g.js("""const { BATTLE_VFX } = await import('/js/engine_v2/vfx/vfxDefs.js');
         const { spawnEnemy } = await import('/js/engine_v2/enemies_v2.js');

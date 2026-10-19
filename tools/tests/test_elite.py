@@ -52,11 +52,13 @@ def run(ctx):
               '가속: 이동 ×1.6, 엘리트 공격력에서 ×1.15 추가', str(st))
 
     place_elite(g, ['shielded'])
-    st = g.js("""const e = b.enemies[0], hp = e.hp; b.dealDamageToEnemy(e, 100, false);
+    # 파괴 이펙트: 지금 쓰는 정의(A 코드 또는 그림 D)의 첫 레이어가 재생됐는지
+    st = g.js("""const { ELITE_VFX } = await import('/js/engine_v2/vfx/vfxDefs.js'), L = ELITE_VFX.shieldBreak.layers[0];
+        const e = b.enemies[0], hp = e.hp; b.dealDamageToEnemy(e, 100, false);
         const first = { hp: e.hp, shield: e.shield, filter: e.dom.style.filter };
         b.dealDamageToEnemy(e, 350, false); b.dealDamageToEnemy(e, 10, false);
         return { hp, maxShield: e.maxShield, first, shield: e.shield, damage: hp - e.hp,
-            filter: e.dom.style.filter, broken: b.fx.vfx.items.some(i => i.type === 'flash' && i.color === '110, 170, 255') };""")
+            filter: e.dom.style.filter, broken: b.fx.vfx.items.some(i => ['type', 'color', 'sheet', 'size', 'r'].every(k => i[k] === L[k])) };""")
     ctx.check(st['maxShield'] == st['hp'] * 0.4 and st['first']['hp'] == st['hp'] and st['first']['shield'] == 320
               and '10px' in st['first']['filter'], '보호막: 최대 체력 40%, 체력보다 먼저 흡수·파란 테두리', str(st))
     ctx.check(st['shield'] == 0 and st['damage'] == 40 and st['broken'] and '10px' not in st['filter'],

@@ -41,7 +41,7 @@ BUILDS = {
 
 class _Handler(http.server.SimpleHTTPRequestHandler):
     # Windows에서 .js가 text/plain으로 나가 ES 모듈이 막히는 문제 방지
-    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, '.js': 'text/javascript'}
+    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, '.js': 'text/javascript', '.webp': 'image/webp'}
 
     def log_message(self, *args):
         pass

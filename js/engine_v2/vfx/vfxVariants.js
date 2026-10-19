@@ -1,5 +1,6 @@
 /* VFX 비교안: A 원본을 보관하고 같은 정의 객체에 덮어 써 게임·테스트의 참조를 유지한다. */
-import { SET_VFX, MECH_VFX, HERO_VFX, KAIJU_VFX, FROST_VFX, BATTLE_VFX, CHIMERA_VFX, DIVER_VFX, SAINT_VFX, DOLL_VFX, ZONE_VFX } from './vfxDefs.js';
+import { SET_VFX, MECH_VFX, HERO_VFX, KAIJU_VFX, FROST_VFX, BATTLE_VFX, CHIMERA_VFX, DIVER_VFX, SAINT_VFX, DOLL_VFX, ZONE_VFX,
+    BOSS_VFX, ELITE_VFX } from './vfxDefs.js';
 
 const clone = value => JSON.parse(JSON.stringify(value));
 const INK = '25, 22, 35';
@@ -171,6 +172,130 @@ addD(BATTLE_VFX, 'BATTLE_VFX', 'baseFinale', '거점 대폭발', null,
 addD(BATTLE_VFX, 'BATTLE_VFX', 'enemyDefeat', '적 처치', null,
     def(spr('defeat_puff', 130, { anchorY: 0.9, dur: 0.55, blend: 'normal', glow: 0 }),
         spr('defeat_puff', 130, { anchorY: 0.9, dur: 0.55, alpha: 0.35, glow: 1.2 })));
+
+// ---- 5단계 (D-061): 나머지 스킬·적 기술 — 터지는 순간은 그림 시트, 판정·상태를 알려 주는 레이어(균열·감속 표식·범위 고리)는 A에서 그대로 ----
+/** A 정의에서 같은 종류의 레이어만 복사 (예: 감속 표식 chevrons, 범위 고리 ring) */
+const keep = (d, ...types) => clone(d.layers.filter(l => types.includes(l.type)));
+const hit = (sheet, size, extra) => spr(sheet, size, { dur: 0.36, glow: 1.3, ...extra });
+const groundSpr = (sheet, size, extra) => spr(sheet, size, { anchorY: 0.85, dur: 0.55, glow: 1.2, ...extra });
+const puff = (size, extra = {}) => [spr('defeat_puff', size, { anchorY: 0.9, dur: 0.55, blend: 'normal', glow: 0, ...extra }),
+    spr('defeat_puff', size, { anchorY: 0.9, dur: 0.55, alpha: 0.35, glow: 1.2, ...extra })];
+const sc = (character, kind, extra = {}) => ({ character, kind, ...extra });
+const D_MORE = [
+    // 거대로봇
+    [MECH_VFX, 'MECH_VFX', 'laserHit', '관통 레이저 적중', sc('mech', 'hit', { arm: 'cannon' }),
+        d => def(hit('punch_cyan', 110), embers('215, 90, 255', { count: 5 }))],
+    [MECH_VFX, 'MECH_VFX', 'missileBlast', '미사일 폭발', null,
+        d => def(spr('fire_burst', 190, { glow: 1.3 }), ...keep(d, 'debris'), embers('255, 190, 80', { cone: 2.8 }))],
+    [MECH_VFX, 'MECH_VFX', 'droneBlast', '드론 자폭', sc('mech', 'missile', { clip: 'attack' }),
+        d => def(spr('dark_burst', 150), ...keep(d, 'debris'))],
+    [MECH_VFX, 'MECH_VFX', 'landing', '출격 착지', sc('mech', 'selfGround'),
+        d => def(groundSpr('ground_impact', 210), ...keep(d, 'cracks'))],
+    [SET_VFX, 'SET_VFX', 'railHit', '레일건 적중', sc('mech', 'hit'), d => def(hit('punch_cyan', 80, { dur: 0.3 }))],
+    [SET_VFX, 'SET_VFX', 'rocketHit', '로켓 돌진 충돌', sc('mech', 'melee', { clip: 'attack' }),
+        d => def(spr('punch_cyan', 170), ...keep(d, 'debris'))],
+    [SET_VFX, 'SET_VFX', 'pileHit', '파일 벙커', sc('mech', 'melee', { clip: 'attack' }),
+        d => def(spr('punch_cyan', 210, { glow: 1.5 }), ...keep(d, 'streaks', 'debris'))],
+    // 거대괴수
+    [KAIJU_VFX, 'KAIJU_VFX', 'acidCharge', '산성 돌진', null,
+        d => def(spr('acid_burst', 230, { dy: -40 }), ...keep(d, 'cracks', 'mist'))],
+    [KAIJU_VFX, 'KAIJU_VFX', 'eggHatch', '알 부화', sc('kaiju', 'charge'),
+        d => def(spr('acid_burst', 100, { dy: -14 }), ...keep(d, 'debris'))],
+    [SET_VFX, 'SET_VFX', 'spikeStorm', '가시 폭풍', sc('kaiju', 'selfGround', { clip: 'attack' }),
+        d => def(groundSpr('ground_impact', 240), ...keep(d, 'crystals', 'debris', 'ring'))],
+    [SET_VFX, 'SET_VFX', 'groundSlam', '지면 내려찍기', sc('kaiju', 'charge', { clip: 'attack' }),
+        d => def(groundSpr('ground_impact', 280), ...keep(d, 'cracks', 'shards'))],
+    [SET_VFX, 'SET_VFX', 'sporeBurst', '독 포자 폭발', sc('kaiju', 'charge'),
+        d => def(spr('spore_burst', 200, { dy: -50, dur: 0.6 }), ...keep(d, 'ring'))],
+    [SET_VFX, 'SET_VFX', 'spitSplash', '산성 침', sc('kaiju', 'charge'), d => def(spr('acid_burst', 110, { dy: -12 }))],
+    // 타락 히어로
+    [HERO_VFX, 'HERO_VFX', 'waveHit', '어둠 파동 적중', sc('hero', 'hit'),
+        d => def(hit('dark_burst', 130), ...keep(d, 'pillar', 'glow'))],
+    [HERO_VFX, 'HERO_VFX', 'castRelease', '스킬 시전', sc('hero', 'self'), d => def(hit('dark_burst', 90))],
+    [HERO_VFX, 'HERO_VFX', 'mindConvert', '세뇌 변환', sc('hero', 'charge'),
+        d => def(spr('mutation_burst', 140, { dy: -34, dur: 0.6 }), ...keep(d, 'rune'))],
+    [HERO_VFX, 'HERO_VFX', 'curseNova', '흑마법 폭발', sc('hero', 'charge'),
+        d => def(...keep(d, 'rune', 'ring'), spr('dark_burst', 280, { dy: -50, dur: 0.55 }))],
+    [SET_VFX, 'SET_VFX', 'whirl', '회전 베기', sc('hero', 'self'),
+        d => def(spr('slash_violet', 300, { dur: 0.36 }), spr('slash_violet', 300, { at: 0.07, dur: 0.36, angle: Math.PI }))],
+    [SET_VFX, 'SET_VFX', 'orbBlast', '암흑 구체 폭발', sc('hero', 'hit'), d => def(hit('dark_burst', 120))],
+    [SET_VFX, 'SET_VFX', 'blackHoleEnd', '블랙홀 붕괴', sc('hero', 'hit'), d => def(spr('dark_burst', 230, { dur: 0.5 }))],
+    [SET_VFX, 'SET_VFX', 'clonePoof', '분신 연기', sc('hero', 'selfGround'), d => def(...puff(130))],
+    // 합성괴인
+    [CHIMERA_VFX, 'CHIMERA_VFX', 'summon', '졸몹 소환', sc('chimera', 'charge'),
+        d => def(spr('summon_portal', 150, { anchorY: 0.76, dur: 0.7, glow: 1.15 }))],
+    [CHIMERA_VFX, 'CHIMERA_VFX', 'slam', '파괴 광란', sc('chimera', 'charge', { clip: 'attack' }),
+        d => def(groundSpr('ground_impact', 320), ...keep(d, 'cracks', 'shards', 'embers'))],
+    [CHIMERA_VFX, 'CHIMERA_VFX', 'phase2Burst', '2페이즈 변신', sc('chimera', 'selfGround'),
+        d => def(...keep(d, 'glow', 'ring').filter(l => !l.at), groundSpr('ground_impact', 300, { at: 0.58 }),
+            spr('power_aura', 260, { at: 0.5, anchorY: 0.92, dur: 0.8, glow: 1.15 }), ...keep(d, 'cracks', 'debris'))],
+    [SET_VFX, 'SET_VFX', 'maulHit', '광견 돌진 적중', sc('chimera', 'melee', { clip: 'attack' }),
+        d => def(spr('claw_fire', 140), ...keep(d, 'debris'))],
+    [SET_VFX, 'SET_VFX', 'adrenaline', '아드레날린', sc('chimera', 'selfGround'),
+        d => def(spr('power_aura', 230, { anchorY: 0.92, dur: 0.8, glow: 1.15 }), ...keep(d, 'motes'))],
+    [SET_VFX, 'SET_VFX', 'earthSmash', '대지 강타', sc('chimera', 'charge', { clip: 'attack' }),
+        d => def(groundSpr('ground_impact', 340), ...keep(d, 'cracks', 'shards'))],
+    [SET_VFX, 'SET_VFX', 'stomp', '짓밟기', sc('chimera', 'selfGround'), d => def(groundSpr('ground_impact', 140, { dur: 0.4 }))],
+    [SET_VFX, 'SET_VFX', 'mobilize', '총동원령', sc('chimera', 'selfGround'),
+        d => def(spr('summon_portal', 280, { anchorY: 0.76, dur: 0.8, glow: 1.15 }), ...keep(d, 'glow'))],
+    // 새 캐릭터 4종
+    [DIVER_VFX, 'DIVER_VFX', 'jetHit', '물줄기 적중', sc('diver', 'hit'), d => def(hit('water_burst', 85, { dur: 0.32 }))],
+    [DIVER_VFX, 'DIVER_VFX', 'surgeBurst', '고압 분사', sc('diver', 'self'), d => def(spr('water_burst', 160))],
+    [DIVER_VFX, 'DIVER_VFX', 'surgeHit', '물살 적중', sc('diver', 'hit'), d => def(hit('water_burst', 115), ...keep(d, 'chevrons', 'ring'))],
+    [SAINT_VFX, 'SAINT_VFX', 'needleHit', '바늘 적중', sc('saint', 'hit'), d => def(hit('needle_crimson', 95, { dur: 0.34 }))],
+    [FROST_VFX, 'FROST_VFX', 'fanHit', '서리 부채 적중', sc('frost', 'hit'), d => def(hit('ice_burst', 85, { dur: 0.32 }))],
+    [FROST_VFX, 'FROST_VFX', 'crescentBurst', '초승달 참격 발사', sc('frost', 'self'), d => def(spr('ice_burst', 150))],
+    [FROST_VFX, 'FROST_VFX', 'crescentHit', '초승달 적중', sc('frost', 'hit'), d => def(hit('ice_burst', 120))],
+    [DOLL_VFX, 'DOLL_VFX', 'snipHit', '가위 자르기', sc('doll', 'melee', { clip: 'attack' }), d => def(hit('xcut_cyan', 95, { dur: 0.32 }))],
+    [DOLL_VFX, 'DOLL_VFX', 'puppetHit', '꼭두각시 타격', sc('doll', 'hit'), d => def(hit('xcut_cyan', 85, { dur: 0.32 }))],
+    [DOLL_VFX, 'DOLL_VFX', 'dollBurst', '토끼 인형 터짐', sc('doll', 'charge'), d => def(...puff(140), ...keep(d, 'ring', 'debris'))],
+    // 구역 3·4 적·보스
+    [ZONE_VFX, 'ZONE_VFX', 'axeCleave', '악마기사 도끼', sc('hero', 'enemyHit', { enemy: 'demonknight' }),
+        d => def(spr('cleave_crimson', 230, { dy: -30, dur: 0.4 }), ...keep(d, 'cracks', 'shards'))],
+    [ZONE_VFX, 'ZONE_VFX', 'spellFire', '마법사 불', sc('hero', 'enemyHit', { enemy: 'mage' }), d => def(hit('fire_burst', 110))],
+    [ZONE_VFX, 'ZONE_VFX', 'spellBolt', '마법사 번개', sc('hero', 'enemyHit', { enemy: 'mage' }), d => def(hit('lightning_burst', 120))],
+    [ZONE_VFX, 'ZONE_VFX', 'spellIce', '마법사 얼음', sc('hero', 'enemyHit', { enemy: 'mage' }), d => def(hit('ice_burst', 110))],
+    [ZONE_VFX, 'ZONE_VFX', 'arrowHit', '통제탑 화살', sc('hero', 'enemyHit', { enemy: 'soldier' }),
+        d => def(hit('golden_burst', 70, { dur: 0.3 }))],
+    [ZONE_VFX, 'ZONE_VFX', 'holyHeal', '신관 치유', sc('hero', 'charge', { enemy: 'priest' }),
+        d => def(spr('pillar_gold', 120, { anchorY: 0.92, dur: 0.6, glow: 1.2 }), ...keep(d, 'motes'))],
+    [ZONE_VFX, 'ZONE_VFX', 'venomSplash', '유기질 벽 독액', sc('hero', 'enemyHit', { enemy: 'tentacle' }),
+        d => def(hit('acid_burst', 115), ...keep(d, 'mist'))],
+    [ZONE_VFX, 'ZONE_VFX', 'sporeBurst', '포자 덩어리', sc('hero', 'enemyGround', { enemy: 'sporer' }),
+        d => def(spr('spore_burst', 170, { dy: -10, dur: 0.6 }), ...keep(d, 'mist'))],
+    [ZONE_VFX, 'ZONE_VFX', 'gooSplat', '유전자 붕괴', sc('hero', 'enemyHit', { enemy: 'slime' }),
+        d => def(hit('mutation_burst', 115), ...keep(d, 'chevrons'))],
+    [ZONE_VFX, 'ZONE_VFX', 'mutationBurst', '극한의 변이', sc('hero', 'hit', { enemy: 'carapace' }),
+        d => def(spr('mutation_burst', 320, { dur: 0.6 }), ...keep(d, 'cracks'))],
+    [ZONE_VFX, 'ZONE_VFX', 'chargeImpact', '2페이즈 돌진', sc('hero', 'enemyHit', { enemy: 'carapace' }),
+        d => def(spr('cleave_crimson', 220, { dy: -20, dur: 0.36, angle: 0.5 }),
+            spr('cleave_crimson', 220, { at: 0.03, dy: -20, dur: 0.36, angle: -0.5, flipX: true }), ...keep(d, 'shockwave', 'cracks'))],
+    [ZONE_VFX, 'ZONE_VFX', 'slimeSplit', '슬라임 분열', sc('hero', 'hit', { enemy: 'slime' }),
+        d => def(hit('mutation_burst', 110), ...keep(d, 'goo'))],
+    [ZONE_VFX, 'ZONE_VFX', 'abyssGate', '심연의 문 개방', sc('mech', 'spawn', { enemy: 'demonknight' }),
+        d => def(spr('hellgate_red', 260, { anchorY: 0.78, dur: 0.9, glow: 1.15 }), ...keep(d, 'motes'))],
+    [BOSS_VFX, 'BOSS_VFX', 'chainHit', '속죄의 사슬', sc('hero', 'enemyHit', { enemy: 'inquisitor' }),
+        d => def(spr('golden_burst', 150), ...keep(d, 'ring'))],
+    [BOSS_VFX, 'BOSS_VFX', 'gaze', '진홍 시선 (외눈)', sc('hero', 'enemyBeam', { enemy: 'oculus' }),
+        d => def(...clone(d.layers.filter(l => !(l.pos === 'to' && ['flash', 'shockwave'].includes(l.type)))),
+            spr('needle_crimson', 150, { pos: 'to', at: 0.04 }))],
+    [ELITE_VFX, 'ELITE_VFX', 'volatileBlast', '엘리트 자폭', sc('mech', 'charge'),
+        d => def(spr('fire_burst', 260, { dy: -40, dur: 0.5 }), ...keep(d, 'shockwave'))],
+    [ELITE_VFX, 'ELITE_VFX', 'frostHit', '엘리트 냉기', sc('hero', 'enemyHit'), d => def(hit('ice_burst', 100), ...keep(d, 'crystals'))],
+    [ELITE_VFX, 'ELITE_VFX', 'shieldBreak', '엘리트 방패 깨짐', sc('hero', 'hit'), d => def(spr('punch_cyan', 170), ...keep(d, 'debris'))],
+    // 공통 전투
+    [BATTLE_VFX, 'BATTLE_VFX', 'shockHit', '전기 충격', null, d => def(hit('lightning_burst', 130))],
+    [BATTLE_VFX, 'BATTLE_VFX', 'shieldBash', '방패 강타', sc('hero', 'enemyHit', { enemy: 'shield' }),
+        d => def(spr('punch_cyan', 150), ...keep(d, 'debris'))],
+    [BATTLE_VFX, 'BATTLE_VFX', 'emp', 'EMP', sc('mech', 'enemyGround', { enemy: 'mechanic' }),
+        d => def(spr('lightning_burst', 320, { dy: -120, dur: 0.5 }), ...keep(d, 'ring'))],
+    [BATTLE_VFX, 'BATTLE_VFX', 'eliteSpawn', '엘리트 등장', null,
+        d => def(spr('summon_portal', 170, { anchorY: 0.76, dur: 0.8, glow: 1.15 }), ...keep(d, 'motes'))],
+    [BATTLE_VFX, 'BATTLE_VFX', 'baseBlast', '거점 연쇄 폭발', sc('mech', 'finale'),
+        d => def(spr('fire_burst', 170), ...keep(d, 'debris', 'smoke'))],
+    [BATTLE_VFX, 'BATTLE_VFX', 'baseHit', '거점 피격', null, d => def(hit('punch_fire', 90, { dur: 0.32 }))]
+];
+for (const [table, group, key, name, scene, make] of D_MORE) addD(table, group, key, name, scene, make(table[key]));
 
 /** 게임 기본값: D(그림 프레임)가 있는 이펙트는 D, 나머지는 A — 주소 ?vfx=A로 예전 모습 */
 export const DEFAULT_VFX_CHOICES = Object.fromEntries(Object.entries(VFX_VARIANTS)

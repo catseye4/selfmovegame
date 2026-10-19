@@ -129,6 +129,6 @@ def run(ctx):
     g.wait(850)
     st = g.js("""return { hurt: b._hurt, expected: b.maxPlayerHp * 0.06, stun: b.pStunT,
         beam: b.fx.vfx.items.some(i => i.type === 'beam' && i.w === 26 && i.to),
-        hit: b.fx.vfx.items.some(i => i.type === 'flash' && i.pos === 'to') };""")
+        hit: b.fx.vfx.items.some(i => ['flash', 'sprite'].includes(i.type) && i.pos === 'to') };""")  # 그림 D는 목표 섬광이 sprite
     ctx.check(abs(st['hurt'] - st['expected']) < 0.001 and 0 < st['stun'] <= 0.5 and st['beam'] and st['hit'],
               '진홍 시선: 최대 내구도 6% 피해 + 기절 0.5초, 굵은 광선·목표 섬광', str(st))
