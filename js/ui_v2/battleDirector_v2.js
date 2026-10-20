@@ -22,9 +22,15 @@ import { sound } from '../engine_v2/audio/sound_v2.js';
 import { settings } from '../engine_v2/settings_v2.js';
 
 import { chapterOf } from '../engine_v2/stages_v2.js';
+import { difficultyOf, difficultyOfStage } from '../engine_v2/difficulty_v2.js';
 
 // 별 3개 조건 (D-029): 요새 / 최종 기지 / 목표 시간 안에 클리어
 const starLabels = stage => ['중간 요새', '최종 기지', `${stage.starTime}초 안에`];
+// 노말이 아니면 작전 카드·결과 화면에 난이도 표시 (D-063)
+const diffTag = stage => {
+    const d = difficultyOf(difficultyOfStage(stage));
+    return d.id === 'normal' ? '' : ` · <span class="v2-diffbadge" style="--diff:${d.color}">${d.name}</span>`;
+};
 const clock = sec => `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
 const INTRO_MS = { card: 150, sortie: 1750, reveal: 2150, end: 2700 };
 const FB = 58;   // 지면 높이 (bottom px)
@@ -90,7 +96,7 @@ export class BattleDirector {
         const bars = this.layer('v2-letterbox', '<i></i><i></i>');
         const card = this.layer('v2-opcard', `
             <div class="v2-opcard__inner">
-                <small>STAGE ${stage.id} · ${chapterOf(stage).name}</small>
+                <small>STAGE ${stage.id} · ${chapterOf(stage).name}${diffTag(stage)}</small>
                 <h2>${stage.id}<span>//</span>${stage.name}</h2>
                 <p>${icon(stage.boss ? 'hq' : 'fort', 14)} ${stage.desc}</p>
                 <div class="v2-hazard v2-opcard__stripe"></div>
@@ -392,7 +398,7 @@ export class BattleDirector {
         const el = this.layer(`v2-result ${r.victory ? 'is-win' : 'is-lose'}`, `
             <div class="v2-result__panel v2-panel">
                 <div class="v2-hazard v2-result__stripe"></div>
-                <small class="v2-result__op">STAGE ${stage.id} · ${stage.name}</small>
+                <small class="v2-result__op">STAGE ${stage.id} · ${stage.name}${diffTag(stage)}</small>
                 <h2 class="v2-result__title">${r.victory ? 'MISSION COMPLETE' : 'MISSION FAILED'}</h2>
                 <p class="v2-result__sub">${r.victory ? '적 수비대 거점을 모두 분쇄했습니다' : '제한 시간 안에 최종 기지를 부수지 못했습니다'}</p>
                 <div class="v2-result__stars">
@@ -409,6 +415,7 @@ export class BattleDirector {
                     ${r.bonus ? `<div><dt>새 별 보너스 (${r.newStars}개)</dt><dd>+${r.bonus.toLocaleString()}</dd></div>` : ''}
                     <div class="is-reward"><dt>${icon('gem', 16)} 획득 DM</dt><dd><strong data-count="${r.dm}">+0</strong></dd></div>
                 </dl>
+                ${r.unlocked ? `<p class="v2-result__unlock" style="--diff:${r.unlocked.color}">${icon('star', 16)} <b>${r.unlocked.name}</b> 난이도가 열렸습니다 · 파츠 강화 한도 Lv${r.unlocked.maxLevel}</p>` : ''}
                 ${r.victory ? '' : '<p class="v2-result__tip">연구소에서 파츠를 사거나 강화해 더 빨리 부순 뒤 다시 도전하세요.</p>'}
                 <div class="v2-result__actions">
                     ${r.next ? `<button class="v2-btn v2-btn--primary" data-act="next">${icon('play', 16)} 다음 ${r.next.id}</button>` : ''}

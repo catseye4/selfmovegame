@@ -32,6 +32,7 @@ import { BattleDirector } from '../ui_v2/battleDirector_v2.js';
 import { sound } from './audio/sound_v2.js';
 import { progress } from './progress_v2.js';
 import { stageById, defaultStage, nextStageOf } from './stages_v2.js';
+import { stageFor, difficultyOf, difficultyUnlocked, nextDifficultyOf, FINAL_STAGE_ID, DEFAULT_DIFFICULTY } from './difficulty_v2.js';
 import { aimAt as aimOf } from './bases_v2.js';
 import { HERO, POPUP, FOOT_B } from './battle/tuning.js';
 import { PlayerMethods } from './battle/player.js';
@@ -54,6 +55,7 @@ export class BattleEngine {
         this.distanceTraveled = 0;
         this.maxDistance = 1000;
         this.stage = stageById('1-1');
+        this.difficulty = DEFAULT_DIFFICULTY;
         this.starFlags = [false, false, false];   // 요새 / 최종 기지 / 목표 시간 안에 클리어 (D-029)
         this.pSlowT = 0;
         this.pStunT = 0;
@@ -142,11 +144,14 @@ export class BattleEngine {
         this.stopBattle();
         this.isActive = true;
         this.distanceTraveled = 0;
-        this.stage = stageById(progress.selectedStage || defaultStage(progress).id);
+        // 난이도(D-063): 고른 난이도의 배율을 곱한 스테이지 복사본 — 전투 코드는 b.stage만 읽음
+        this.difficulty = difficultyUnlocked(progress.difficulty, progress) ? progress.difficulty : DEFAULT_DIFFICULTY;
+        this.stage = stageFor(stageById(progress.selectedStage || defaultStage(progress).id), this.difficulty);
         // 구역 배경 (ui_v2.css .v2-zone-2 ~ 4), 보스전은 경보 조명·불길 판 (.v2-stage-boss)
         // .v2-boss-rage(구역 4 보스 2페이즈)·.v2-crimson(구역 3 악마기사 소환 점멸)은 전투 중에 붙음
         const screen = document.getElementById('screen-battle-v2');
         screen?.classList.toggle('v2-stage-boss', !!this.stage.boss);
+        if (screen) screen.dataset.difficulty = this.difficulty;   // HUD 난이도 표시 색 (ui_v2.css [data-difficulty])
         [2, 3, 4].forEach(z => screen?.classList.toggle(`v2-zone-${z}`, this.stage.zone === z));
         screen?.classList.remove('v2-boss-rage', 'v2-crimson');
         this.maxDistance = this.stage.distance;
@@ -377,14 +382,21 @@ export class BattleEngine {
     finishBattle(victory) {
         // 세 번째 별: 목표 시간(stage.starTime) 안에 클리어 (D-029)
         if (victory && this.stats.time <= this.stage.starTime) this.starFlags[2] = true;
-        const prevStars = [...progress.stage(this.stage.id).stars];
-        const record = progress.recordStage(this.stage.id, { stars: this.starFlags, cleared: victory, time: this.stats.time });
+        const diff = this.difficulty;
+        const nextDiff = nextDifficultyOf(diff);
+        const wasLocked = nextDiff && !difficultyUnlocked(nextDiff.id, progress);
+        const prevStars = [...progress.stage(this.stage.id, diff).stars];
+        const record = progress.recordStage(this.stage.id, { stars: this.starFlags, cleared: victory, time: this.stats.time }, diff);
         const next = victory ? nextStageOf(this.stage.id) : null;
+        // 마지막 스테이지(4-B)를 처음 깨면 다음 난이도가 열림 + 강화 한도 상승 (D-063)
+        const unlocked = victory && this.stage.id === FINAL_STAGE_ID && wasLocked && difficultyUnlocked(nextDiff.id, progress) ? nextDiff : null;
         const result = {
             victory,
             stage: this.stage,
+            difficulty: difficultyOf(diff),
+            unlocked,
             starFlags: [...this.starFlags],
-            bestStars: progress.stage(this.stage.id).stars,
+            bestStars: progress.stage(this.stage.id, diff).stars,
             prevStars,
             newStars: record.newStars,
             bonus: record.bonus,

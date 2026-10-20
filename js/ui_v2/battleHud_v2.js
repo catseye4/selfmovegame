@@ -15,6 +15,7 @@ import { monsterControllerV2 } from '../engine_v2/monster_v2.js';
 import { SLOT_KEYS } from '../engine_v2/skills_v2.js';
 import { sound } from '../engine_v2/audio/sound_v2.js';
 import { openSettings } from './settingsPanel_v2.js';
+import { difficultyOf, difficultyOfStage } from '../engine_v2/difficulty_v2.js';
 
 const FACTION_COLOR = { mech: '#3ee6ff', kaiju: '#a0ff32', hero: '#c86eff', chimera: '#ff9628', diver: '#3fe0c8', saint: '#ff4d6d', frost: '#7fd4ff', doll: '#5ae6f0' };
 // 진행도 표시: 스테이지 거리와 요새·최종 기지 위치 (stages_v2.js)
@@ -63,7 +64,12 @@ export class BattleHud {
         const st = this.b.stage;
         this.maxDist = st.distance;
         this.marks = [{ at: st.midAt, icon: 'fort' }, { at: st.finalAt, icon: st.boss ? 'roar' : 'hq' }];
-        if (this.el.stage) this.el.stage.textContent = `${st.id} ${st.name}`;
+        if (this.el.stage) {
+            // 노말이 아니면 난이도 표시 (D-063)
+            const d = difficultyOf(difficultyOfStage(st));
+            this.el.stage.innerHTML = (d.id === 'normal' ? '' : `<span class="v2-diffbadge" style="--diff:${d.color}">${d.name}</span>`)
+                + `${st.id} ${st.name}`.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+        }
         if (this.el.distMax) this.el.distMax.textContent = st.distance;
         this.last = {};
         this.buildMarks();

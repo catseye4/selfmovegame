@@ -10,7 +10,8 @@
 
 import { gameState } from '../engine/state.js';
 import { PART_SKILL, SKILLS, skillsForParts, legPassiveOf } from '../engine_v2/skills_v2.js';
-import { progress, MAX_LEVEL, LEVEL_BONUS } from '../engine_v2/progress_v2.js';
+import { progress, LEVEL_BONUS } from '../engine_v2/progress_v2.js';
+import { highestDifficulty, nextDifficultyOf, FINAL_STAGE_ID } from '../engine_v2/difficulty_v2.js';
 import { RigAvatar, rigConfigFor, variantThumb } from '../engine_v2/rig/rigAvatar.js';
 import { RIG_CHARACTERS } from '../engine_v2/rig/characters.js';
 import { rosterOf, characterOfPart, partsOfCharacter, partSetLabel } from '../engine_v2/roster_v2.js';
@@ -239,12 +240,15 @@ export class LabController {
         const valid = part && part.id !== 'none';
         const lv = valid ? progress.levelOf(part.id) : 0;
         $('lab-upg-name-v2').textContent = valid ? `${part.name}  Lv${lv}` : '파츠 없음';
-        $('lab-upg-pips-v2').innerHTML = valid ? Array.from({ length: MAX_LEVEL }, (_, i) => `<i class="${i < lv ? 'is-on' : ''}"></i>`).join('') : '';
+        // 강화 한도는 열린 난이도에 따라 Lv5 → 7 → 9 → 10 (D-063)
+        const max = progress.maxLevel();
+        $('lab-upg-pips-v2').innerHTML = valid ? Array.from({ length: max }, (_, i) => `<i class="${i < lv ? 'is-on' : ''}"></i>`).join('') : '';
         const cost = valid ? progress.upgradeCost(part.id) : null;
         const owned = valid && progress.isOwned(part.id);
         const pct = Math.round(LEVEL_BONUS * 100);
+        const top = highestDifficulty(progress), next = nextDifficultyOf(top.id);
         $('lab-upg-effect-v2').textContent = !valid ? '강화할 파츠를 골라 주세요'
-            : cost == null ? `최대 레벨 · HP·DPS +${pct * (MAX_LEVEL - 1)}%`
+            : cost == null ? `최대 레벨 · HP·DPS +${pct * (lv - 1)}%${next ? ` — ${top.name} ${FINAL_STAGE_ID}를 깨면 ${next.name} · 한도 Lv${next.maxLevel}` : ''}`
                 : !owned ? '구매(개조 확정) 후 강화할 수 있습니다'
                     : `다음 레벨: 이 파츠의 HP·DPS +${pct}% (현재 +${pct * (lv - 1)}%)`;
         $('lab-upg-cost-v2').textContent = cost == null ? (valid ? 'MAX' : '') : `${cost.toLocaleString()} DM`;

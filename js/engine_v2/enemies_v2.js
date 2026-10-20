@@ -22,6 +22,7 @@ import { aimAt } from './bases_v2.js';
 // 적 그림 (로드맵 C단계, D-035): 리그를 구운 동작별 스프라이트 — tools/rig/bake_enemies.py가 만듦.
 // 그림이 있는 종류는 구운 크기 그대로(종류별 scale·색조 대신), 없는 종류는 임시 고블린 + 색조 (D-023)
 import { ENEMY_ART } from './enemyArt_v2.js';
+import { hastedType } from './difficulty_v2.js';
 
 export const ENEMY_TYPES = {
     guard: { name: '경비병', hp: 350, dps: 35, speed: [75, 100], reward: 1 },
@@ -296,7 +297,9 @@ function playOnce(e, clip) {
 /** 적 하나를 전장에 만든다. opts: { x, elite, affixes? } */
 export function spawnEnemy(b, typeId, opts = {}) {
     ensureEnemyStyles();
-    const t = ENEMY_TYPES[typeId] || ENEMY_TYPES.guard;
+    const t0 = ENEMY_TYPES[typeId] || ENEMY_TYPES.guard;
+    // 나이트메어 보스: 기술 간격을 줄인 복사본 (difficulty_v2.js bossHaste)
+    const t = t0.boss ? hastedType(typeId, t0, b.stage.bossHaste) : t0;
     const se = b.stage.enemy;
     const elite = !!opts.elite && !t.boss;
     const affixes = [];
@@ -305,7 +308,7 @@ export function spawnEnemy(b, typeId, opts = {}) {
             affixes.push(...new Set(opts.affixes.filter(id => Object.hasOwn(ELITE_AFFIXES, id))));
         } else {
             const pool = Object.keys(ELITE_AFFIXES);
-            const count = b.stage.zone >= 3 ? 2 : 1;
+            const count = b.stage.affixCount ?? (b.stage.zone >= 3 ? 2 : 1);   // 난이도별 (difficulty_v2.js affixCountFor)
             for (let i = 0; i < count; i++) affixes.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
         }
     }

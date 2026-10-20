@@ -8,7 +8,9 @@
      equipped  장착 파츠 { head, body, arm, leg }
      owned     보유 파츠 id 목록 (가격 0인 파츠와 [파츠제거]는 처음부터 보유)
      levels    파츠 강화 레벨 { id: 1~5 }  (결정 D-015)
-     stages    스테이지 기록 { '1-1': { stars: [요새, 기지, 체력50%], cleared, bestTime } }  (D-016)
+     stages    스테이지 기록 { '1-1': { stars: [요새, 기지, 체력50%], cleared, bestTime } }  (D-016) — 노말
+     diffStages 하드·헬·나이트메어 기록 { hard: { '1-1': { … } }, … }  (D-063, 난이도마다 따로)
+     difficulty 메인 화면에서 고른 난이도 id (difficulty_v2.js)
      character 선택창에서 고른 캐릭터 id (D-051)
      loadouts  캐릭터별 마지막 장착 { mech: { head, body, arm, leg }, ... } — 다시 고르면 그대로
    v1 저장(캐릭터 없음, 다른 캐릭터 파츠를 섞어 낌)은 처음 읽을 때 몸통 캐릭터로 바꾼다 (fixMixed)
@@ -17,9 +19,10 @@
 import { gameState } from '../engine/state.js';
 import { PARTS_DB } from '../data/parts.js';
 import { SLOTS, DEFAULT_CHARACTER, rosterOf, characterOfPart, partsOfCharacter } from './roster_v2.js';
+import { DIFFICULTIES, DEFAULT_DIFFICULTY, difficultyOf, difficultyUnlocked, highestDifficulty } from './difficulty_v2.js';
 
 const KEY = 'mo_v2_save';
-export const MAX_LEVEL = 5;
+export const MAX_LEVEL = 5;           // 노말 강화 한도 — 높은 난이도를 열면 올라감 (progress.maxLevel(), D-063)
 export const LEVEL_BONUS = 0.12;      // 강화 1레벨마다 그 파츠의 HP·DPS +12%
 export const STAR_BONUS_DM = 300;     // 새로 얻은 별 하나마다 보너스
 
@@ -36,6 +39,8 @@ class Progress {
         this.owned = new Set();
         this.levels = {};
         this.stages = {};
+        this.diffStages = {};        // 하드 이상 난이도별 기록 (저장)
+        this.difficulty = DEFAULT_DIFFICULTY;   // 메인 화면에서 고른 난이도 (저장)
         this.selectedStage = null;   // 메인 화면에서 고른 스테이지 (저장)
         this.character = DEFAULT_CHARACTER;   // 선택창에서 고른 캐릭터 (저장)
         this.loadouts = {};                   // 캐릭터별 마지막 장착 (저장)
@@ -61,7 +66,11 @@ class Progress {
             (data.owned || []).forEach(id => this.owned.add(id));
             this.levels = { ...(data.levels || {}) };
             this.stages = { ...(data.stages || {}) };
+            DIFFICULTIES.forEach(d => {
+                if (d.id !== DEFAULT_DIFFICULTY && data.diffStages && data.diffStages[d.id]) this.diffStages[d.id] = { ...data.diffStages[d.id] };
+            });
             this.selectedStage = data.selectedStage || null;
+            if (data.difficulty && difficultyUnlocked(data.difficulty, this)) this.difficulty = difficultyOf(data.difficulty).id;
             this.loadouts = { ...(data.loadouts || {}) };
         }
         SLOTS.forEach(slot => this.owned.add(gameState.equippedParts[slot]));   // 장착 중인 파츠는 보유
@@ -92,6 +101,8 @@ class Progress {
             owned: [...this.owned],
             levels: this.levels,
             stages: this.stages,
+            diffStages: this.diffStages,
+            difficulty: this.difficulty,
             selectedStage: this.selectedStage,
             character: this.character,
             loadouts: this.loadouts
@@ -204,10 +215,15 @@ class Progress {
         return this.levels[id] || 1;
     }
 
+    /** 강화 한도: 열린 난이도 중 가장 높은 난이도의 한도 (노말 Lv5 → 하드 Lv7 → 헬 Lv9 → 나이트메어 Lv10) */
+    maxLevel() {
+        return highestDifficulty(this).maxLevel;
+    }
+
     /** 다음 레벨 강화 비용 (최대면 null) */
     upgradeCost(id) {
         const lv = this.levelOf(id);
-        if (lv >= MAX_LEVEL || id === 'none') return null;
+        if (lv >= this.maxLevel() || id === 'none') return null;
         const p = partOf(slotOf(id), id);
         const base = Math.max(p ? p.cost || 0 : 0, 200);
         return Math.round((base * 0.6 * lv) / 10) * 10;
@@ -257,28 +273,44 @@ class Progress {
         this.saveSoon();
     }
 
-    stage(id) {
-        return this.stages[id] || { stars: [false, false, false], cleared: false, bestTime: null };
+    /** 난이도 고르기 (열린 난이도만) — 기록·잠금·별 표시가 그 난이도 것으로 바뀜 */
+    selectDifficulty(id) {
+        if (!difficultyUnlocked(id, this)) return false;
+        this.difficulty = difficultyOf(id).id;
+        this.saveSoon();
+        return true;
     }
 
-    starCount(id) {
-        return this.stage(id).stars.filter(Boolean).length;
+    /** 그 난이도의 기록 저장소 (노말 = stages) */
+    recordsOf(diff = this.difficulty) {
+        if (diff === DEFAULT_DIFFICULTY) return this.stages;
+        return (this.diffStages[diff] ||= {});
+    }
+
+    /** 스테이지 기록. diff를 안 주면 지금 고른 난이도 */
+    stage(id, diff = this.difficulty) {
+        const rec = diff === DEFAULT_DIFFICULTY ? this.stages[id] : this.diffStages[diff] && this.diffStages[diff][id];
+        return rec || { stars: [false, false, false], cleared: false, bestTime: null };
+    }
+
+    starCount(id, diff = this.difficulty) {
+        return this.stage(id, diff).stars.filter(Boolean).length;
     }
 
     /**
-     * 전투 결과 기록. stars: [요새, 기지, 체력50%] 이번 판 달성 여부
-     * @returns {{ newStars: number, bonus: number }} 새로 얻은 별 수와 보너스 DM (보너스는 여기서 지급)
+     * 전투 결과 기록. stars: [요새, 기지, 체력50%] 이번 판 달성 여부, diff = 싸운 난이도
+     * @returns {{ newStars: number, bonus: number }} 새로 얻은 별 수와 보너스 DM (보너스는 여기서 지급, 난이도 보상 배율)
      */
-    recordStage(id, { stars, cleared, time }) {
-        const prev = this.stage(id);
+    recordStage(id, { stars, cleared, time }, diff = this.difficulty) {
+        const prev = this.stage(id, diff);
         const merged = prev.stars.map((had, i) => had || !!stars[i]);
         const newStars = merged.filter(Boolean).length - prev.stars.filter(Boolean).length;
-        this.stages[id] = {
+        this.recordsOf(diff)[id] = {
             stars: merged,
             cleared: prev.cleared || !!cleared,
             bestTime: cleared ? Math.min(prev.bestTime ?? Infinity, time) : prev.bestTime
         };
-        const bonus = newStars * STAR_BONUS_DM;
+        const bonus = Math.round(newStars * STAR_BONUS_DM * difficultyOf(diff).reward);
         if (bonus) gameState.darkMatter += bonus;
         gameState.notify();
         return { newStars, bonus };

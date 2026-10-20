@@ -2,6 +2,7 @@
    PROJECT: MAD OVERLORD // 메인 화면: 전술 그리드 (v2, 가로 1280x720)
    ① 오버로드 대기실: 장착 파츠로 조립된 캐릭터(리그 idle) + 부위별 파츠·스킬 설명 + 능력치 + CHARACTER(선택창) · MUTATION LAB
    ② 전술 레이더: 챕터 스테이지 점(누르면 선택), 선택한 스테이지 정보 (STORY / SPECIAL 전환 — SPECIAL은 준비 중)
+      화면 오른쪽 위 난이도 노말·하드·헬·나이트메어 (D-063): 고른 난이도의 잠금·별·배율로 표시
    ③ ATTACK / SORTIE 출격 버튼 + 상태 줄(보유 DM, 장착 스킬)
    ④ 우상단: 재화, 설정(톱니바퀴)
    ========================================================================== */
@@ -12,6 +13,7 @@ import { skillsForParts, legPassiveOf } from '../engine_v2/skills_v2.js';
 import { progress } from '../engine_v2/progress_v2.js';
 import { rosterOf } from '../engine_v2/roster_v2.js';
 import { CHAPTERS, stageById, isUnlocked, defaultStage, chapterOf, chapterUnlocked, defaultStageIn } from '../engine_v2/stages_v2.js';
+import { DIFFICULTIES, difficultyOf, difficultyUnlocked, stageFor, FINAL_STAGE_ID } from '../engine_v2/difficulty_v2.js';
 import { ENEMY_TYPES } from '../engine_v2/enemies_v2.js';
 import { sound } from '../engine_v2/audio/sound_v2.js';
 import { icon, fillIcons } from './icons.js';
@@ -110,6 +112,33 @@ export class MenuController {
         this.renderStages();
     }
 
+    /** 난이도 버튼: 잠긴 난이도는 바로 앞 난이도의 마지막 스테이지를 깨야 열림 */
+    selectDifficulty(id) {
+        if (!difficultyUnlocked(id, progress)) {
+            sound.play('ui_error');
+            const i = DIFFICULTIES.findIndex(d => d.id === id);
+            const prev = DIFFICULTIES[i - 1];
+            $('menu-map-foot-v2').innerHTML = `<b>${difficultyOf(id).name}</b> 잠김 — ${prev.name} ${FINAL_STAGE_ID}까지 클리어하면 열립니다`;
+            return;
+        }
+        if (id === progress.difficulty) return;
+        sound.play('ui_tab');
+        progress.selectDifficulty(id);
+        this.renderStages();
+    }
+
+    renderDifficulties() {
+        const box = $('menu-diffs-v2');
+        if (!box) return;
+        box.innerHTML = DIFFICULTIES.map(d => {
+            const open = difficultyUnlocked(d.id, progress);
+            const on = d.id === progress.difficulty;
+            return `<button class="v2-difftab${on ? ' is-on' : ''}${open ? '' : ' is-locked'}" data-diff="${d.id}" style="--diff:${d.color}"`
+                + ` aria-pressed="${on}" title="${d.name}${open ? '' : ' (잠김)'}">${open ? '' : icon('lock', 10)}${d.name}</button>`;
+        }).join('');
+        box.querySelectorAll('.v2-difftab').forEach(b => b.addEventListener('click', () => this.selectDifficulty(b.dataset.diff)));
+    }
+
     renderZones(cur) {
         const box = $('menu-zones-v2');
         if (!box) return;
@@ -127,6 +156,10 @@ export class MenuController {
         progress.selectedStage = cur.id;
         const ch = chapterOf(cur);
         $('menu-map-name-v2').textContent = ch.name;
+        const diff = difficultyOf(progress.difficulty);
+        const radar = this.root.querySelector('.v2-radar');
+        if (radar) { radar.dataset.difficulty = diff.id; radar.style.setProperty('--diff', diff.color); }
+        this.renderDifficulties();
         this.renderZones(cur);
         const nodes = ch.stages.map(st => ({
             id: st.id, at: st.map, boss: !!st.boss, name: `${st.id} ${st.name}`,
@@ -138,10 +171,19 @@ export class MenuController {
         const enemies = Object.keys(cur.enemy.mix).map(k => ENEMY_TYPES[k].name).join(' · ');
         const best = progress.stage(cur.id).bestTime;
         const clock = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+        const shown = stageFor(cur, diff.id);   // 제한·별 시간은 난이도 배율 반영
+        // 노말이 아니면 레이더 왼쪽 아래에 배율 요약
+        const note = $('menu-diffnote-v2');
+        if (note) {
+            note.hidden = diff.id === 'normal';
+            note.innerHTML = diff.id === 'normal' ? '' : `<b>${diff.en}</b><span>적 체력 ×${diff.enemyHp} · 공격력 ×${diff.enemyDps} · 거점 ×${diff.base}</span>`
+                + `<span>엘리트 속성 ${shown.affixCount}개${diff.bossHaste > 1 ? ' · 보스 기술 빨라짐' : ''} · 보상 ×${diff.reward}</span>`;
+        }
         $('menu-map-foot-v2').innerHTML = `<b>${cur.id} ${cur.name}</b> <span class="v2-stars">${stars}</span>`
-            + `<span class="v2-radar__time">⏱ 제한 ${clock(cur.timeLimit)} · ★ ${cur.starTime}초 안에${best ? ` · 최고 ${clock(best)}` : ''}</span>`
+            + `<span class="v2-radar__time">⏱ 제한 ${clock(shown.timeLimit)} · ★ ${shown.starTime}초 안에${best ? ` · 최고 ${clock(best)}` : ''}</span>`
             + `<small>${cur.desc} · 적: ${enemies}${cur.boss ? ' · 보스' : ''}</small>`;
-        $('menu-sortie-sub-v2').textContent = progress.isReady() ? `STAGE ${cur.id} ${cur.name} 출격` : '몸통 파츠 필요 — 연구소에서 구매';
+        $('menu-sortie-sub-v2').textContent = progress.isReady()
+            ? `STAGE ${cur.id} ${cur.name}${diff.id === 'normal' ? '' : ` · ${diff.name}`} 출격` : '몸통 파츠 필요 — 연구소에서 구매';
     }
 
     /** 메인 화면이 보일 때마다: 장착 상태로 캐릭터/설명/능력치/상태 줄 갱신, 레이더 시작 */

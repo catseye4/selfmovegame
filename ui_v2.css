@@ -421,6 +421,12 @@
 }
 .v2-progress__head { display: flex; align-items: center; gap: 10px; font-family: var(--v2-font-num); font-size: 11px; }
 .v2-progress__stage { color: var(--v2-amber); font-weight: 900; letter-spacing: 1px; }
+.v2-progress__stage .v2-diffbadge { margin-right: 6px; }
+.v2-result__unlock {
+    margin: 0; padding: 8px 12px; border: 1px solid rgb(var(--diff)); border-radius: 4px; text-align: center;
+    color: #fff; background: rgba(var(--diff), 0.18); box-shadow: 0 0 14px rgba(var(--diff), 0.4);
+}
+.v2-result__unlock b { color: rgb(var(--diff)); }
 .v2-progress__dist { color: var(--v2-dim); flex: 1; }
 .v2-progress__dist strong { color: #fff; font-size: 13px; }
 .v2-stars { color: var(--v2-gold); font-size: 16px; letter-spacing: 2px; text-shadow: 0 0 8px rgba(255, 209, 102, 0.8); }
@@ -1435,6 +1441,30 @@ div.v2-settings__row > span { flex: 1; }
 .v2-zonetab:hover { color: var(--v2-text); border-color: var(--v2-amber); }
 .v2-zonetab.is-on { color: #16120a; background: var(--v2-amber); border-color: var(--v2-amber); }
 .v2-zonetab.is-locked { opacity: 0.55; }
+/* 난이도 (D-063, menu_v2.js renderDifficulties): 레이더 화면 오른쪽 위. 색 = 난이도 (--diff: 'r, g, b') */
+.v2-difftabs { position: absolute; top: 8px; right: 8px; z-index: 2; display: flex; gap: 4px; }
+.v2-difftab {
+    --diff: 120, 220, 140;
+    display: inline-flex; align-items: center; gap: 3px;
+    font: 800 11px var(--v2-font); letter-spacing: 0.5px; color: rgb(var(--diff)); background: rgba(5, 6, 9, 0.75);
+    border: 1px solid rgba(var(--diff), 0.45); border-radius: 4px; padding: 3px 8px; cursor: pointer;
+}
+.v2-difftab:hover { border-color: rgb(var(--diff)); }
+.v2-difftab.is-on { color: #120d06; background: rgb(var(--diff)); border-color: rgb(var(--diff)); box-shadow: 0 0 10px rgba(var(--diff), 0.55); }
+.v2-difftab.is-locked { color: var(--v2-dim); border-color: rgba(255, 255, 255, 0.12); opacity: 0.6; }
+.v2-difftab:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+.v2-radar[data-difficulty]:not([data-difficulty="normal"]) .v2-radar__screen { border-color: rgba(var(--diff), 0.55); box-shadow: inset 0 0 24px rgba(var(--diff), 0.18); }
+.v2-radar__diffnote {
+    position: absolute; right: 8px; bottom: 8px; z-index: 2; max-width: 46%; display: grid; gap: 1px; /* 오른쪽 아래: 스테이지 점은 왼쪽 아래 → 오른쪽 위 대각선 */
+    font: 700 11px/1.35 var(--v2-font); color: rgb(var(--diff)); background: rgba(5, 6, 9, 0.78);
+    border-left: 2px solid rgb(var(--diff)); padding: 4px 8px;
+}
+.v2-radar__diffnote[hidden] { display: none; }
+.v2-radar__diffnote b { font-size: 12px; letter-spacing: 1px; }
+.v2-diffbadge {
+    display: inline-block; font: 800 11px var(--v2-font); letter-spacing: 0.5px; padding: 1px 7px; border-radius: 3px;
+    color: #120d06; background: rgb(var(--diff, 255, 176, 32)); vertical-align: 1px;
+}
 .v2-maptab {
     flex: 1;
     height: 44px;
