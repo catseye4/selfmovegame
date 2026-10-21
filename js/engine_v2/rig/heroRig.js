@@ -178,6 +178,7 @@ export const HERO = {
     hitSocket: ['tip', 'sword'],
     sockets: { hand: [660, 666] },       // 칼 쥔 주먹 (스킬 시전 에너지/세뇌 구체 발사 위치)
     autoGround: [['footF', 'shinF'], ['footB', 'shinB']],   // 다리가 몸통에 매달려 있어 발로 접지
+    wind: [{ bone: 'cape1', rot: 4 }, { bone: 'cape2', rot: 7 }],   // 빨리 걸을수록 망토가 뒤로 (Q-008 Q6, reactions.js WIND)
     // 컨셉의 보라 오라: 몸 뒤에서 연기가 피어올라 흩어지고, 앞쪽으로 불티가 떠오름
     ambient: [
         { kind: 'smoke', socket: 'chest', bone: 'torso', layer: 'back', rate: 20,

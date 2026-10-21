@@ -368,6 +368,20 @@ export class MonsterController {
     }
 
     /** 동작 빠르기 배율 (오버드라이브 = 공격 속도 +50%: 공격 동작의 타격 이벤트가 빨리 옴). 상태 이상 배율과 곱함 */
+    /** 반응 동작 (맞음·밀림·기절 — rig/reactions.js, Q4). 리그가 없으면 생략 */
+    playReaction(name) {
+        if (this.useRig && this.rigBattle) this.rigBattle.react(name);
+    }
+
+    stopReaction(name) {
+        if (this.useRig && this.rigBattle) this.rigBattle.stopReact(name);
+    }
+
+    /** 걷기 동작 빠르기 (실제 진격 속도에 맞춤, battle/player.js syncWalk) — 걷는 동작에만 붙음 */
+    setWalkRate(k = 1) {
+        if (this.rigBattle) this.rigBattle.walkScale = k;
+    }
+
     setAnimBoost(mul = 1) {
         this.animBoost = mul;
         if (this.rigBattle) this.rigBattle.timeScale = (this.statusAnim ?? 1) * mul;
@@ -399,10 +413,12 @@ export class MonsterController {
             this.clones.push(c);
         }
         const copy = () => {
+            const src = this.spriteCanvas;
             for (const c of this.clones) {
+                if (c.width !== src.width || c.height !== src.height) { c.width = src.width; c.height = src.height; }   // 해상도 배율(displayRes)을 따라감
                 const ctx = c.getContext('2d');
                 ctx.clearRect(0, 0, c.width, c.height);
-                ctx.drawImage(this.spriteCanvas, 0, 0);
+                ctx.drawImage(src, 0, 0);
             }
             this.cloneRaf = requestAnimationFrame(copy);
         };

@@ -2,15 +2,16 @@
   "frameWidth": 133,
   "frameHeight": 122,
   "anchorX": 76.5,
+  "res": 2.0,
   "clips": {
     "walk": {
-      "src": "assets/sprites/rig/demonknight/demonknight_walk.png",
-      "frames": 12,
+      "src": "assets/sprites/rig/demonknight/demonknight_walk.webp",
+      "frames": 16,
       "duration": 0.9
     },
     "attack": {
-      "src": "assets/sprites/rig/demonknight/demonknight_attack.png",
-      "frames": 12,
+      "src": "assets/sprites/rig/demonknight/demonknight_attack.webp",
+      "frames": 16,
       "duration": 1
     }
   }

@@ -14,8 +14,8 @@ import { sound } from '../audio/sound_v2.js';
 import { KAIJU_VFX, BATTLE_VFX, ZONE_VFX, ELITE_VFX } from '../vfx/vfxDefs.js';
 import { spawnEnemy, updateEnemy, pickType, killReward, ENEMY_TYPES, ELITE_AFFIXES } from '../enemies_v2.js';
 import { icon } from '../../ui_v2/icons.js';
-import { GROUND_SPEED, BASE_STATE, baseArt, baseArtName, baseSize, aimAt as aimOf, dressBase, setBaseState } from '../bases_v2.js';
-import { HERO, HIT_REACT, ACID, POPUP, FOOT_B, BASE_X } from './tuning.js';
+import { BASE_STATE, baseArt, baseArtName, baseSize, aimAt as aimOf, dressBase, setBaseState } from '../bases_v2.js';
+import { HERO, HIT_REACT, ACID, POPUP, FOOT_B, BASE_X, ENEMY_REACT } from './tuning.js';
 
 // 적 상태 외형 (우선순위: 기절 > 감속 > 저주) + 체력바 옆 상태 아이콘
 const ENEMY_TINT = {
@@ -25,7 +25,7 @@ const ENEMY_TINT = {
     slow: 'drop-shadow(0 0 6px #b050ff) saturate(0.55) brightness(0.9)',
     curse: 'brightness(0.72) saturate(0.7) drop-shadow(0 0 4px rgba(170, 80, 255, 0.9))'
 };
-const STATUS_ICON = { curse: 'curse', slow: 'slow', stun: 'stun', acid: 'acid', root: 'net', bleed: 'blood', abyss: 'hand', stitch: 'stitch',
+const STATUS_ICON = { curse: 'curse', slow: 'slow', stun: 'stun', acid: 'acid', root: 'net', bleed: 'thorns', abyss: 'hand', stitch: 'stitch',
     frozen: 'snow', chill: 'snow', puppet: 'puppet' };
 const PUDDLE_STICK = 1.5;   // 늪을 밟은 뒤 감속이 남는 시간(초)
 
@@ -110,10 +110,15 @@ export const EnemyMethods = {
     // react.dot: 지속 피해 — 피격 반응 없이 합산해 0.5초마다 숫자 표시
     dealDamageToEnemy(enemy, damage, isCrit, react = null) {
         if (damage > 0) enemy.lastHit = this.stats.time;
+        const purified = this.isPurified(enemy);   // 정화 파동: 엘리트 효과 꺼짐 (growth.js)
+        if (damage > 0) {
+            damage *= this.gearDamageMul(enemy);    // 파츠 옵션(엘리트·보스·공성) · 철벽 변이 (growth.js)
+            if (this.gear?.healBlock) enemy.healBlockUntil = this.stats.time + this.gear.healBlock;   // 치유 방해 옵션
+        }
         if (enemy.armor && damage > 0) damage *= 1 - enemy.armor * (1 - (react?.pierce || 0));   // 방패병·보스: 받는 피해 감소 (인형사 가위는 일부 무시)
         if (enemy.barrierT > 0 && damage > 0) damage *= 1 - enemy.t.barrier.cut;
         if (enemy.frozenT > 0 && damage > 0) damage *= 1 + this.shatterBonus();   // 서리의 무희 다리 '빙판 걸음' (frost.js)
-        if (enemy.affixes?.includes('iron') && damage > 0) {
+        if (enemy.affixes?.includes('iron') && !purified && damage > 0) {
             damage *= 1 - ELITE_AFFIXES.iron.cut;
             if (this.stats.time - (enemy.ironFxAt ?? -Infinity) >= 0.3) {
                 enemy.ironFxAt = this.stats.time;
@@ -121,18 +126,20 @@ export const EnemyMethods = {
             }
         }
         if (enemy.shield > 0 && damage > 0) {
-            const absorbed = Math.min(enemy.shield, damage);
+            const sm = 1 + (this.gear?.shieldDmg || 0);   // 보호막 파쇄 옵션: 보호막에는 더 세게
+            const absorbed = Math.min(enemy.shield, damage * sm);
             enemy.shield -= absorbed;
-            damage -= absorbed;
+            damage -= absorbed / sm;
             if (enemy.shield <= 0) {
                 this.fx.play(ELITE_VFX.shieldBreak, enemy.x + 38, FOOT_B + 55);
                 this.createDamagePopup(enemy.x, 180, '보호막 깨짐', false);
                 this.updateEnemyFilter(enemy);
             }
         }
-        if (enemy.affixes?.includes('thorns') && react && !react.dot && damage > 0) {
+        if (enemy.affixes?.includes('thorns') && !purified && react && !react.dot && damage > 0) {
             const thorns = ELITE_AFFIXES.thorns;
-            this.damagePlayer(Math.min(damage * thorns.reflect, this.maxPlayerHp * thorns.cap), 0);
+            const cut = 1 - (this.gear?.reflectCut || 0);   // 반사 차단 옵션
+            this.damagePlayer(Math.min(damage * thorns.reflect, this.maxPlayerHp * thorns.cap) * cut, 0);
             if (this.stats.time - (enemy.thornsFxAt ?? -Infinity) >= 0.3) {
                 enemy.thornsFxAt = this.stats.time;
                 this.fx.play(ELITE_VFX.thornsSpark, enemy.x + 38, FOOT_B + 55);
@@ -140,7 +147,7 @@ export const EnemyMethods = {
         }
         enemy.hp -= damage;
         if (enemy.isBuilding && damage > 0 && this.stats.time - (enemy.baseHitFxAt ?? -Infinity) >= 0.25) { enemy.baseHitFxAt = this.stats.time; this.fx.play(BATTLE_VFX.baseHit, aimOf(enemy).x, aimOf(enemy).b); }
-        if (react && !react.dot) this.lifesteal(damage);           // 피의 서약 (battle/sets.js)
+        if (react && !react.dot) this.lifesteal(damage);           // 어둠의 서약 (battle/sets.js)
         if (react && !react.dot && enemy.hp > 0) this.hitReact(enemy, react);
         if (react && react.dot) {
             enemy.dotAcc = (enemy.dotAcc || 0) + damage;
@@ -163,8 +170,8 @@ export const EnemyMethods = {
         if (enemy.hp <= 0) {
             if (!this.enemies.includes(enemy)) return;   // 같은 프레임에 두 번 처리되지 않게
             if (!enemy.isBuilding && !enemy.isBarricade) this.fx.play(BATTLE_VFX.enemyDefeat, enemy.x + 38, FOOT_B, { scale: enemy.boss ? 1.8 : 1 });
-            // 거점 건물은 파괴 연출이 무너뜨린 뒤 치움
-            if (enemy.dom && !enemy.isBuilding) enemy.dom.remove();
+            // 거점 건물은 파괴 연출이 무너뜨린 뒤 치움, 적은 뒤로 넘어지며 사라짐 (Q4)
+            if (enemy.dom && !enemy.isBuilding) this.enemyFall(enemy);
             this.enemies = this.enemies.filter(e => e.id !== enemy.id);
             if (enemy.isBuilding) this.onBaseDestroyed(enemy);
             else this.onEnemyKilled(enemy);
@@ -288,14 +295,18 @@ export const EnemyMethods = {
         }
         this.stats.kills += 1;
         sound.play('enemy_die');
+        this.onGrowthKill(enemy);   // 스킬 코어 · 핏빛 달 변이 (growth.js)
+        this.onSetKill(enemy);      // 레어 세트 4부위 효과 (sets.js — 독안개 산성 옮기기)
+        const purified = this.isPurified(enemy);   // 정화된 채 쓰러지면 독 구름·폭발 없음
         if (enemy.stitchT > 0) this.addCorpse(enemy);   // 봉합 성녀: 봉합된 채 쓰러지면 시체 (battle/saint.js)
         gameState.addDarkMatter(killReward(this, enemy));
-        if (enemy.affixes?.includes('toxic')) {
+        if (enemy.affixes?.includes('toxic') && !purified) {
             const toxic = ELITE_AFFIXES.toxic;
-            this.addPuddle(enemy.x + 38 - toxic.width / 2, toxic.width, toxic.sec);
+            const w = toxic.width * (this.mutator?.toxicWidth || 1), sec = toxic.sec * (this.mutator?.toxicMul || 1);   // 맹독 변이
+            this.addPuddle(enemy.x + 38 - w / 2, w, sec);
             this.fx.play(ELITE_VFX.toxicCloud, enemy.x + 38, FOOT_B + 10);
         }
-        if (enemy.affixes?.includes('volatile')) {
+        if (enemy.affixes?.includes('volatile') && !purified) {
             const volatile = ELITE_AFFIXES.volatile;
             const x = enemy.x + 38;
             this.fx.play(ELITE_VFX.volatileWarn, x, FOOT_B);
@@ -354,6 +365,43 @@ export const EnemyMethods = {
             e.x += HIT_REACT.knockPx * react.knock;
             e.dom.style.left = `${e.x}px`;
         }
+        if (!e.isBuilding && !e.isBarricade) this.enemyRecoil(e, react);
+    },
+
+    /** 맞은 적의 그림이 뒤로(오른쪽) 젖혀졌다 돌아옴 (Q-008 Q4) — 젖혀지는 중이면 다시 하지 않음 */
+    enemyRecoil(e, react) {
+        const sprite = e.dom.querySelector('.v2-enemy__sprite');
+        if (!sprite || !sprite.animate || (e.recoil && e.recoil.playState === 'running')) return;
+        const R = ENEMY_REACT;
+        const deg = (e.knockResist || e.boss ? R.bossDeg : R.deg) * Math.min(1.6, 0.6 + (react.knock || 0) * 0.4);
+        sprite.style.transformOrigin = '50% 100%';
+        e.recoil = sprite.animate([
+            { transform: 'none' },
+            { transform: `translateX(3px) rotate(${deg.toFixed(1)}deg)`, offset: 0.3 },
+            { transform: 'none' }
+        ], { duration: R.ms, easing: 'ease-out' });
+    },
+
+    /** 쓰러진 적: 체력바를 지우고 뒤로 넘어지며 흐려진 뒤 치움 (그림이 없으면 바로 치움) */
+    enemyFall(e) {
+        const el = e.dom;
+        const sprite = el.querySelector('.v2-enemy__sprite');
+        if (!sprite || !sprite.animate) { el.remove(); return; }
+        el.querySelector('.enemy-hp-track')?.remove();
+        e.statusEl?.remove();
+        el.style.pointerEvents = 'none';
+        el.classList.add('is-falling');
+        sprite.style.animationPlayState = 'paused';   // 걷기·공격 그림이 멈춘 채 넘어짐
+        sprite.style.transformOrigin = '50% 100%';
+        e.recoil?.cancel();
+        const ms = e.boss ? ENEMY_REACT.fallBossMs : ENEMY_REACT.fallMs;
+        const fall = sprite.animate([
+            { transform: 'none', opacity: 1 },
+            { transform: 'translateX(8px) rotate(16deg)', opacity: 1, offset: 0.35 },
+            { transform: 'translate(16px, 4px) rotate(78deg) scaleY(0.92)', opacity: 0 }
+        ], { duration: ms, easing: 'ease-in', fill: 'forwards' });
+        fall.onfinish = () => el.remove();
+        setTimeout(() => el.remove(), ms + 200);   // 탭이 가려져 애니메이션이 멈춰도 치움
     },
 
     slowEnemy(e) {
@@ -510,7 +558,7 @@ export const EnemyMethods = {
     scrollRuins(dt) {
         if (!this.ruins.length) return;
         this.ruins = this.ruins.filter(r => {
-            r.x -= GROUND_SPEED * dt;
+            r.x -= this.groundSpeed() * dt;
             if (r.x + r.size.w < -40) {
                 r.dom.remove();
                 return false;
@@ -578,7 +626,7 @@ export const EnemyMethods = {
     /** 걷는 동안 늪도 바닥과 같이 흘러감 */
     scrollHazards(dt) {
         this.hazards.forEach(h => {
-            h.x -= GROUND_SPEED * dt;
+            h.x -= this.groundSpeed() * dt;
             h.dom.style.left = `${h.x}px`;
         });
     },

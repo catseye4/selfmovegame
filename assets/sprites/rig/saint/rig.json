@@ -41,11 +41,11 @@
       "h": 231
     },
     "armF": {
-      "src": "armF.png",
+      "src": "armF_sleeve.png",
       "x": 541,
-      "y": 503,
-      "w": 378,
-      "h": 181
+      "y": 531,
+      "w": 130,
+      "h": 153
     },
     "legB_up": {
       "src": "legB_up.png",
@@ -83,11 +83,25 @@
       "h": 303
     },
     "armF_up": {
-      "src": "armF_up.png",
+      "src": "armF_up_sleeve.png",
       "x": 530,
       "y": 500,
       "w": 388,
-      "h": 231
+      "h": 226
+    },
+    "handF": {
+      "src": "handF.png",
+      "x": 551,
+      "y": 503,
+      "w": 368,
+      "h": 178
+    },
+    "handF_up": {
+      "src": "handF_up.png",
+      "x": 545,
+      "y": 504,
+      "w": 372,
+      "h": 227
     }
   },
   "pivots": {
@@ -118,6 +132,10 @@
     "legF": [
       560.0,
       745.0
+    ],
+    "handF": [
+      593.0,
+      549.0
     ]
   },
   "sockets": {

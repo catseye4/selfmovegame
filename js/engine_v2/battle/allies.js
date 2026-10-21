@@ -85,6 +85,7 @@ export const AllyMethods = {
         if (ally.dom) ally.dom.remove();
         this.allies = this.allies.filter(a => a.id !== ally.id);
         this.onAllyDown(ally);
+        this.onSetAllyDown(ally);   // 조직 사령관 4부위: 졸개 폭발 (sets.js)
     },
 
     /** 아군 이동·공격: 가장 가까운 적(뒤로 35px까지)과 붙으면 싸우고, 아니면 앞으로 (주인공보다 너무 멀리 가지 않음) */

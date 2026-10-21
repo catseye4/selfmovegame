@@ -69,8 +69,13 @@ def run_bases(ctx):
     g.wait(1600)
     st = state(g)
     ctx.check(st is None or st['left'] < left0 - 100, '다시 걸으면 잔해가 왼쪽으로 흘러감', f'{left0} → {st and st["left"]}')
-    g.wait(2500)
-    ctx.check(g.js("return b.ruins.length === 0 && !document.querySelector('.building-entity');"), '화면 밖으로 나간 잔해는 치움')
+    gone = False
+    for _ in range(30):   # 바닥은 캐릭터 진격 속도에 맞춰 흐름 (Q2) — 느린 캐릭터는 늦게 나감, 최대 6초
+        g.wait(200)
+        gone = g.js("return b.ruins.length === 0 && !document.querySelector('.building-entity');")
+        if gone:
+            break
+    ctx.check(gone, '화면 밖으로 나간 잔해는 치움')
 
     # 최종 기지: 그림 → 파손 → 파괴 뒤 잔해가 승리 연출 동안 남음
     g.js("b.enemies.filter(e => !e.isBuilding).forEach(e => e.dom.remove()); b.enemies = []; b.distanceTraveled = b.stage.finalAt - 0.5; b.playerSpeed = b.spd0;")

@@ -6,6 +6,7 @@
    ========================================================================== */
 
 import { PARTS_DB } from '../data/parts.js';
+import { setOf, setLabelOf } from './sets_v2.js';
 
 export const SLOTS = ['head', 'body', 'arm', 'leg'];
 export const DEFAULT_CHARACTER = 'mech';
@@ -40,11 +41,13 @@ export function partsOfCharacter(character, slot) {
 }
 
 /**
- * 연구소 카드의 세트 표시: 파츠에 set이 있으면 그것(A·B 세트), 거대로봇 기본 로봇 파츠는 '기본 로봇',
- * 나머지 지금 파츠는 팩션 괄호 안 이름(메카닉 / 돌연변이 / 세뇌 / 키메라)
+ * 연구소 카드의 세트 표시: 세트 표(sets_v2.js)에 있으면 "레어 ① 포격 사령부"처럼 등급과 함께, 그 밖에 set이 있으면 그것,
+ * 거대로봇 기본 로봇 파츠는 '기본 로봇', 나머지 지금 파츠는 팩션 괄호 안 이름(메카닉 / 돌연변이 / 세뇌 / 키메라)
  */
 export function partSetLabel(part) {
     if (!part || part.id === 'none') return '';
+    const s = setOf(part);
+    if (s) return setLabelOf(s);
     if (part.set) return part.set;
     if (part.id.endsWith('_red_robot')) return '기본 로봇';
     const m = String(part.faction || '').match(/\(([^)]+)\)/);

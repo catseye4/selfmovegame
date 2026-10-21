@@ -13,6 +13,7 @@ import { registerV2Parts } from './engine_v2/partsExtra_v2.js';
 import { runLoading } from './ui_v2/loading_v2.js';
 import { applyVfxChoices, readVfxChoices, readVfxStyle } from './engine_v2/vfx/vfxVariants.js';
 import { preloadVfxSheets } from './engine_v2/vfx/vfxPlayer.js';
+import { setFitScale } from './engine_v2/displayRes.js';
 
 class GameRouterV2 {
     constructor() {
@@ -136,6 +137,7 @@ function fitScreens() {
     if (!app) return;
     const aw = app.clientWidth, ah = app.clientHeight;
     const k = Math.max(FRAME.min, Math.min(FRAME.max, aw / FRAME.w, ah / FRAME.h));
+    setFitScale(k);   // 캔버스 해상도 배율 (displayRes.js — 큰 화면에서 선명하게)
     const st = document.documentElement.style;
     st.setProperty('--v2-scale', k.toFixed(4));
     st.setProperty('--v2-x', `${Math.round((aw - FRAME.w * k) / 2)}px`);

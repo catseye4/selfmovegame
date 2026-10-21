@@ -8,6 +8,8 @@
      앞팔(armF) = 재단 가위(강화: 가위 칼날 집게), 어깨에서 오른쪽 아래 40° → rot -는 가위를 들어 올림
      뒷팔(armB) = 나무 손(강화: 황동 대포 — 몸 앞을 가로지름), 어깨에서 왼쪽 아래 → rot +가 들어 올림
    앞치마가 허벅지를 덮어 다리는 몸통 뒤에서 들어 올리는 삐걱이는 인형 걸음 (다리는 루트에 붙어 발이 미끄러지지 않음).
+   손목 관절 (Q-008 단계 2, D-067): 가위를 쥔 앞손(handF)을 팔(armF)에서 떼어 손목으로 돌림 — tools/rig/cut_joints.py doll
+     (Gemini "가위·손 지운 전신"과 원래 전신의 차이). 자를 때마다 손목을 비틂. 팔에 매달린 청록 실은 팔에 남음
    ========================================================================== */
 
 export const DOLL_ASSET_DIR = 'assets/sprites/rig/doll/';
@@ -20,12 +22,13 @@ export const DOLL_BONES = [
     { name: 'torso', parent: 'root', part: 'torso', z: 3 },
     { name: 'head', parent: 'torso', part: 'head', z: 4 },
     { name: 'armB', parent: 'torso', part: 'armB', z: 5 },
-    { name: 'armF', parent: 'torso', part: 'armF', z: 6 }
+    { name: 'armF', parent: 'torso', part: 'armF', z: 6 },
+    { name: 'handF', parent: 'armF', part: 'handF', z: 5.5 }   // 가위를 쥔 손은 소맷부리 밑에 (이음새를 소매가 덮음)
 ];
 
 /** 강화 그림 (D-044): 강화 팔은 가위 칼날 집게(끝이 더 멂)와 대포(뒷손 자리에 포구) → 소켓도 바꿈 */
 export const DOLL_UPGRADE = {
-    parts: { head: ['head'], body: ['torso'], arm: ['armF', 'armB'], leg: ['legF', 'legB'] },
+    parts: { head: ['head'], body: ['torso'], arm: ['armF', 'armB', 'handF'], leg: ['legF', 'legB'] },
     sockets: { arm: { blade: 'bladeUp', hand: 'cannon' } }
 };
 
@@ -36,7 +39,7 @@ export const DOLL_SPRINGS = [
 ];
 
 export const DOLL_DEBUG_SOCKETS = [
-    ['blade', 'armF'],
+    ['blade', 'handF'],
     ['hand', 'armB'],
     ['eye', 'head'],
     ['spool', 'torso'],
@@ -55,6 +58,7 @@ export const DOLL_CLIPS = {
         duration: 2.2,
         loop: true,
         tracks: {
+            handF: { rot: [[0, 0], [1.1, 4], [2.2, 0]] },
             torso: { y: [[0, 0], [1.1, 4], [2.2, 0]], rot: [[0, 0], [1.1, 1], [2.2, 0]] },
             head: { rot: [[0, 0], [0.55, -3], [1.1, 2], [1.65, -1], [2.2, 0]] },
             armF: { rot: [[0, 0], [1.1, -4], [2.2, 0]] },
@@ -67,6 +71,7 @@ export const DOLL_CLIPS = {
         duration: 1.0,
         loop: true,
         tracks: {
+            handF: { rot: [[0, 4], [0.5, -4], [1.0, 4]] },
             legF: {
                 y: [[0, 0, 'out'], [0.17, -22, 'in'], [0.34, 0, 'linear'], [1.0, 0]],
                 rot: [[0, 0, 'out'], [0.17, -7, 'in'], [0.34, 0, 'linear'], [1.0, 0]]
@@ -95,6 +100,7 @@ export const DOLL_CLIPS = {
         duration: 1.0,
         loop: true,
         tracks: {
+            handF: { rot: [[0, 0], [0.25, 10, 'in'], [0.38, -12, 'out'], [0.52, 8, 'in'], [0.7, -12, 'out'], [1.0, 0]] },
             armF: { rot: [[0, 0], [0.25, 16, 'in'], [0.38, -22, 'out'], [0.52, 6, 'in'], [0.7, -24, 'out'], [1.0, 0]] },
             armB: { rot: [[0, 0], [0.25, -8], [0.38, 6], [0.52, -6], [0.7, 8], [1.0, 0]] },
             torso: {
@@ -104,8 +110,8 @@ export const DOLL_CLIPS = {
             head: { rot: [[0, 0], [0.38, 4], [0.52, -2], [0.7, 5], [1.0, 0]] }
         },
         events: [
-            [0.38, 'impact', { hit: 0.5, socket: 'blade', bone: 'armF', color: STEEL }],
-            [0.7, 'impact', { hit: 0.5, socket: 'blade', bone: 'armF', color: STEEL }]
+            [0.38, 'impact', { hit: 0.5, socket: 'blade', bone: 'handF', color: STEEL }],
+            [0.7, 'impact', { hit: 0.5, socket: 'blade', bone: 'handF', color: STEEL }]
         ]
     },
 
@@ -114,6 +120,7 @@ export const DOLL_CLIPS = {
         duration: 0.95,
         loop: false,
         tracks: {
+            handF: { rot: [[0, 0], [0.28, -14, 'in'], [0.4, 14, 'out'], [0.5, 10], [0.62, -14, 'out'], [0.95, 0]] },
             armF: { rot: [[0, 0], [0.28, -55, 'in'], [0.4, 30, 'out'], [0.5, 34], [0.62, -40, 'out'], [0.95, 0]] },
             armB: { rot: [[0, 0], [0.28, 14], [0.4, -8], [0.62, 10], [0.95, 0]] },
             torso: {
@@ -130,6 +137,7 @@ export const DOLL_CLIPS = {
         duration: 1.0,
         loop: false,
         tracks: {
+            handF: { rot: [[0, 0], [0.3, -8], [0.4, 6], [0.5, -8], [0.6, 6], [1.0, 0]] },
             armF: { rot: [[0, 0], [0.3, -40, 'out'], [0.4, -30], [0.5, -42], [0.6, -32], [1.0, 0]] },
             armB: { rot: [[0, 0], [0.3, 36, 'out'], [0.4, 26], [0.5, 38], [0.6, 28], [1.0, 0]] },
             torso: { y: [[0, 0], [0.3, -6], [0.6, -4], [1.0, 0]], rot: [[0, 0], [0.3, -2], [0.6, 2], [1.0, 0]] },
@@ -147,6 +155,7 @@ export const DOLL_CLIPS = {
         duration: 1.2,
         loop: false,
         tracks: {
+            handF: { rot: [[0, 0], [0.3, -6], [0.45, 6], [0.6, -6], [0.75, 6], [1.2, 0]] },
             armF: { rot: [[0, 0], [0.3, -60, 'out'], [0.4, -52], [0.5, -62], [0.6, -54], [0.7, -62], [1.2, 0]] },
             armB: { rot: [[0, 0], [0.3, 55, 'out'], [0.4, 47], [0.5, 57], [0.6, 49], [0.7, 57], [1.2, 0]] },
             torso: { y: [[0, 0], [0.3, -10, 'out'], [0.8, -8], [1.2, 0]], rot: [[0, 0], [0.3, -3], [0.8, -3], [1.2, 0]] },
@@ -164,6 +173,7 @@ export const DOLL_CLIPS = {
         duration: 1.0,
         loop: true,
         tracks: {
+            handF: { rot: [[0, -8], [0.25, 4], [0.5, -8], [0.75, 4], [1.0, -8]] },
             armF: { rot: [[0, -50], [0.25, -40], [0.5, -55], [0.75, -40], [1.0, -50]] },
             armB: { rot: [[0, 30], [0.5, 40], [1.0, 30]] },
             torso: { y: [[0, 0], [0.5, -8], [1.0, 0]], rot: [[0, -2], [0.5, 2], [1.0, -2]] },
@@ -184,7 +194,7 @@ export const DOLL = {
     clips: DOLL_CLIPS,
     arms: null,
     attack: 'attack_snip',
-    hitSocket: ['blade', 'armF'],
+    hitSocket: ['blade', 'handF'],
     upgrade: DOLL_UPGRADE,
     skillClips: [['가위 참격 X자', 'xcut'], ['인형 가족', 'cast'], ['인형 실', 'strings']],   // rig_test.html 동작 버튼
     // 십자틀 양 끝에서 실을 따라 흘러내리는 청록 빛

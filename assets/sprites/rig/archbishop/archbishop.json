@@ -1,21 +1,22 @@
 {
-  "frameWidth": 197,
+  "frameWidth": 198,
   "frameHeight": 227,
   "anchorX": 103.6,
+  "res": 1.5,
   "clips": {
     "walk": {
-      "src": "assets/sprites/rig/archbishop/archbishop_walk.png",
-      "frames": 12,
+      "src": "assets/sprites/rig/archbishop/archbishop_walk.webp",
+      "frames": 16,
       "duration": 1.4
     },
     "attack": {
-      "src": "assets/sprites/rig/archbishop/archbishop_attack.png",
-      "frames": 12,
+      "src": "assets/sprites/rig/archbishop/archbishop_attack.webp",
+      "frames": 16,
       "duration": 0.9
     },
     "bash": {
-      "src": "assets/sprites/rig/archbishop/archbishop_bash.png",
-      "frames": 12,
+      "src": "assets/sprites/rig/archbishop/archbishop_bash.webp",
+      "frames": 16,
       "duration": 1.1
     }
   }

@@ -13,7 +13,7 @@
 
 import { monsterControllerV2 } from '../monster_v2.js';
 import { SAINT_VFX, BLOOD } from '../vfx/saintVfx.js';
-import { aimAt as aimOf, GROUND_SPEED } from '../bases_v2.js';
+import { aimAt as aimOf } from '../bases_v2.js';
 import { SAINT, FOOT_B } from './tuning.js';
 
 const solid = e => e.isBuilding || e.isBarricade;
@@ -162,7 +162,7 @@ export const SaintMethods = {
     /** 걷는 동안 시체도 바닥과 같이 흘러감 (화면 밖으로 나가면 사라짐) */
     scrollCorpses(dt) {
         [...this.corpses].forEach(c => {
-            c.x -= GROUND_SPEED * dt;
+            c.x -= this.groundSpeed() * dt;
             if (c.dom) c.dom.style.left = `${c.x + 14}px`;
             if (c.x < -80) this.removeCorpse(c);
         });

@@ -2,8 +2,9 @@
    PROJECT: MAD OVERLORD // 전투 — 기존 4종 A·B 세트 (v2, D-050 파츠 확장 1차)
    새 파츠 32개가 쓰는 전투 기능 (기획안 4장 "새로 만드는 기능 묶음"):
      새 기본 공격 4종 (레일건 관통 탄 · 산성 침 · 암흑 구체 · 산탄), 일정 시간 강화(버프),
-     지속 피해 구역 (독안개 · 화염 · 산성 웅덩이), 출혈·저주 지속 피해, 속박, 블랙홀, 자동 포탑, 그림자 분신, 돌진,
-     다리 패시브 8종 (포격 고정 · 자기장 방벽 · 단단한 껍질 · 질주 본능 · 불굴 · 그림자 회피 · 짓밟기 · 졸개 지휘)
+     지속 피해 구역 (독안개 · 화염 · 산성 웅덩이), 가시 독·저주 지속 피해, 속박, 블랙홀, 자동 포탑, 그림자 분신, 돌진,
+     다리 패시브 8종 (포격 고정 · 자기장 방벽 · 단단한 껍질 · 질주 본능 · 불굴 · 그림자 회피 · 짓밟기 · 졸개 지휘),
+     레어 세트 4부위 효과 (Q-008, sets_v2.js — 켜졌는지는 this.setOn(세트 id), 수치는 SET.setBonus)
    스킬 정의는 skills_v2.js, 수치는 battle/tuning.js SET, 이펙트는 vfx/setVfx.js.
    battle_v2.js의 BattleEngine에 메서드로 붙는다 (this = 전투 엔진).
    ========================================================================== */
@@ -11,7 +12,7 @@
 import { monsterControllerV2 } from '../monster_v2.js';
 import { sound } from '../audio/sound_v2.js';
 import { SET_VFX } from '../vfx/setVfx.js';
-import { GROUND_SPEED, aimAt as aimOf } from '../bases_v2.js';
+import { aimAt as aimOf } from '../bases_v2.js';
 import { SET, FOOT_B } from './tuning.js';
 
 const ACID_RGB = '160, 255, 50';
@@ -52,7 +53,7 @@ export const SetMethods = {
         return true;
     },
 
-    // ---- 버프 (오버드라이브·아드레날린·가시 갑옷·피의 서약·총동원령·강화 주사) ----
+    // ---- 버프 (오버드라이브·아드레날린·가시 갑옷·어둠의 서약·총동원령·강화 주사) ----
     addBuff(key, sec) {
         this.buffs[key] = { t: sec };
         if (key === 'overdrive') monsterControllerV2.setAnimBoost(SET.overdrive.atk);   // 공격 동작이 빨라짐 = 공격 속도
@@ -103,7 +104,8 @@ export const SetMethods = {
             if (this.setFxReady('dodge', 0.7)) this.fx.play(SET_VFX.dodge, this.monsterX + 35, FOOT_B);
         }
         if (this.buffs.thornArmor && src && !src.isBuilding && this.enemies.includes(src)) {
-            this.dealDamageToEnemy(src, amount * SET.thorn.reflect, false, { dot: true });   // 나를 때린 적에게 되돌림
+            const reflect = this.setOn('kaiju_a') ? SET.setBonus.thornReflect : SET.thorn.reflect;   // 가시 갑각 4부위
+            this.dealDamageToEnemy(src, amount * reflect, false, { dot: true });   // 나를 때린 적에게 되돌림
             if (this.setFxReady('thorn', 0.35)) this.fx.play(SET_VFX.thornReflect, aimOf(src).x - 10, aimOf(src).b);
         }
         if (this.equippedLegId === 'leg_kaiju_a' && this.setFxReady('shell', 0.6)) this.fx.play(SET_VFX.shellChip, this.monsterX + 70, 110);
@@ -121,6 +123,7 @@ export const SetMethods = {
     moveBuffMul() {
         let m = 1;
         if (this.buffs.overdrive) m *= 1 + SET.overdrive.move;
+        if (this.buffs.thornArmor && this.setOn('kaiju_a')) m *= 1 + SET.setBonus.thornMove;   // 가시 갑각 4부위
         if (this.equippedLegId === 'leg_kaiju_b' && !this.enemiesInRange(this.playerRange + SET.sprint.clear).length) {
             m *= 1 + SET.sprint.move;
             if (this.setFxReady('sprint', 0.15)) this.fx.play(SET_VFX.sprintTrail, this.monsterX - 10, FOOT_B);
@@ -136,7 +139,7 @@ export const SetMethods = {
         return m;
     },
 
-    /** 피의 서약: 직접 준 피해의 20% 회복 (enemyField.js dealDamageToEnemy) */
+    /** 어둠의 서약(예전 이름 피의 서약): 직접 준 피해의 20% 회복 (enemyField.js dealDamageToEnemy) */
     lifesteal(damage) {
         if (!this.buffs.bloodOath || damage <= 0 || this.overloadT > 0) return;
         const heal = damage * SET.blood.ratio;
@@ -177,7 +180,8 @@ export const SetMethods = {
             this.fx.play(SET_VFX.spitSplash, aim.x, FOOT_B);
             if (this.enemies.includes(target)) this.dealDamageToEnemy(target, dmg, isCrit, { knock: 0.5 });
             const w = SET.spit.puddleW;
-            this.addZone({ x: aim.x - w / 2, w, sec: SET.spit.puddleSec, dps: this.playerDps * SET.spit.puddleDps, puff: SET_VFX.toxicPuff, every: 0.7, scale: 0.6 });
+            this.addZone({ x: aim.x - w / 2, w, sec: SET.spit.puddleSec, dps: this.playerDps * SET.spit.puddleDps, puff: SET_VFX.toxicPuff, every: 0.7, scale: 0.6,
+                baseMul: this.setOn('kaiju_b') ? SET.setBonus.toxicBaseMul : 1 });   // 독안개 4부위: 거점 2배
         }, 'kaiju_spore');
     },
 
@@ -243,11 +247,11 @@ export const SetMethods = {
 
     /** 걷는 동안 구역도 바닥과 같이 흘러감 (battle_v2.js tickAdvance) */
     scrollZones(dt) {
-        this.zones.forEach(z => { z.x -= GROUND_SPEED * dt; });
-        if (this.blackHole) this.blackHole.x -= GROUND_SPEED * dt;
+        this.zones.forEach(z => { z.x -= this.groundSpeed() * dt; });
+        if (this.blackHole) this.blackHole.x -= this.groundSpeed() * dt;
     },
 
-    // ---- 출혈(가시 폭풍)·저주(저주의 사슬) 지속 피해, 속박 ----
+    // ---- 가시 독(가시 폭풍, 예전 이름 출혈)·저주(저주의 사슬) 지속 피해, 속박 ----
     applyBleed(e, sec, dps, kind = 'bleed') {
         if (!e || e.hp <= 0) return;
         const fresh = !(e.bleedT > 0);
@@ -339,10 +343,16 @@ export const SetMethods = {
     },
 
     // ---- 그림자 분신 (그림자 마도사 머리): 반투명 분신 2명이 기본 공격을 같이 쏨 ----
+    /** 분신 수: 2명, 그림자 마도사 4부위면 3명 */
+    cloneCount() {
+        return SET.clones.count + (this.setOn('hero_b') ? SET.setBonus.clonesExtra : 0);
+    },
+
     startClones(sec) {
         this.clonesT = sec;
-        monsterControllerV2.setClones(SET.clones.count, SET.clones.gap);
-        for (let i = 1; i <= SET.clones.count; i++) this.fx.play(SET_VFX.clonePoof, this.monsterX + 35 - SET.clones.gap * i, FOOT_B);
+        this.clonesN = this.cloneCount();
+        monsterControllerV2.setClones(this.clonesN, SET.clones.gap);
+        for (let i = 1; i <= this.clonesN; i++) this.fx.play(SET_VFX.clonePoof, this.monsterX + 35 - SET.clones.gap * i, FOOT_B);
     },
 
     tickClones(dt) {
@@ -350,14 +360,14 @@ export const SetMethods = {
         this.clonesT -= dt;
         if (this.clonesT > 0) return;
         monsterControllerV2.setClones(0);
-        for (let i = 1; i <= SET.clones.count; i++) this.fx.play(SET_VFX.clonePoof, this.monsterX + 35 - SET.clones.gap * i, FOOT_B);
+        for (let i = 1; i <= (this.clonesN || SET.clones.count); i++) this.fx.play(SET_VFX.clonePoof, this.monsterX + 35 - SET.clones.gap * i, FOOT_B);
     },
 
     /** 기본 공격 1타마다 분신도 같이 쏨 (분신 자리에서 암흑 구체, 피해 × mul) */
     cloneEcho(target, dmg) {
         if (!(this.clonesT > 0) || !target) return;
         const muzzle = monsterControllerV2.getMuzzlePoint() || { x: this.monsterX + 90, bottom: 130 };
-        for (let i = 1; i <= SET.clones.count; i++) {
+        for (let i = 1; i <= (this.clonesN || SET.clones.count); i++) {
             this.schedule(0.06 * i, () => {
                 if (this.isActive && this.enemies.includes(target)) {
                     this.fireDarkOrb(target, dmg * SET.clones.mul, false, { x: muzzle.x - SET.clones.gap * i, bottom: muzzle.bottom });
@@ -388,6 +398,49 @@ export const SetMethods = {
                 });
             });
         }
+    },
+
+    // ---- 레어 세트 4부위 효과 (Q-008) — 스킬 안에서 켜는 것(레일 충전·4회전·분신 수·독 거점 배율)은 그 자리에서 ----
+    /** 돌격 강습대: 로켓 돌진이 끝난 자리에서 충격파 — 둘레 적 피해 + 보통 적 기절 */
+    dashShockwave() {
+        if (!this.isActive) return;
+        const T = SET.setBonus.dashShock;
+        const cx = this.frontX() + 20;
+        this.fx.play(SET_VFX.groundSlam, cx, FOOT_B, { scale: 0.8 });
+        this.director.shake(5, 200);
+        [...this.enemies].forEach(e => {
+            if (Math.abs(aimOf(e).x - cx) > T.radius) return;
+            this.dealDamageToEnemy(e, this.unit() * T.dmg, false, { knock: 0.8 });
+            if (!e.isBuilding && !e.isBarricade && this.enemies.includes(e)) this.stunEnemy(e, T.stun);
+        });
+    },
+
+    /** 광폭 실험체: 아드레날린 동안 밀려나지 않음 (player.js knockPlayerBack) */
+    knockImmuneBySet() {
+        return !!this.buffs?.adrenaline && this.setOn('chimera_a');
+    },
+
+    /** 적이 쓰러질 때 (enemyField.js onEnemyKilled) — 독안개: 산성에 녹던 적이면 가까운 적에게 산성이 옮음 */
+    onSetKill(enemy) {
+        if (!this.setOn('kaiju_b') || !(enemy.acidT > 0)) return;
+        const T = SET.setBonus;
+        const cx = aimOf(enemy).x;
+        const next = this.enemies.filter(e => e !== enemy && e.hp > 0 && !e.isBarricade && Math.abs(aimOf(e).x - cx) <= T.acidSpread)
+            .sort((p, q) => Math.abs(aimOf(p).x - cx) - Math.abs(aimOf(q).x - cx))[0];
+        if (!next) return;
+        this.applyAcid(next, T.acidSec);
+        this.fx.play(SET_VFX.toxicPuff, aimOf(next).x, FOOT_B + 10, { scale: 0.7 });
+    },
+
+    /** 아군이 쓰러질 때 (allies.js removeAlly) — 조직 사령관: 졸개가 터지며 주변 적 피해 */
+    onSetAllyDown(ally) {
+        if (!this.isActive || ally.kind !== 'chimera' || !this.setOn('chimera_b')) return;
+        const T = SET.setBonus.minionBlast;
+        const cx = ally.x + 38;
+        this.fx.play(SET_VFX.maulHit, cx, FOOT_B + 30, { scale: 0.8 });
+        [...this.enemies].forEach(e => {
+            if (Math.abs(aimOf(e).x - cx) <= T.radius) this.dealDamageToEnemy(e, this.unit() * T.dmg, false, { knock: 0.6 });
+        });
     },
 
     // ---- 다리 패시브 ----

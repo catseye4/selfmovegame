@@ -9,6 +9,10 @@
   python tools/rig/bake_sprite.py guard walk:12,attack:10 92 assets/sprites/rig/guard/guard.png
   → guard_walk.png, guard_attack.png, guard.json (높이 = 첫 클립 기준 키, anchorX = 프레임 안 발 사이 x)
 
+  선택 (여러 클립 모드, Q-008 퀄리티업 Q5):
+    --res=2      그림 픽셀을 2배로 (json의 frameWidth·frameHeight는 게임 크기 그대로 — CSS가 background-size로 줄여 그림 → 큰 화면에서 선명)
+    --webp=90    PNG 대신 WebP(품질 90)로 저장 (D-062와 같은 품질)
+
 - 배경/이펙트를 끄고 투명 배경으로 한 사이클을 균등하게 찍음
 - 모든 프레임을 같은 영역(전체 프레임의 합집합)으로 잘라 흔들림 없이 가로로 이어 붙임
 - 같은 이름의 .json에 프레임 크기/수/재생 시간을 기록 (battleFx.js가 CSS 애니메이션에 사용)
@@ -100,7 +104,7 @@ def main_single(char, clip, count, height, out):
     print(out, meta)
 
 
-def main_multi(char, spec, height, out):
+def main_multi(char, spec, height, out, res=1, webp=None):
     """여러 클립을 같은 틀·같은 배율로: 첫 클립(걷기)의 키가 height가 되게 줄이고, 모든 프레임의 합집합으로 자름.
     → 클립을 바꿔 끼워도 캐릭터 크기·발 위치가 같음. anchorX = 프레임 안에서 캐릭터 뿌리(발 사이)의 x"""
     clips = [(name, int(n)) for name, n in (part.split(':') for part in spec.split(','))]
@@ -118,10 +122,14 @@ def main_multi(char, spec, height, out):
     fw, fh = max(1, round((x1 - x0) * scale)), max(1, round((y1 - y0) * scale))
     base = os.path.splitext(out)[0]
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    meta = {'frameWidth': fw, 'frameHeight': fh, 'anchorX': round((anchor[0] - x0) * scale, 1), 'clips': {}}
+    meta = {'frameWidth': fw, 'frameHeight': fh, 'anchorX': round((anchor[0] - x0) * scale, 1), 'res': res, 'clips': {}}
     for name, (frames, duration) in caps.items():
-        path = f'{base}_{name}.png'
-        make_sheet(frames, box, fw, fh).save(path)
+        path = f'{base}_{name}.{"webp" if webp else "png"}'
+        sheet = make_sheet(frames, box, round(fw * res), round(fh * res))
+        if webp:
+            sheet.save(path, 'WEBP', quality=webp, method=6)
+        else:
+            sheet.save(path)
         meta['clips'][name] = {'src': path.replace(os.sep, '/'), 'frames': len(frames), 'duration': duration}
     with open(base + '.json', 'w', encoding='utf-8') as fp:
         json.dump(meta, fp, indent=2, ensure_ascii=False)
@@ -134,11 +142,14 @@ URL = ['']
 def main():
     httpd = serve(os.getcwd())
     URL[0] = f'http://127.0.0.1:{httpd.server_address[1]}/rig_test.html?bake=1'
+    flags = {k: v for k, _, v in (a[2:].partition('=') for a in sys.argv if a.startswith('--'))}
+    args = [a for a in sys.argv if not a.startswith('--')]
     try:
-        if ':' in sys.argv[2]:
-            main_multi(sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4])
+        if ':' in args[2]:
+            main_multi(args[1], args[2], int(args[3]), args[4],
+                       res=float(flags.get('res', 1)), webp=int(flags['webp']) if 'webp' in flags else None)
         else:
-            main_single(sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]), sys.argv[5])
+            main_single(args[1], args[2], int(args[3]), int(args[4]), args[5])
     finally:
         httpd.shutdown()
 

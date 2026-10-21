@@ -7,9 +7,9 @@
 
 import { monsterControllerV2 } from '../monster_v2.js';
 import { sound } from '../audio/sound_v2.js';
-import { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX } from '../vfx/vfxDefs.js';
-import { aimAt as aimOf } from '../bases_v2.js';
-import { PHASE2, HERO, PASSIVE, LEG, PLAYER_STATUS, OVERLOAD, FOOT_B, FROST } from './tuning.js';
+import { HERO_VFX, MECH_VFX, KAIJU_VFX, CHIMERA_VFX, BATTLE_VFX } from '../vfx/vfxDefs.js';
+import { aimAt as aimOf, GROUND_SPEED } from '../bases_v2.js';
+import { PHASE2, HERO, PASSIVE, LEG, PLAYER_STATUS, OVERLOAD, FOOT_B, FROST, WALK_SYNC, REACT } from './tuning.js';
 
 export const PlayerMethods = {
     // 몬스터가 받는 피해: 실드가 있으면 먼저 흡수
@@ -38,7 +38,17 @@ export const PlayerMethods = {
         }
         this.playerHp -= amount;
         if (amount > 0) sound.play('player_hit');   // 0.4초에 한 번까지 (sound_v2 SFX 표)
+        if (amount > 0) this.hurtReact(dt);
         monsterControllerV2.updateHpBar(this.playerHp, this.maxPlayerHp);
+    },
+
+    /** 맞으면 움찔 (Q-008 Q4, rig/reactions.js): 한 방은 바로(0.25초에 한 번까지), 계속 맞는 근접은 휘두르는 박자처럼 0.7초마다 */
+    hurtReact(dt) {
+        const now = this.stats.time;
+        const gap = dt > 0 ? REACT.meleeEvery : REACT.hitEvery;
+        if (now - (this.hurtReactAt ?? -Infinity) < gap) return;
+        this.hurtReactAt = now;
+        monsterControllerV2.playReaction('hurt');
     },
 
     // [다리 패시브 '궤도 돌진'] 처음 맞닿은 적에게 돌진 피해 + 밀쳐냄 + 잠깐 기절 (적마다 LEG.ramCd초에 한 번)
@@ -90,7 +100,7 @@ export const PlayerMethods = {
         this.playerHp = 0;
         this.overloadT = OVERLOAD.sec;
         this.stats.overloads = (this.stats.overloads || 0) + 1;
-        this.applyPlayerStun(OVERLOAD.sec, 'OVERLOAD');
+        this.applyPlayerStun(OVERLOAD.sec, 'OVERLOAD', true);
         this.director.overload(OVERLOAD.sec);
     },
 
@@ -101,12 +111,22 @@ export const PlayerMethods = {
             return;
         }
         sec *= 1 - this.bootsCut('slow');                // 다리 패시브 '잠수화' (diver.js)
+        sec *= this.ccMul();                             // 냉기 저항 옵션·방벽 발생기 (growth.js)
+        if (sec <= 0) return;
         if (this.pSlowT <= 0) this.createDamagePopup(this.monsterX + 40, 190, '❄ 감속!', false);
         this.pSlowT = Math.max(this.pSlowT, sec);
         this.updatePlayerStatus();
     },
 
-    applyPlayerStun(sec, label = '기절!') {
+    /** force: 과부하(긴급 수리) 정지 — 옵션·면역과 상관없이 */
+    applyPlayerStun(sec, label = '기절!', force = false) {
+        if (!force) {
+            sec *= this.ccMul();                         // 냉기 저항 옵션·방벽 발생기 (growth.js)
+            if (sec <= 0) {
+                this.createDamagePopup(this.monsterX + 40, 200, '⬢ 면역', false);
+                return;
+            }
+        }
         if (this.pStunT <= 0) this.createDamagePopup(this.monsterX + 40, 200, `⚡ ${label}`, false);
         this.pStunT = Math.max(this.pStunT, sec);
         this.updatePlayerStatus();
@@ -115,14 +135,42 @@ export const PlayerMethods = {
     /** 속박 (그물): 진격 불가, 공격·스킬은 가능 (구역 2 그물총 사수) */
     applyPlayerRoot(sec) {
         sec *= 1 - this.bootsCut('slow');                // 잠수화
+        sec *= this.ccMul();                             // 냉기 저항 옵션·방벽 발생기 (growth.js)
+        if (sec <= 0) return;
         if (this.pRootT <= 0) this.createDamagePopup(this.monsterX + 40, 200, '🕸 그물에 묶임!', false);
         this.pRootT = Math.max(this.pRootT, sec);
         this.updatePlayerStatus();
     },
 
     /** 뒤로 밀려남 (고철왕 자석): 거점을 향해 다시 걸어야 해서 시간 손실 */
+    // ---- 걸음 맞추기 (Q2): 걷는 동안 바닥이 흐르는 빠르기 = 실제 진격 속도 ----
+    /** 바닥 흐름 배율 (WALK_SYNC.ground 범위) */
+    walkSyncK() {
+        const k = (this.playerSpeed * this.moveMul()) / WALK_SYNC.ref;
+        return Math.max(WALK_SYNC.ground[0], Math.min(WALK_SYNC.ground[1], k || 0));
+    },
+
+    /** 바닥에 놓인 것(구역·장판·잔해·시체)이 흐르는 px/초 — 배경 바닥 층과 같게 */
+    groundSpeed() {
+        return GROUND_SPEED * (this.groundK ?? 1);
+    },
+
+    /** 매 프레임 (battle_v2.js tickAdvance): 배경 층 CSS 애니메이션 속도와 걷기 동작 빠르기를 맞춤 (moving = 걷는 중) */
+    syncWalk(moving) {
+        const k = this.walkSyncK();
+        this.groundK = k;
+        if (!this.bgLayers) this.bgLayers = ['bg-sky-v2', 'bg-city-v2', 'bg-ground-v2'].map(id => document.getElementById(id)).filter(Boolean);
+        for (const el of this.bgLayers) {
+            for (const a of el.getAnimations ? el.getAnimations() : []) {
+                if (Math.abs((a.playbackRate || 1) - k) > 0.01) a.updatePlaybackRate ? a.updatePlaybackRate(k) : (a.playbackRate = k);   // 지금 자리에서 빠르기만 바뀜 (튀지 않음)
+            }
+        }
+        const anim = Math.max(WALK_SYNC.anim[0], Math.min(WALK_SYNC.anim[1], k));
+        monsterControllerV2.setWalkRate(moving ? anim : 1);
+    },
+
     knockPlayerBack(px, label) {
-        if (this.equippedLegId === 'leg_kaiju_a') {   // 다리 패시브 '단단한 껍질': 밀려나지 않음
+        if (this.equippedLegId === 'leg_kaiju_a' || this.knockImmuneBySet()) {   // '단단한 껍질' 다리 · 광폭 실험체 4부위(아드레날린 중): 밀려나지 않음
             this.createDamagePopup(this.monsterX + 30, 210, '버팀!', false);
             return;
         }
@@ -134,6 +182,8 @@ export const PlayerMethods = {
         }
         this.monsterX = Math.max(80, this.monsterX - px);
         monsterControllerV2.setMonsterPosition(this.monsterX);
+        monsterControllerV2.playReaction('knock');   // 크게 젖혀졌다 버팀 (Q4)
+        this.fx.play(BATTLE_VFX.knockDust, this.monsterX + 35, FOOT_B);   // 발밑 흙먼지
         if (label) this.createDamagePopup(this.monsterX + 30, 210, label, false);
         this.director.shake(8, 350);
     },
@@ -145,12 +195,15 @@ export const PlayerMethods = {
     /** 진격 속도 배율 (기절·속박 0, 감속 0.5) × 세트 효과 (오버드라이브·질주 본능) */
     moveMul() {
         if (this.pStunT > 0 || this.pRootT > 0) return 0;
-        return (this.pSlowT > 0 ? PLAYER_STATUS.slowMove : 1) * this.moveBuffMul() * this.dollStride();   // 인형사 다리 '실 걸음' (doll.js)
+        return (this.pSlowT > 0 ? PLAYER_STATUS.slowMove : 1) * this.moveBuffMul() * this.dollStride()   // 인형사 다리 '실 걸음' (doll.js)
+            * this.gearMoveMul();                                                                          // 신속 진격 옵션·얼음 바닥 변이 (growth.js)
     },
 
     updatePlayerStatus() {
         const state = this.pStunT > 0 ? 'stun' : this.pRootT > 0 ? 'root' : this.pSlowT > 0 ? 'slow' : null;
         if (state === this.pStatusShown) return;
+        if (state === 'stun') monsterControllerV2.playReaction('stun');          // 기절: 동작은 멈추고 비틀거림만 (Q4)
+        else if (this.pStatusShown === 'stun') monsterControllerV2.stopReaction('stun');
         this.pStatusShown = state;
         monsterControllerV2.setStatusVisual(state, state === 'slow' ? PLAYER_STATUS.slowAnim : state === 'stun' ? 0 : 1);
     },

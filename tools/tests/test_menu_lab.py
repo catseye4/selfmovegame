@@ -26,7 +26,7 @@ def run(ctx):
     for slot in ('head', 'body', 'arm', 'leg'):
         g.page.click(f'.v2-slottab[data-slot="{slot}"]')
         g.wait(100)
-        names += g.js("return [...document.querySelectorAll('#parts-grid-v2 .v2-partcard__name')].map(e => e.textContent);")
+        names += g.js("return [...document.querySelectorAll('#parts-grid-v2 .v2-partcard__name')].map(e => e.firstChild.textContent);")  # 이름만 (뒤의 Lv·등급 표시 빼고)
     ctx.check(len(names) == 17 and '[파츠제거]' not in names and '흑마법 룬 갑옷' not in names and '산성 발톱 팔' not in names
               and '레일건' in names and '파일 벙커' in names,
               '연구소: 거대로봇 파츠만 17개 (기본 9 + A·B 세트 8, [파츠제거]·다른 캐릭터 없음)', str(names))
@@ -76,12 +76,22 @@ def run(ctx):
     ctx.check(st['cards'] == 8 and st['visible'] == 4 and st['scroll'] and st['sel'] == 'mech',
               '선택창: 카드 8장 (한 화면 4장 + 가로로 넘김), 지금 캐릭터 = 거대로봇', str(st))
 
-    # 합성괴인 (파츠 무료·보유) → 바로 그 캐릭터 파츠로
+    # 별로 여는 캐릭터 (Q-006): 별이 없으면 잠김 안내, 별을 모으면 눌러서 해금
+    st = g.js("""return { lock: document.querySelector('.v2-charcard[data-char="chimera"]').classList.contains('is-locked'),
+        foot: document.querySelector('.v2-charcard[data-char="chimera"] .v2-charcard__foot').textContent };""")
     g.page.click('.v2-charcard[data-char="chimera"]')
     g.wait(300)
-    st = g.js("return { ch: progress.character, eq: gameState.equippedParts, ready: progress.isReady() };")
-    ctx.check(st['ch'] == 'chimera' and st['eq']['body'] == 'body_chimera' and st['eq']['arm'] == 'arm_chimera' and st['ready'],
-              '선택창: 합성괴인 → 가진 합성괴인 파츠로 장착', str(st))
+    st2 = g.js("return { ch: progress.character, info: document.getElementById('select-info-v2').textContent };")
+    ctx.check(st['lock'] and '★9로 해금' in st['foot'] and st2['ch'] == 'mech' and '별이 부족' in st2['info'],
+              '선택창: 잠긴 합성괴인 — "★9로 해금", 별이 없으면 안 바뀌고 안내', str([st, st2]))
+    g.js("['1-1','1-2','1-3','1-4','1-5','1-B'].forEach(id => progress.stages[id] = { stars: [true,true,true], cleared: true, bestTime: 60 });")
+
+    # 합성괴인 (파츠 무료·보유) → 별 9개로 해금하고 바로 그 캐릭터 파츠로
+    g.page.click('.v2-charcard[data-char="chimera"]')
+    g.wait(300)
+    st = g.js("return { ch: progress.character, eq: gameState.equippedParts, ready: progress.isReady(), stars: progress.availableStars() };")
+    ctx.check(st['ch'] == 'chimera' and st['eq']['body'] == 'body_chimera' and st['eq']['arm'] == 'arm_chimera' and st['ready'] and st['stars'] == 9,
+              '선택창: 합성괴인 → 별 9개로 해금, 가진 합성괴인 파츠로 장착', str(st))
 
     # 타락 히어로 (파츠 없음) → 빈 장착, 흐린 모습, 출격 막힘
     g.page.click('.v2-charcard[data-char="hero"]')
@@ -103,8 +113,8 @@ def run(ctx):
     g.page.click('#btn-to-lab-v2')
     g.wait(800)
     g.page.click('.v2-slottab[data-slot="body"]')
-    names = g.js("return [...document.querySelectorAll('#parts-grid-v2 .v2-partcard__name')].map(e => e.textContent);")
-    ctx.check(names == ['흑마법 룬 갑옷', '피의 망토 갑옷', '저주 룬 로브'], '연구소: 타락 히어로 몸통만 표시 (기본 + A·B 세트)', str(names))
+    names = g.js("return [...document.querySelectorAll('#parts-grid-v2 .v2-partcard__name')].map(e => e.firstChild.textContent);")  # 이름만 (뒤의 Lv·등급 표시 빼고)
+    ctx.check(names == ['흑마법 룬 갑옷', '찢어진 망토 갑옷', '저주 룬 로브'], '연구소: 타락 히어로 몸통만 표시 (기본 + A·B 세트)', str(names))
     g.page.locator('.v2-partcard', has_text='흑마법 룬 갑옷').click()
     g.page.click('#btn-equip-confirm-v2')
     g.wait(300)

@@ -424,7 +424,7 @@ function toggleSeal() {
 
 // 서리의 무희: 서리 부채(앞 둘) · 초승달 참격(모두) · 눈보라(켜고 끄기) · 빙결 · 영원한 안식(가뒀다 깨뜨림)
 function previewFrostWave(h, range, hits) {
-    const m = toStage(skeleton.socketWorld('fanF', 'armF'));
+    const m = toStage(skeleton.socketWorld('fanF', 'handF'));
     const hit = new Set();
     vfx.launchWave({
         x: m[0], y: dummyCenterY(), range, speed: 760, h, color: ICE, mist: MIST, scale: VFX_SCALE,

@@ -19,6 +19,8 @@ import { sound } from '../engine_v2/audio/sound_v2.js';
 import { icon, fillIcons } from './icons.js';
 import { openSettings } from './settingsPanel_v2.js';
 import { TacticalRadar } from './radar_v2.js';
+import { resChipHtml, openGrowthPanel } from './growthUi_v2.js';
+import { MUTATORS } from '../engine_v2/growth_v2.js';
 
 const $ = id => document.getElementById(id);
 const SLOTS = [
@@ -58,6 +60,7 @@ export class MenuController {
             this.switchScreen('battle');
         });
         $('btn-menu-settings-v2')?.addEventListener('click', () => openSettings());
+        $('btn-menu-support-v2')?.addEventListener('click', () => openGrowthPanel('modules', () => this.updateDisplay()));
         this.root?.querySelectorAll('.v2-maptab').forEach(tab => tab.addEventListener('click', () => this.setMap(tab.dataset.map)));
     }
 
@@ -176,8 +179,10 @@ export class MenuController {
         const note = $('menu-diffnote-v2');
         if (note) {
             note.hidden = diff.id === 'normal';
+            const mut = shown.mutator && MUTATORS[shown.mutator];   // 나이트메어 이번 주 전장 변이 (Q-006)
             note.innerHTML = diff.id === 'normal' ? '' : `<b>${diff.en}</b><span>적 체력 ×${diff.enemyHp} · 공격력 ×${diff.enemyDps} · 거점 ×${diff.base}</span>`
-                + `<span>엘리트 속성 ${shown.affixCount}개${diff.bossHaste > 1 ? ' · 보스 기술 빨라짐' : ''} · 보상 ×${diff.reward}</span>`;
+                + `<span>엘리트 속성 ${shown.affixCount}개${diff.bossHaste > 1 ? ' · 보스 기술 빨라짐' : ''} · 보상 ×${diff.reward}</span>`
+                + (mut ? `<span class="v2-mutnote">이번 주 변이: ${mut.name} — ${mut.desc} (대응: ${mut.counter})</span>` : '');
         }
         $('menu-map-foot-v2').innerHTML = `<b>${cur.id} ${cur.name}</b> <span class="v2-stars">${stars}</span>`
             + `<span class="v2-radar__time">⏱ 제한 ${clock(shown.timeLimit)} · ★ ${shown.starTime}초 안에${best ? ` · 최고 ${clock(best)}` : ''}</span>`
@@ -189,6 +194,10 @@ export class MenuController {
     /** 메인 화면이 보일 때마다: 장착 상태로 캐릭터/설명/능력치/상태 줄 갱신, 레이더 시작 */
     updateDisplay() {
         if (this.domDmCount) this.domDmCount.textContent = gameState.darkMatter.toLocaleString();
+        const res = $('menu-res-v2');
+        if (res) res.innerHTML = resChipHtml();   // 별·조각·코어 (Q-006)
+        const badge = $('menu-support-badge-v2');   // 받을 파견이 있으면 빨간 점
+        if (badge) badge.textContent = progress.dispatch.some(d => d.end <= Date.now()) ? ' ' : '';
         const equipped = gameState.getEquippedObjects();
         monsterControllerV2.renderVisuals(equipped, progress.character);
 

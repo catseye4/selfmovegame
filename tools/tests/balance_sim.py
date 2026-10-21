@@ -5,6 +5,8 @@
   python tools/tests/balance_sim.py report                       # 모은 결과 → MD/밸런스_기록.md 표
   python tools/tests/balance_sim.py batch hero:1 mech_free:3 ...  # 여러 조합을 동시 2개씩(각 20분 제한) 돌리고 표까지
   --stages=1-1,4-B   스테이지만 골라서 / --diff=hard|hell|nightmare  난이도 (D-063, 결과 파일 _<난이도>, 표에는 안 넣음)
+  강화 외 성장 (Q-006): --grade=rare  네 파츠 등급 / --opts=elite,siege,…  옵션(팔·머리·몸통·다리 차례로 하나씩 돌려 붙임)
+                       --skill=3  스킬 레벨 / --mods=orbital,repair  전술 모듈 / --tag=geared  결과 파일 이름 끝에 붙임
 
 ※ 한 번에 Chrome을 많이 띄우면 느려져 시작에 실패할 수 있다 → batch는 동시 실행 수를 제한하고,
   실패·시간 초과도 결과 파일(error)로 남겨 기다림이 끝나지 않는 일이 없게 한다.
@@ -57,8 +59,12 @@ LIMIT = 400   # 안전장치(게임 시간, 초). 실제 패배는 스테이지 
 DIFFS = ['normal', 'hard', 'hell', 'nightmare']   # js/engine_v2/difficulty_v2.js 순서
 
 
+GEAR = {}   # --grade·--opts·--skill·--mods·--tag (명령줄에서 채움)
+
+
 def result_path(build, level, diff='normal'):
-    return os.path.join(OUT, f'balance_{build}_Lv{level}' + ('' if diff == 'normal' else f'_{diff}') + '.json')
+    tag = f"_{GEAR['tag']}" if GEAR.get('tag') else ''
+    return os.path.join(OUT, f'balance_{build}_Lv{level}' + ('' if diff == 'normal' else f'_{diff}') + tag + '.json')
 
 
 def save(build, level, results, errors, diff='normal'):
@@ -70,7 +76,7 @@ def save(build, level, results, errors, diff='normal'):
         old.update({r['stage']: r for r in results})
         results = [old[sid] for ids in ZONES.values() for sid in ids if sid in old]
     with open(path, 'w', encoding='utf-8') as f:
-        json.dump({'build': build, 'level': level, 'difficulty': diff, 'results': results, 'errors': errors}, f, ensure_ascii=False, indent=1)
+        json.dump({'build': build, 'level': level, 'difficulty': diff, 'gear': GEAR, 'results': results, 'errors': errors}, f, ensure_ascii=False, indent=1)
 
 
 def sim(build, level, speed, stages=None, diff='normal'):
@@ -96,6 +102,13 @@ def _sim(build, level, speed, results, stages, diff='normal'):
             g.js(f"""{DIFFS[:DIFFS.index(diff) + 1]}.forEach(d => {[sid for ids in ZONES.values() for sid in ids]}.forEach(id =>
                     progress.recordsOf(d)[id] = {{ stars: [true,true,true], cleared: true, bestTime: 1 }}));
                 progress.selectDifficulty('{diff}');
+                progress.grades = {{}}; progress.options = {{}}; progress.skillLevels = {{}};
+                const parts = ['{arm}', '{head}', '{body}', '{leg}'], opts = {GEAR.get('opts', [])}, grade = '{GEAR.get('grade', '')}';
+                if (grade) parts.forEach(id => {{ if (grade !== 'common') progress.grades[id] = grade; }});
+                opts.forEach((o, i) => {{ const id = parts[i % 4]; (progress.options[id] ||= []).push(o); }});
+                const {{ PART_SKILL }} = await import('/js/engine_v2/skills_v2.js');
+                parts.forEach(id => {{ if (PART_SKILL[id]) progress.skillLevels[PART_SKILL[id]] = {GEAR.get('skill', 1)}; }});
+                progress.modules.owned = {GEAR.get('mods', [])}; progress.modules.equipped = {GEAR.get('mods', [])};
                 ['{head}','{body}','{arm}','{leg}'].forEach(id => {{ progress.owned.add(id); progress.levels[id] = {level}; }});
                 gameState.equippedParts = {{ head: '{head}', body: '{body}', arm: '{arm}', leg: '{leg}' }};
                 progress.selectStage('{sid}');
@@ -163,7 +176,7 @@ LIMITS = {1: '1-1 150/100, 1-2 180/110, 1-3 180/110, 1-4 200/120, 1-5 230/140, 1
 
 def report():
     data = [json.load(open(p, encoding='utf-8')) for p in sorted(glob.glob(os.path.join(OUT, 'balance_*.json')))]
-    data = [d for d in data if d.get('difficulty', 'normal') == 'normal']   # 자동 표는 노말만 (난이도 결과는 밸런스_기록 "난이도"에 손으로)
+    data = [d for d in data if d.get('difficulty', 'normal') == 'normal' and not d.get('gear')]   # 자동 표는 노말·성장 설정 없음만 (나머지는 밸런스_기록 "난이도"에 손으로)
     lines = ['# 밸런스 기록', '',
              '`python tools/tests/balance_sim.py <조합> <레벨>`로 자동 전투(자동 스킬, 실제 게임 루프)한 결과.',
              '✅ 승리 / ⌛ 제한 시간 초과 패배 / ⚠ 측정 중단. 칸: 걸린 시간 · 별 · 과부하(내구도 0 → 4초 정지) 횟수.', '',
@@ -212,6 +225,12 @@ if __name__ == '__main__':
         dif = next((a.split('=')[1] for a in sys.argv[2:] if a.startswith('--diff=')), 'normal')
         batch([a for a in args if not a.startswith('--')], parallel=par, stages=stg, diff=dif)
     else:
+        for a in sys.argv[1:]:
+            if a.startswith('--grade='): GEAR['grade'] = a.split('=')[1]
+            if a.startswith('--opts='): GEAR['opts'] = [x for x in a.split('=')[1].split(',') if x]
+            if a.startswith('--skill='): GEAR['skill'] = int(a.split('=')[1])
+            if a.startswith('--mods='): GEAR['mods'] = [x for x in a.split('=')[1].split(',') if x]
+            if a.startswith('--tag='): GEAR['tag'] = a.split('=')[1]
         stg = next((a.split('=')[1].split(',') for a in sys.argv[1:] if a.startswith('--stages=')), None)
         dif = next((a.split('=')[1] for a in sys.argv[1:] if a.startswith('--diff=')), 'normal')
         pos = [a for a in sys.argv[1:] if not a.startswith('--')]

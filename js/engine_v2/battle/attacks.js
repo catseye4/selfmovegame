@@ -216,8 +216,8 @@ export const AttackMethods = {
         const st = this.skillState(slot);
         if (!st.ready || !st.hasTarget) return false;
         if (sk.ult) this.ultGauge = 0;
-        else this.skillCd[slot] = sk.cd;
-        sk.use(this);
+        else this.skillCd[slot] = this.skillCooldown(slot, sk);   // 스킬 레벨·재충전·과부하 변이 (growth.js)
+        sk.use(sk.module ? this : this.skillCaster(slot));         // 스킬 레벨 피해 배율 (growth.js)
         if (!sk.ult) sound.play('skill_use');
         this.hud.onSkillUsed(slot, sk);
         return true;
@@ -229,7 +229,7 @@ export const AttackMethods = {
     },
 
     tickSkills(dt) {
-        for (const slot of ['arm', 'body']) this.skillCd[slot] = Math.max(0, this.skillCd[slot] - dt);
+        for (const slot in this.skillCd) this.skillCd[slot] = Math.max(0, this.skillCd[slot] - dt);   // 팔·몸통 + 전술 모듈 mod1·mod2
         this.ultGauge = Math.min(1, this.ultGauge + ULT_FILL.perSec * dt);
         if (this.shieldTimer !== Infinity) {
             this.shieldTimer -= dt;
@@ -243,6 +243,8 @@ export const AttackMethods = {
         }
         if (this.autoSkills) {
             for (const slot of ['arm', 'body', 'head']) this.useSkill(slot);
+            // 전술 모듈은 쓸 상황일 때만 (모듈마다 auto 조건 — growth.js)
+            for (const slot of ['mod1', 'mod2']) if (this.skills[slot]?.auto(this) && this.skillCd[slot] <= 0) this.useSkill(slot);
         }
     }
 };

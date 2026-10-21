@@ -1,26 +1,27 @@
 {
-  "frameWidth": 228,
+  "frameWidth": 230,
   "frameHeight": 242,
-  "anchorX": 139.4,
+  "anchorX": 141.1,
+  "res": 1.5,
   "clips": {
     "walk": {
-      "src": "assets/sprites/rig/oculus2/oculus2_walk.png",
-      "frames": 12,
+      "src": "assets/sprites/rig/oculus2/oculus2_walk.webp",
+      "frames": 16,
       "duration": 1.3
     },
     "attack": {
-      "src": "assets/sprites/rig/oculus2/oculus2_attack.png",
-      "frames": 12,
+      "src": "assets/sprites/rig/oculus2/oculus2_attack.webp",
+      "frames": 16,
       "duration": 0.9
     },
     "magnet": {
-      "src": "assets/sprites/rig/oculus2/oculus2_magnet.png",
-      "frames": 12,
+      "src": "assets/sprites/rig/oculus2/oculus2_magnet.webp",
+      "frames": 16,
       "duration": 0.9
     },
     "drop": {
-      "src": "assets/sprites/rig/oculus2/oculus2_drop.png",
-      "frames": 12,
+      "src": "assets/sprites/rig/oculus2/oculus2_drop.webp",
+      "frames": 16,
       "duration": 1.1
     }
   }

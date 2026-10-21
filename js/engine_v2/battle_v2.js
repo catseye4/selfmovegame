@@ -44,6 +44,7 @@ import { DiverMethods } from './battle/diver.js';
 import { SaintMethods } from './battle/saint.js';
 import { FrostMethods } from './battle/frost.js';
 import { DollMethods } from './battle/doll.js';
+import { GrowthBattleMethods } from './battle/growth.js';
 
 export class BattleEngine {
     constructor() {
@@ -146,7 +147,7 @@ export class BattleEngine {
         this.distanceTraveled = 0;
         // 난이도(D-063): 고른 난이도의 배율을 곱한 스테이지 복사본 — 전투 코드는 b.stage만 읽음
         this.difficulty = difficultyUnlocked(progress.difficulty, progress) ? progress.difficulty : DEFAULT_DIFFICULTY;
-        this.stage = stageFor(stageById(progress.selectedStage || defaultStage(progress).id), this.difficulty);
+        this.stage = this.growthStage(stageFor(stageById(progress.selectedStage || defaultStage(progress).id), this.difficulty));   // + 계정 연구 DM (growth.js)
         // 구역 배경 (ui_v2.css .v2-zone-2 ~ 4), 보스전은 경보 조명·불길 판 (.v2-stage-boss)
         // .v2-boss-rage(구역 4 보스 2페이즈)·.v2-crimson(구역 3 악마기사 소환 점멸)은 전투 중에 붙음
         const screen = document.getElementById('screen-battle-v2');
@@ -224,6 +225,7 @@ export class BattleEngine {
         this.playerSpeed = stats.speed;
         this.attackType = equippedObjs.arm ? (equippedObjs.arm.attackType || 'melee') : 'melee';
         this.skills = skillsForParts(equippedObjs);
+        this.setupGrowth(equippedObjs);   // 옵션·스킬 레벨·전술 모듈·전장 변이 (battle/growth.js, Q-006)
 
         if (this.equippedBodyId === 'body_chimera') {
             setTimeout(() => {
@@ -386,13 +388,16 @@ export class BattleEngine {
         const nextDiff = nextDifficultyOf(diff);
         const wasLocked = nextDiff && !difficultyUnlocked(nextDiff.id, progress);
         const prevStars = [...progress.stage(this.stage.id, diff).stars];
+        const firstClear = victory && !progress.stage(this.stage.id, diff).cleared;
         const record = progress.recordStage(this.stage.id, { stars: this.starFlags, cleared: victory, time: this.stats.time }, diff);
         const next = victory ? nextStageOf(this.stage.id) : null;
         // 마지막 스테이지(4-B)를 처음 깨면 다음 난이도가 열림 + 강화 한도 상승 (D-063)
         const unlocked = victory && this.stage.id === FINAL_STAGE_ID && wasLocked && difficultyUnlocked(nextDiff.id, progress) ? nextDiff : null;
+        const loot = this.finishGrowth(victory, firstClear);   // 스킬 코어 + 파츠 드랍 (battle/growth.js)
         const result = {
             victory,
             stage: this.stage,
+            loot,
             difficulty: difficultyOf(diff),
             unlocked,
             starFlags: [...this.starFlags],
@@ -443,6 +448,7 @@ export class BattleEngine {
         this.tickHazards(dt);            // enemyField.js (늪 장판)
         this.updateBaseArt();            // enemyField.js
         this.tickPlayerStatus(dt);       // player.js
+        this.tickGrowth(dt);             // growth.js (방벽 발생기 면역 시간)
         this.tickArtillery(dt);          // enemyField.js
         this.tickSpawning(dt);           // enemyField.js
 
@@ -485,6 +491,7 @@ export class BattleEngine {
 
         if (closestEnemy && minDistance <= this.playerRange) {
             monsterControllerV2.setState('attacking');
+            this.syncWalk(false);   // 걸음 맞추기 (player.js, Q2)
 
             // 공격 애니메이션의 타격 시점(리그 이벤트/페이퍼돌 휘두르기 정점)에 맞춰 발사
             const hit = monsterControllerV2.consumeAttackHit();
@@ -496,6 +503,7 @@ export class BattleEngine {
             }
         } else if (activeBuilding) {
             monsterControllerV2.setState('walking-forward');
+            this.syncWalk(true);
             this.monsterX += this.playerSpeed * dt * this.moveMul();
             monsterControllerV2.setMonsterPosition(this.monsterX);
         } else if (this.ruinHoldT > 0) {
@@ -503,6 +511,7 @@ export class BattleEngine {
             monsterControllerV2.setState('victory');
         } else {
             monsterControllerV2.setState('walking');
+            this.syncWalk(true);     // 배경·바닥에 놓인 것이 실제 진격 속도로 흐름
             this.scrollRuins(dt);
             if (this.moveMul() > 0) {
                 this.scrollHazards(dt);
@@ -547,7 +556,8 @@ attachMethods(BattleEngine.prototype, {
     'battle/diver.js': DiverMethods,
     'battle/saint.js': SaintMethods,
     'battle/frost.js': FrostMethods,
-    'battle/doll.js': DollMethods
+    'battle/doll.js': DollMethods,
+    'battle/growth.js': GrowthBattleMethods
 });
 
 export const battleEngineV2 = new BattleEngine();

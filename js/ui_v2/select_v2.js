@@ -113,9 +113,22 @@ export class SelectController {
         });
     }
 
-    /** 카드 누름: 그 캐릭터로 바꿈 (지금 장착은 기억) */
+    /** 카드 누름: 그 캐릭터로 바꿈 (지금 장착은 기억). 잠긴 캐릭터는 별로 해금, 파견 중이면 못 고름 (Q-006) */
     pick(id) {
         if (id === progress.character) return;
+        if (progress.isDispatched(id)) {
+            sound.play('ui_error');
+            this.renderInfo('파견 중인 캐릭터입니다 — 작전 지원 → 파견에서 받은 뒤 고르세요');
+            return;
+        }
+        if (!progress.isCharacterUnlocked(id)) {
+            const res = progress.unlockCharacter(id);
+            if (!res.success) {
+                sound.play('ui_error');
+                this.renderInfo(`${res.reason} — 별은 스테이지 별(난이도마다 따로)로 모아요`);
+                return;
+            }
+        }
         if (!progress.selectCharacter(id)) return;
         sound.play('ui_equip');
         this.render();
@@ -140,8 +153,11 @@ export class SelectController {
         const own = progress.ownedCountOf(c.id);
         const ready = ids.body !== 'none';
         const on = c.id === progress.character;
+        const locked = !progress.isCharacterUnlocked(c.id);
+        const away = progress.isDispatched(c.id);
         el.classList.toggle('is-selected', on);
         el.classList.toggle('is-empty', !ready);
+        el.classList.toggle('is-locked', locked);
         el.setAttribute('aria-pressed', String(on));
 
         el.querySelector('.v2-charcard__stats').innerHTML = [['ARMOR', st.hp], ['POWER', st.dps], ['SPEED', st.speed]]
@@ -158,7 +174,9 @@ export class SelectController {
         el.querySelector('.v2-charcard__skills').innerHTML = chips.join('');
 
         el.querySelector('.v2-charcard__foot').innerHTML = `<span>파츠 <b>${own.owned}</b> / ${own.total} 보유</span>`
-            + (ready ? '<em class="is-ready">출격 가능</em>' : '<em class="is-need">연구소에서 몸통 구매</em>');
+            + (locked ? `<em class="is-lock">${icon('lock', 12)} ★${progress.characterStars(c.id)}로 해금</em>`
+                : away ? '<em class="is-need">파견 중</em>'
+                    : ready ? '<em class="is-ready">출격 가능</em>' : '<em class="is-need">연구소에서 몸통 구매</em>');
 
         this.renderRig(c.id, parts);
     }
@@ -175,7 +193,7 @@ export class SelectController {
         card.rig.start();
     }
 
-    renderInfo() {
+    renderInfo(message = '') {
         const box = $('select-info-v2');
         if (!box) return;
         const c = rosterOf(progress.character);
@@ -183,8 +201,9 @@ export class SelectController {
         const ready = progress.isReady();
         box.innerHTML = `<span>선택 <b style="color:${c.color}">${RIG_CHARACTERS[c.id].name}</b></span>`
             + `<span>파츠 <b>${own.owned}</b> / ${own.total} 보유</span>`
-            + `<small>${ready ? '연구소에는 이 캐릭터의 파츠만 나옵니다 · 캐릭터마다 장착을 따로 기억합니다'
-                : '몸통 파츠가 없어 아직 출격할 수 없습니다 — 연구소에서 파츠를 구매하세요'}</small>`;
+            + `<span>남은 별 <b>★${progress.availableStars()}</b></span>`
+            + `<small${message ? ' class="is-warn"' : ''}>${message || (ready ? '연구소에는 이 캐릭터의 파츠만 나옵니다 · 캐릭터마다 장착을 따로 기억합니다'
+                : '몸통 파츠가 없어 아직 출격할 수 없습니다 — 연구소에서 파츠를 구매하세요')}</small>`;
         const lab = $('btn-select-lab-v2');
         if (lab) lab.classList.toggle('is-hint', !ready);
     }

@@ -1,16 +1,17 @@
 {
-  "frameWidth": 80,
+  "frameWidth": 81,
   "frameHeight": 90,
-  "anchorX": 44.0,
+  "anchorX": 44.2,
+  "res": 2.0,
   "clips": {
     "walk": {
-      "src": "assets/sprites/rig/demon/demon_walk.png",
-      "frames": 12,
+      "src": "assets/sprites/rig/demon/demon_walk.webp",
+      "frames": 16,
       "duration": 0.65
     },
     "attack": {
-      "src": "assets/sprites/rig/demon/demon_attack.png",
-      "frames": 10,
+      "src": "assets/sprites/rig/demon/demon_attack.webp",
+      "frames": 14,
       "duration": 0.9
     }
   }

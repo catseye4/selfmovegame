@@ -5,6 +5,7 @@
    - 키프레임 클립: 뼈별 x/y/rot/sx/sy 트랙 + 이징, 루프 구간(loopFrom), 시간 이벤트
    - 상태 전환 크로스페이드: 이전 클립과 새 클립 자세를 섞어 끊김 없이 전환
    - 스프링(2차 모션): 부모의 가속도를 받아 한 박자 늦게 흔들리는 보조 움직임
+   - 더하기 동작(samplePose를 offsets로): 맞음·밀림·기절 반응을 지금 동작 위에 얹음 (reactions.js, Q-008 Q4)
    좌표계: 모델 공간 = 원본 이미지 픽셀 좌표(뼈 피벗 기준). 화면 변환은 그릴 때 곱한다.
    ========================================================================== */
 
@@ -60,7 +61,7 @@ function sampleTrack(keys, t) {
     return last[1];
 }
 
-function samplePose(clip, t) {
+export function samplePose(clip, t) {
     const pose = {};
     for (const bone in clip.tracks) {
         const tracks = clip.tracks[bone];
@@ -100,15 +101,17 @@ export class Animator {
         this.fadeDur = 0;
     }
 
-    play(name, fadeDur = 0.15) {
+    /** startTime: 그 동작의 어느 시점부터 (걷기를 끊김 없이 이어 갈 때 — rigAvatar 다리 층) */
+    play(name, fadeDur = 0.15, startTime = 0) {
         if (this.cur && this.cur.name === name) return;
         const clip = this.clips[name];
         if (!clip) throw new Error(`[rig] unknown clip: ${name}`);
         this.prev = this.cur && fadeDur > 0 ? this.cur : null;
-        this.cur = { name, clip, time: 0 };
+        const time = Math.max(0, Math.min(startTime || 0, clip.duration));
+        this.cur = { name, clip, time };
         this.fade = 0;
         this.fadeDur = fadeDur;
-        this._fire(this.cur, -1e-9, 0);
+        if (!time) this._fire(this.cur, -1e-9, 0);
     }
 
     get currentName() {

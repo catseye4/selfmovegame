@@ -368,7 +368,8 @@ export function spawnEnemy(b, typeId, opts = {}) {
  */
 export function updateEnemy(b, e, dt, frontX) {
     const t = e.t;
-    const regen = e.affixes?.includes('regen') && ELITE_AFFIXES.regen;
+    const blocked = e.healBlockUntil > b.stats.time || e.purifyUntil > b.stats.time;   // 치유 방해 옵션·정화 파동 (battle/growth.js)
+    const regen = e.affixes?.includes('regen') && !blocked && ELITE_AFFIXES.regen;
     if (regen && b.stats.time - (e.lastHit || 0) >= regen.delay && e.hp < e.maxHp) {
         e.hp = Math.min(e.maxHp, e.hp + e.maxHp * regen.rate * dt);
         if (e.hpBar) e.hpBar.style.width = `${(e.hp / e.maxHp) * 100}%`;
@@ -378,7 +379,7 @@ export function updateEnemy(b, e, dt, frontX) {
             b.fx.play(ELITE_VFX.regenMotes, e.x + ENEMY_CENTER, FOOT_B + 30);
         }
     }
-    const frost = e.affixes?.includes('frost') && ELITE_AFFIXES.frost;
+    const frost = e.affixes?.includes('frost') && !(e.purifyUntil > b.stats.time) && ELITE_AFFIXES.frost;
     if (frost) {
         e.cd.frostFx = (e.cd.frostFx || 0) + dt;
         if (e.cd.frostFx >= 0.5) {
@@ -525,6 +526,7 @@ export function updateEnemy(b, e, dt, frontX) {
 
 function moveBy(b, e, px) {
     if (e.rootT > 0) return;   // 속박 (저주의 사슬): 제자리에서 공격만
+    if (e.purifyUntil > b.stats.time && e.affixes?.includes('swift')) px /= ELITE_AFFIXES.swift.speedMul;   // 정화 파동: 가속 해제
     e.x -= px;
     if (e.dom) e.dom.style.left = `${e.x}px`;
     if (px > 0 && e.affixes?.includes('swift') && b.stats.time - (e.cd.swiftFx ?? -Infinity) >= 0.2) {
@@ -823,6 +825,7 @@ function tickBossSkills(b, e, dt, dist) {
 function healNearest(b, e) {
     const h = e.t.heal;
     const cands = b.enemies.filter(o => o !== e && o.hp < o.maxHp && Math.abs(o.x - e.x) <= h.range
+        && !(o.healBlockUntil > b.stats.time)                                                       // 치유 방해 옵션
         && !(h.soldiersOnly && (o.isBuilding || o.isBarricade)));   // 신관: 병사만
     if (!cands.length) return;
     playOnce(e, 'attack');

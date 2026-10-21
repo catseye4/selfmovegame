@@ -23,13 +23,32 @@ import { settings } from '../engine_v2/settings_v2.js';
 
 import { chapterOf } from '../engine_v2/stages_v2.js';
 import { difficultyOf, difficultyOfStage } from '../engine_v2/difficulty_v2.js';
+import { gradeOf, OPTIONS, MUTATORS } from '../engine_v2/growth_v2.js';
+import { setOf, setLabelOf } from '../engine_v2/sets_v2.js';
 
 // 별 3개 조건 (D-029): 요새 / 최종 기지 / 목표 시간 안에 클리어
 const starLabels = stage => ['중간 요새', '최종 기지', `${stage.starTime}초 안에`];
+// 전리품 (Q-006): 파츠 드랍(새로 얻음·등급 상승·중복 환급) + 스킬 코어
+const lootHtml = loot => {
+    if (!loot || (!loot.drop && !loot.cores)) return '';
+    const d = loot.drop;
+    let card = '';
+    if (d) {
+        const g = gradeOf(d.grade);
+        const what = d.type === 'new' ? 'NEW 파츠' : d.type === 'upgrade' ? `등급 상승 (${gradeOf(d.prev).name} → ${g.name})` : '중복 — 환급';
+        const opts = d.options.map(o => OPTIONS[o] ? `<li>${OPTIONS[o].name} · ${OPTIONS[o].desc}</li>` : '').join('');
+        card = `<div class="v2-loot__part is-${d.type}" style="--grade:${g.color}">
+            <small>${what}${d.sure ? ' · 보스전 첫 클리어' : ''}</small><b>${d.name}</b><em>${g.name}${setOf(d.id) ? ` · ${setLabelOf(setOf(d.id))}` : ''}</em>
+            ${d.type === 'refund' ? `<span>+${d.dm.toLocaleString()} DM · 파츠 조각 +${d.shards}</span>` : opts ? `<ul>${opts}</ul>` : ''}</div>`;
+    }
+    const cores = loot.cores ? `<div class="v2-loot__chip">${icon('gem', 14)} 스킬 코어 +${loot.cores}</div>` : '';
+    return `<div class="v2-result__loot">${card}${cores}</div>`;
+};
 // 노말이 아니면 작전 카드·결과 화면에 난이도 표시 (D-063)
 const diffTag = stage => {
     const d = difficultyOf(difficultyOfStage(stage));
-    return d.id === 'normal' ? '' : ` · <span class="v2-diffbadge" style="--diff:${d.color}">${d.name}</span>`;
+    const mut = stage.mutator && MUTATORS[stage.mutator];   // 나이트메어 전장 변이 (Q-006)
+    return d.id === 'normal' ? '' : ` · <span class="v2-diffbadge" style="--diff:${d.color}">${d.name}</span>${mut ? ` · 변이: ${mut.name}` : ''}`;
 };
 const clock = sec => `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
 const INTRO_MS = { card: 150, sortie: 1750, reveal: 2150, end: 2700 };
@@ -415,6 +434,7 @@ export class BattleDirector {
                     ${r.bonus ? `<div><dt>새 별 보너스 (${r.newStars}개)</dt><dd>+${r.bonus.toLocaleString()}</dd></div>` : ''}
                     <div class="is-reward"><dt>${icon('gem', 16)} 획득 DM</dt><dd><strong data-count="${r.dm}">+0</strong></dd></div>
                 </dl>
+                ${lootHtml(r.loot)}
                 ${r.unlocked ? `<p class="v2-result__unlock" style="--diff:${r.unlocked.color}">${icon('star', 16)} <b>${r.unlocked.name}</b> 난이도가 열렸습니다 · 파츠 강화 한도 Lv${r.unlocked.maxLevel}</p>` : ''}
                 ${r.victory ? '' : '<p class="v2-result__tip">연구소에서 파츠를 사거나 강화해 더 빨리 부순 뒤 다시 도전하세요.</p>'}
                 <div class="v2-result__actions">

@@ -1,11 +1,11 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // 게임 설정 (v2)
-   음량(전체/효과음/배경음), 음소거, 화면 흔들림. 브라우저(localStorage)에 저장해 다음 실행에도 유지.
+   음량(전체/효과음/배경음), 음소거, 화면 흔들림, 선명한 그림(캔버스 고해상도 — displayRes.js). 브라우저(localStorage)에 저장해 다음 실행에도 유지.
    settings.get(key) / settings.set(key, value) / settings.subscribe(fn)
    ========================================================================== */
 
 const KEY = 'mo_v2_settings';
-export const DEFAULT_SETTINGS = { master: 0.8, sfx: 0.9, bgm: 0.5, mute: false, shake: true };
+export const DEFAULT_SETTINGS = { master: 0.8, sfx: 0.9, bgm: 0.5, mute: false, shake: true, sharp: true };
 
 function load() {
     try {

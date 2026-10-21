@@ -11,7 +11,7 @@ const SMOKE = '70, 60, 80';
 const METAL = '60, 60, 75';
 const STEAM = '200, 190, 230';
 const BONE = '235, 225, 195';
-const BLOOD = '210, 30, 55';
+const BLOOD = '180, 60, 255';   // 어둠의 서약(예전 피의 서약)·가시 독 — 12세 기준(Q-008 S6)으로 붉은색 대신 보라
 const EARTH = '120, 95, 60';
 const VENOM = '150, 240, 40';
 const DARK = '200, 110, 255';
@@ -318,7 +318,7 @@ export const SET_VFX = {
             { type: 'glow', at: 0.1, dur: 1.1, r: 95, color: DARK }
         ]
     },
-    // 피의 서약: 모여들었다 피어나는 진홍 마력 (피 표현 없음)
+    // 어둠의 서약: 모여들었다 피어나는 보라 마력 (피 표현 없음)
     bloodOn: {
         sfx: 'shield_on',
         layers: [

@@ -263,6 +263,9 @@
                         </div>
                     </div>
                     <div class="v2-topbar__right">
+                        <!-- 작전 지원 (Q-006): 전술 모듈 · 파견 · 계정 연구 (growthUi_v2.js) -->
+                        <button class="v2-supportbtn" id="btn-menu-support-v2" title="전술 모듈 · 파견 · 계정 연구"><span data-icon="orbital" data-icon-size="18"></span>작전 지원<i id="menu-support-badge-v2"></i></button>
+                        <div class="v2-chip v2-chip--res" id="menu-res-v2"></div>
                         <div class="v2-chip v2-chip--dm"><strong id="menu-dm-count-v2">0</strong><small>DM</small></div>
                         <button class="v2-iconbtn v2-iconbtn--lg" id="btn-menu-settings-v2" title="설정" data-icon="gear"></button>
                     </div>
@@ -387,6 +390,7 @@
                         </div>
                     </div>
                     <div class="v2-topbar__right">
+                        <div class="v2-chip v2-chip--res" id="lab-res-v2"></div>
                         <div class="v2-chip v2-chip--dm"><strong id="lab-dm-count-v2">0</strong><small>DM</small></div>
                         <button class="v2-iconbtn v2-iconbtn--lg" id="btn-lab-settings-v2" title="설정" data-icon="gear"></button>
                     </div>
@@ -417,6 +421,7 @@
                         <dl class="v2-compare" id="lab-compare-v2"></dl>
                         <h3 class="v2-lab__title">스킬 구성 <small>파츠가 스킬을 정함</small></h3>
                         <ul class="v2-loadout" id="lab-loadout-v2"></ul>
+                        <div class="v2-setbonus" id="lab-setbonus-v2" hidden></div>
                     </section>
 
                     <section class="v2-lab__parts v2-frame">
@@ -430,9 +435,12 @@
                         <!-- 선택한 파츠 강화 (D-015: Lv1~5) -->
                         <div class="v2-upgrade" id="lab-upgrade-v2">
                             <div class="v2-upgrade__info">
-                                <div><strong id="lab-upg-name-v2">-</strong><span class="v2-pips" id="lab-upg-pips-v2"></span></div>
+                                <div><strong id="lab-upg-name-v2">-</strong><span class="v2-pips" id="lab-upg-pips-v2"></span><span class="v2-gradetag" id="lab-upg-grade-v2"></span></div>
                                 <small id="lab-upg-effect-v2"></small>
+                                <small class="v2-upgrade__opts" id="lab-upg-opts-v2"></small>
                             </div>
+                            <!-- 등급 (Q-006): 파츠 조각으로 한 칸 올리기 -->
+                            <button id="btn-grade-v2" class="v2-btn v2-upgrade__btn v2-upgrade__btn--grade"><span>등급 ▲</span><b id="lab-grade-cost-v2"></b></button>
                             <button id="btn-upgrade-v2" class="v2-btn v2-upgrade__btn"><span>강화</span><b id="lab-upg-cost-v2"></b></button>
                         </div>
                     </section>

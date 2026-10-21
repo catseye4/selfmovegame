@@ -20,6 +20,9 @@ export const HERO = { recruitChance: 0.1, curseTick: 0.65, curseZone: [-40, 180]
 // 팩션 패시브 수치 (밸런스 1차): 괴수 머리 재생(최대 체력 비율/초), 합성괴인 다리 지진(초당 피해), 괴수 다리 포자(초당 피해)
 export const PASSIVE = { regen: 0.012, quakeDps: 30, sporeDps: 30 };
 export const HIT_REACT = { flashMs: 80, knockPx: 10, stopSec: 0.05 };
+// 적 몸 반응 (Q-008 Q4): 맞으면 그림이 발끝 기준으로 뒤로 젖혀졌다 돌아옴(deg·ms, 밀리지 않는 적은 bossDeg),
+// 쓰러지면 뒤로 넘어지며 사라짐(fallMs, 보스 fallBossMs) — 그동안 처치 판정·보상은 이미 끝남
+export const ENEMY_REACT = { deg: 7, bossDeg: 2, ms: 170, fallMs: 420, fallBossMs: 700 };
 // 다리 패시브 (설명: skills_v2.js LEG_PASSIVES). 궤도 돌진: 피해(기본 1타 배수)·넉백·기절·재사용 / 반중력 부양: 피해 감소율
 export const LEG = { ramDmg: 1.5, ramKnock: 3, ramStun: 0.6, ramCd: 4, hoverReduce: 0.3 };
 // 주인공 상태 이상 (적 공격): 감속 = 진격 속도·동작 속도 감소, 기절 = 공격·진격·스킬 멈춤
@@ -104,7 +107,7 @@ export const SET = {
     shotgun: { max: 4, mul: 0.55 },
     // 타락 기사 대검: 넓게 휩쓸기 (기본 근접 휩쓸기 60px·40%보다 넓고 셈)
     greatsword: { radius: 120, mul: 0.65 },
-    // 버프: 오버드라이브(공격 속도·진격 속도·받는 피해), 아드레날린(주는 피해), 가시 갑옷(받는 피해·되돌림), 피의 서약(흡혈)
+    // 버프: 오버드라이브(공격 속도·진격 속도·받는 피해), 아드레날린(주는 피해), 가시 갑옷(받는 피해·되돌림), 어둠의 서약(흡수 회복)
     overdrive: { sec: 6, atk: 1.5, move: 0.4, reduce: 0.3 },
     adrenaline: { sec: 8, dmg: 0.4 },
     thorn: { sec: 6, reduce: 0.25, reflect: 0.5 },
@@ -125,9 +128,28 @@ export const SET = {
     dodge: { chance: 0.25 },                       // 그림자 회피: 25% 확률로 피해 무시
     stomp: { dmg: 0.35, range: 130 },              // 짓밟기: 걸음마다 앞쪽 충격파 (u × dmg)
     commander: { perAlly: 0.05, max: 4 },          // 졸개 지휘: 졸개 하나마다 주는 피해 +5% (최대 4기)
+    // 레어 세트 4부위 효과 (Q-008, sets_v2.js SETS — 센 세트는 작게, 약한 세트는 약점 메우기)
+    setBonus: {
+        railCharge: 0.7,                                   // 포격 사령부: 충전 레일 사격 충전 1초 → 0.7초
+        dashShock: { radius: 130, stun: 0.5, dmg: 0.6 },   // 돌격 강습대: 로켓 돌진 끝 충격파 (u × dmg, 보통 적 기절)
+        thornMove: 0.3, thornReflect: 0.8,                 // 가시 갑각: 가시 갑옷 동안 진격 +30%, 되돌림 80%
+        toxicBaseMul: 2, acidSpread: 120, acidSec: 3,      // 독안개: 독 구름·웅덩이 거점 2배, 산성 적이 쓰러지면 120px 안 적에게 3초
+        whirlSpins: 4, whirlAdvance: 90,                   // 타락 기사: 4회전, 도는 동안 앞으로 90px
+        clonesExtra: 1,                                    // 그림자 마도사: 분신 +1
+        minionBlast: { radius: 90, dmg: 0.8 }              // 조직 사령관: 졸개가 쓰러질 때 폭발 (u × dmg)
+    },
     // 합성괴인 추가 머리 화룡 머리 「용의 숨결」(세트 밖, D-054): 입에서 breathSec초 불길, 앞쪽 u × hitMul, 바닥 width px가 zoneSec초 불탐(초당 공격력 × zoneDps)
     dragonBreath: { breathSec: 1.6, hitMul: 1.5, width: 280, zoneSec: 4, zoneDps: 0.8 }
 };
+
+// ---- 걸음 맞추기 (Q-008 퀄리티업 Q2) ----
+// 바닥 배경·바닥에 놓인 것(구역·장판·잔해·시체)이 흐르는 빠르기와 걷기 동작 빠르기를 실제 진격 속도에 맞춤:
+//   배율 = (이동 속도 × 진격 배율) ÷ ref, 바닥은 ground 범위로, 걷기 동작은 anim 범위로 자름 (속도 ref = 예전처럼 배경 3초에 한 바퀴)
+export const WALK_SYNC = { ref: 120, ground: [0.55, 1.7], anim: [0.75, 1.45] };
+
+// ---- 반응 동작 (Q-008 퀄리티업 Q4, rig/reactions.js) ----
+// 주인공 움찔: 한 방 공격은 hitEvery초에 한 번까지, 계속 맞는 근접 피해는 meleeEvery초마다
+export const REACT = { hitEvery: 0.25, meleeEvery: 0.7 };
 
 // ---- 화면 배치 ----
 // 피해 숫자: 같은 자리 연속 표시는 위로 쌓고, 지속 피해(아군 미니언 등)는 모아서 0.5초마다 표시

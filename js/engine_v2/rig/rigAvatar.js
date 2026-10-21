@@ -8,17 +8,22 @@
    - muzzlePoint(): 공격 소켓(총구/입)의 캔버스 좌표 (전투 엔진의 레이저 시작점)
    - headTop(): 머리 위(체력바 자리)의 캔버스 좌표
    - playOnce(clip): 점프/변신처럼 한 번 재생하고 현재 상태 동작으로 복귀
+     걷는 중이면 다리 뼈는 걷기 동작을 그대로 이어 감 (다리 층 — 스킬을 쓰며 걸어도 발이 멈춰 미끄러지지 않게, Q-008 Q3)
+   - react(name): 맞음·밀림·기절 반응을 지금 동작 위에 더함 (reactions.js, Q4) — 기절로 동작이 멈춰도 반응은 움직임
    - enterPhase2() / shieldHit() / breakShield() / resetSkills(): 2페이즈 거대화 + 육각 실드
    ========================================================================== */
 
-import { Animator, Skeleton, Spring, Mat } from './rig.js';
+import { Animator, Skeleton, Spring, Mat, samplePose } from './rig.js';
 import { RIG_CHARACTERS, attackClipOf, hitSocketOf } from './characters.js';
 import { RigEffects } from './rigEffects.js';
 import { gameTime } from '../gameTime.js';
 import { characterOfPart } from '../roster_v2.js';
+import { displayRes } from '../displayRes.js';
+import { REACTIONS, LOWER_BONE, WIND } from './reactions.js';
 
 const FIXED_DT = 1 / 120;
 const FADE_SEC = 0.18;
+const FOOT_EVENTS = new Set(['step', 'stomp']);   // 다리 층(걸으며 스킬)에서도 넘기는 걸음 이벤트 (발먼지·짓밟기)
 const TEST_PAGE_SCALE = 0.42; // rigEffects의 기준 크기(rig_test.html 캐릭터 배율)
 export const PHASE2_SCALE = 1.3; // 2페이즈 거대화 배율
 const SHIELD_COLOR = '255, 200, 60';
@@ -238,13 +243,14 @@ const SLOT_PARTS = {
     kaiju: { head: ['head', 'jaw'], body: ['body', 'tail1', 'tail2', 'tail3'], arm: ['armF'], leg: ['legF', 'legN'] },
     hero: { head: ['head'], body: ['torso', 'pauldron', 'cape1', 'cape2'], arm: ['armF', 'sword'], leg: ['thighF', 'shinF', 'thighB', 'shinB'] },
     chimera: { head: ['head'], body: ['torso', 'wing', 'tail1', 'tail2'], arm: ['armF', 'armB'], leg: ['legF', 'legB'] },
-    diver: { head: ['head', 'head_up'], body: ['torso', 'torso_up'], arm: ['armF', 'armB', 'armF_up', 'armB_up'],
+    diver: { head: ['head', 'head_up'], body: ['torso', 'torso_up'], arm: ['armF', 'armB', 'armF_up', 'armB_up', 'anchorB', 'anchorB_up'],
         leg: ['legF', 'legB', 'legF_up', 'legB_up'] },
-    saint: { head: ['head', 'head_up'], body: ['torso', 'torso_up'], arm: ['armF', 'armB', 'armF_up', 'armB_up'],
+    saint: { head: ['head', 'head_up'], body: ['torso', 'torso_up'], arm: ['armF', 'armB', 'armF_up', 'armB_up', 'handF', 'handF_up'],
         leg: ['legF', 'legB', 'legF_up', 'legB_up'] },
-    frost: { head: ['head', 'hair', 'head_up', 'hair_up'], body: ['torso', 'torso_up'], arm: ['armF', 'armB', 'armF_up', 'armB_up'],
+    frost: { head: ['head', 'hair', 'head_up', 'hair_up'], body: ['torso', 'torso_up'],
+        arm: ['armF', 'armB', 'armF_up', 'armB_up', 'handF', 'handB', 'handF_up', 'handB_up'],   // 손목 관절 (D-067)
         leg: ['legF', 'legB', 'legF_up', 'legB_up'] },
-    doll: { head: ['head', 'head_up'], body: ['torso', 'torso_up'], arm: ['armF', 'armB', 'armF_up', 'armB_up'],
+    doll: { head: ['head', 'head_up'], body: ['torso', 'torso_up'], arm: ['armF', 'armB', 'armF_up', 'armB_up', 'handF', 'handF_up'],
         leg: ['legF', 'legB', 'legF_up', 'legB_up'] }
 };
 // 같은 팩션 안의 변형 파츠 색 (기본 파츠는 원래 색)
@@ -389,6 +395,11 @@ export class RigAvatar {
         this.pendingHit = 0;
         this.animator = new Animator(c.clips, (name, data) => this._handleEvent(name, data));
         this.animator.play(this._clip(this.mode), 0);
+        // 다리 층: 걸으며 스킬 동작을 쓸 때 다리 뼈만 걷기 동작 (발소리 이벤트만 넘김)
+        this.lowerBones = c.bones.map(b => b.name).filter(n => LOWER_BONE.test(n));
+        this.legAnim = c.clips.walk ? new Animator(c.clips, (name, data) => { if (this.legLayer && FOOT_EVENTS.has(name)) this._handleEvent(name, data); }) : null;
+        this.legLayer = false;
+        this.reacts = this.reacts || [];
         this._tick(0);
         if (this.running) this.render();
     }
@@ -399,8 +410,10 @@ export class RigAvatar {
 
     setMode(mode) {
         if (!mode || mode === this.mode) return;
+        if (this.mode === 'walk' && this.reacts) this.react('settle');   // 걷다 멈추면 앞으로 쏠렸다 섬 (Q6)
         this.mode = mode;
         this.pendingHit = 0;
+        if (mode !== 'walk') this.legLayer = false;    // 멈추면 다리도 스킬 동작을 따라감
         if (!this.animator || this.onceClip) return;   // 점프/변신 중이면 끝난 뒤 이 동작으로 복귀
         this.effects.stopCharge();
         this.animator.play(this._clip(mode), FADE_SEC);
@@ -409,11 +422,73 @@ export class RigAvatar {
     /** 한 번만 재생하는 동작(점프/변신). 끝나면 현재 상태 동작으로 복귀. 해당 클립이 없으면 false */
     playOnce(name) {
         if (!this.animator || !this.character.clips[name]) return false;
+        // 걷는 중이면 다리 층을 켜고 지금 걸음 시점부터 이어 감
+        const walking = this.mode === 'walk' && this.legAnim && this.lowerBones.length;
+        if (walking && !this.legLayer) {
+            const t = this.animator.currentName === 'walk' ? this.animator.currentTime : 0;
+            this.legAnim.cur = null;
+            this.legAnim.play('walk', 0, t);
+        }
+        this.legLayer = !!walking;
         this.onceClip = name;
         this.pendingHit = 0;
         this.effects.stopCharge();
         this.animator.play(name, 0.12);
         return true;
+    }
+
+    // ---- 반응 동작 (Q4): 맞음·밀림·기절 ----
+    /** 반응 재생 (같은 반응이면 처음부터). loop 반응(기절)은 stopReact까지 */
+    react(name) {
+        const clip = REACTIONS[name];
+        if (!clip || !this.reacts) return false;
+        this.reacts = this.reacts.filter(r => r.name !== name);
+        this.reacts.push({ name, clip, t: 0 });
+        return true;
+    }
+
+    stopReact(name) {
+        if (this.reacts) this.reacts = this.reacts.filter(r => r.name !== name);
+    }
+
+    /** 바람 세기 (Q6): 걷는 중이면 걷기 배율 쪽으로, 멈추면 0으로 천천히 */
+    _tickWind(dt) {
+        const target = this.mode === 'walk' ? ((this.walkScale ?? 1) - 1) / (WIND.fullAt - 1) : 0;
+        this.windK = (this.windK || 0) + (target - (this.windK || 0)) * Math.min(1, dt * WIND.ease);
+    }
+
+    /** 반응 시간 진행 (실제 시간 — 기절로 동작이 멈춰도 움직임) */
+    _tickReacts(dt) {
+        if (!this.reacts || !this.reacts.length) return;
+        for (const r of this.reacts) r.t += dt;
+        this.reacts = this.reacts.filter(r => r.clip.loop || r.t < r.clip.duration);
+    }
+
+    /** 스프링 + 반응 동작 = 동작 위에 더할 값 { 뼈: { x, y, rot } } */
+    _offsets() {
+        const out = {};
+        const add = (bone, ch, v) => { (out[bone] ||= {})[ch] = (out[bone][ch] || 0) + v; };
+        for (const s of this.springs) add(s.bone, s.channel, s.value);
+        if (this.windK) for (const w of this.character.wind || []) if (this.skeleton.byName[w.bone]) add(w.bone, 'rot', w.rot * this.windK);
+        for (const r of this.reacts || []) {
+            const t = r.clip.loop ? r.t % r.clip.duration : r.t;
+            const pose = samplePose(r.clip, t);
+            for (const bone in pose) {
+                if (!this.skeleton.byName[bone]) continue;
+                for (const ch in pose[bone]) add(bone, ch, pose[bone][ch]);
+            }
+        }
+        return out;
+    }
+
+    /** 지금 자세: 주 동작 (+ 걸으며 스킬이면 다리 뼈는 걷기 동작) */
+    _pose() {
+        const pose = this.animator.sample();
+        if (this.legLayer && this.legAnim) {
+            const legs = this.legAnim.sample();
+            for (const b of this.lowerBones) if (legs[b]) pose[b] = legs[b];
+        }
+        return pose;
     }
 
     // ---- 2페이즈 거대화 + 실드 ----
@@ -541,11 +616,21 @@ export class RigAvatar {
         return this._toCanvas(this.skeleton.socketWorld(socket, bone));
     }
 
+    /** 캔버스 픽셀 크기 = 표시 크기(opts) × 해상도 배율 (displayRes.js). 표시 크기는 CSS·인라인 스타일이 정함 */
+    _fitRes() {
+        const res = displayRes();
+        const w = Math.round(this.opts.width * res), h = Math.round(this.opts.height * res);
+        if (this.canvas.width !== w || this.canvas.height !== h) {
+            this.canvas.width = w;
+            this.canvas.height = h;
+        }
+        this.res = res;
+    }
+
     start() {
         if (this.running) return;
         this.running = true;
-        this.canvas.width = this.opts.width;
-        this.canvas.height = this.opts.height;
+        this._fitRes();
         this.last = performance.now();
         this.rafId = requestAnimationFrame(t => this._loop(t));
     }
@@ -560,14 +645,23 @@ export class RigAvatar {
     _loop(now) {
         if (!this.running) return;
         // 히트스톱/일시정지 0, 배속 적용 × 이 캐릭터만의 동작 속도(감속 0.55, 기절 0)
-        const dt = Math.min(0.1, (now - this.last) / 1000) * gameTime.scale(now) * (this.timeScale ?? 1);
+        const walk = this.mode === 'walk' ? this.walkScale ?? 1 : 1;   // 걷기 동작은 실제 진격 속도에 맞춤 (Q2)
+        const real = Math.min(0.1, (now - this.last) / 1000) * gameTime.scale(now);   // 히트스톱·일시정지만 (반응 동작용)
+        const dt = real * (this.timeScale ?? 1) * walk;
         this.last = now;
         if (this.animator) {
+            const reacting = this.reacts && this.reacts.length;
+            this._tickReacts(real);
+            this._tickWind(dt);
             this.acc += dt;
+            let ticked = false;
             while (this.acc >= FIXED_DT) {
                 this._tick(FIXED_DT);
                 this.acc -= FIXED_DT;
+                ticked = true;
             }
+            // 기절(동작 멈춤) 중이거나 반응이 막 끝난 프레임: 자세만 다시 계산
+            if (!ticked && (reacting || (this.reacts && this.reacts.length))) this.skeleton.update(this._pose(), this._offsets());
             this.render();
         }
         this.rafId = requestAnimationFrame(t => this._loop(t));
@@ -575,19 +669,19 @@ export class RigAvatar {
 
     _tick(h) {
         this.animator.update(h);
+        if (this.legLayer) this.legAnim.update(h);
         if (this.onceClip && this.animator.currentTime >= this.character.clips[this.onceClip].duration) {
             this.onceClip = null;
-            this.animator.play(this._clip(this.mode), FADE_SEC);
+            // 다리 층이 걷던 시점에서 걷기로 돌아감 (발이 튀지 않게)
+            const back = this._clip(this.mode);
+            this.animator.play(back, FADE_SEC, this.legLayer && back === 'walk' ? this.legAnim.currentTime : 0);
+            this.legLayer = false;
         }
         if (this.giant.update(h)) {
             this._applyScale();
             if (this.giant.done && this.opts.onResize) this.opts.onResize();
         }
-        const offsets = {};
-        for (const s of this.springs) {
-            offsets[s.bone] = { ...(offsets[s.bone] || {}), [s.channel]: s.value };
-        }
-        this.skeleton.update(this.animator.sample(), offsets);
+        this.skeleton.update(this._pose(), this._offsets());
         if (h > 0) {
             for (const s of this.springs) s.step(this.skeleton.restPivotWorld(s.bone), h);
         }
@@ -627,7 +721,9 @@ export class RigAvatar {
         const k = this.shakeScale ?? 1;   // 설정에서 화면 흔들림을 끄면 0
         const [sx, sy] = this.effects.shakeOffset().map(v => v * k);
         this._applyShake(sx, sy);
-        const view = this.opts.shakeTarget ? [1, 0, 0, 1, 0, 0] : [1, 0, 0, 1, sx, sy];
+        this._fitRes();
+        const r = this.res;   // 좌표는 CSS px 그대로, 그릴 때만 해상도 배율을 곱함
+        const view = this.opts.shakeTarget ? [r, 0, 0, r, 0, 0] : [r, 0, 0, r, sx * r, sy * r];
 
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);

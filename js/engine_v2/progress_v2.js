@@ -11,6 +11,8 @@
      stages    스테이지 기록 { '1-1': { stars: [요새, 기지, 체력50%], cleared, bestTime } }  (D-016) — 노말
      diffStages 하드·헬·나이트메어 기록 { hard: { '1-1': { … } }, … }  (D-063, 난이도마다 따로)
      difficulty 메인 화면에서 고른 난이도 id (difficulty_v2.js)
+     강화 외 성장 (Q-006, progressGrowth_v2.js): grades · options · shards · cores · skillLevels · modules · research ·
+       spentStars · unlockedChars · dispatch — 없으면 빈 값이라 예전 저장 그대로 읽힘
      character 선택창에서 고른 캐릭터 id (D-051)
      loadouts  캐릭터별 마지막 장착 { mech: { head, body, arm, leg }, ... } — 다시 고르면 그대로
    v1 저장(캐릭터 없음, 다른 캐릭터 파츠를 섞어 낌)은 처음 읽을 때 몸통 캐릭터로 바꾼다 (fixMixed)
@@ -20,6 +22,9 @@ import { gameState } from '../engine/state.js';
 import { PARTS_DB } from '../data/parts.js';
 import { SLOTS, DEFAULT_CHARACTER, rosterOf, characterOfPart, partsOfCharacter } from './roster_v2.js';
 import { DIFFICULTIES, DEFAULT_DIFFICULTY, difficultyOf, difficultyUnlocked, highestDifficulty } from './difficulty_v2.js';
+import { GrowthMethods, emptyGrowth } from './progressGrowth_v2.js';
+import { gradeOf } from './growth_v2.js';
+import { isDropOnly, dropGroupOf } from './sets_v2.js';
 
 const KEY = 'mo_v2_save';
 export const MAX_LEVEL = 5;           // 노말 강화 한도 — 높은 난이도를 열면 올라감 (progress.maxLevel(), D-063)
@@ -44,6 +49,7 @@ class Progress {
         this.selectedStage = null;   // 메인 화면에서 고른 스테이지 (저장)
         this.character = DEFAULT_CHARACTER;   // 선택창에서 고른 캐릭터 (저장)
         this.loadouts = {};                   // 캐릭터별 마지막 장착 (저장)
+        Object.assign(this, emptyGrowth());   // 파츠 등급·조각·코어·스킬 레벨·모듈·연구·별 사용·파견 (저장)
         this.loaded = false;
         this.saveTimer = null;
     }
@@ -53,7 +59,8 @@ class Progress {
     init() {
         if (this.loaded) return;
         this.loaded = true;
-        SLOTS.forEach(slot => (PARTS_DB[slot] || []).forEach(p => { if (!p.cost) this.owned.add(p.id); }));
+        // 가격 0인 파츠는 처음부터 보유 (드랍 전용 — 유니크 세트 — 은 빼고)
+        SLOTS.forEach(slot => (PARTS_DB[slot] || []).forEach(p => { if (!p.cost && !isDropOnly(p)) this.owned.add(p.id); }));
         let data = null;
         try { data = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { data = null; }
         if (data) {
@@ -72,6 +79,7 @@ class Progress {
             this.selectedStage = data.selectedStage || null;
             if (data.difficulty && difficultyUnlocked(data.difficulty, this)) this.difficulty = difficultyOf(data.difficulty).id;
             this.loadouts = { ...(data.loadouts || {}) };
+            this.loadGrowth(data);
         }
         SLOTS.forEach(slot => this.owned.add(gameState.equippedParts[slot]));   // 장착 중인 파츠는 보유
         // 고른 캐릭터: 저장에 있으면 그것, v1 저장이면 몸통 캐릭터
@@ -95,7 +103,7 @@ class Progress {
         if (bodyChar) this.character = bodyChar;
         this.rememberLoadout();
         const data = {
-            v: 2,
+            v: 3,   // 3: 강화 외 성장 필드 추가 (Q-006)
             dm: gameState.darkMatter,
             equipped: { ...gameState.equippedParts },
             owned: [...this.owned],
@@ -105,7 +113,8 @@ class Progress {
             difficulty: this.difficulty,
             selectedStage: this.selectedStage,
             character: this.character,
-            loadouts: this.loadouts
+            loadouts: this.loadouts,
+            ...this.growthData()
         };
         try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* 저장 불가 환경: 이번 실행에서만 유지 */ }
     }
@@ -198,11 +207,25 @@ class Progress {
         return SLOTS.filter(s => gameState.cartParts[s] !== gameState.equippedParts[s]).length;
     }
 
-    /** 장바구니 확정: 보유하지 않은 파츠는 구매 후 장착 */
+    /** 장바구니에서 살 수 없는 파츠 (안 가진 드랍 전용 — 유니크 세트) */
+    cartLocked() {
+        return SLOTS.map(slot => partOf(slot, gameState.cartParts[slot]))
+            .filter(p => p && p.id !== 'none' && !this.owned.has(p.id) && isDropOnly(p));
+    }
+
+    /** 장바구니 확정: 보유하지 않은 파츠는 구매 후 장착 (세트 파츠는 등급 바닥만큼 옵션을 채움) */
     confirmCart() {
+        const locked = this.cartLocked();
+        if (locked.length) return { success: false, reason: `${locked[0].name}: 드랍·조각으로만 얻는 파츠입니다` };
         const cost = this.cartCost();
         if (gameState.darkMatter < cost) return { success: false, reason: '다크 매터(DM)가 부족합니다' };
-        SLOTS.forEach(slot => this.owned.add(gameState.cartParts[slot]));
+        SLOTS.forEach(slot => {
+            const id = gameState.cartParts[slot];
+            if (!this.owned.has(id)) {
+                this.owned.add(id);
+                this.ensureGradeOptions(id);
+            }
+        });
         gameState.darkMatter -= cost;
         gameState.equippedParts = { ...gameState.cartParts };
         this.rememberLoadout();
@@ -225,7 +248,8 @@ class Progress {
         const lv = this.levelOf(id);
         if (lv >= this.maxLevel() || id === 'none') return null;
         const p = partOf(slotOf(id), id);
-        const base = Math.max(p ? p.cost || 0 : 0, 200);
+        // 강화 기준값 = 가격 (가격 없는 유니크 세트는 1200 — 레어 세트 부위 값보다 조금 위)
+        const base = Math.max(p ? p.cost || (dropGroupOf(p) === 'unique' ? 1200 : 0) : 0, 200);
         return Math.round((base * 0.6 * lv) / 10) * 10;
     }
 
@@ -240,10 +264,10 @@ class Progress {
         return { success: true, cost, level: this.levels[id] };
     }
 
-    /** 강화 레벨을 반영한 파츠 능력치 */
+    /** 강화 레벨·등급(커먼 ×1 ~ 레전더리 ×1.35)을 반영한 파츠 능력치 */
     partStats(part) {
         const s = (part && part.stats) || {};
-        const k = 1 + LEVEL_BONUS * (this.levelOf(part && part.id) - 1);
+        const k = (1 + LEVEL_BONUS * (this.levelOf(part && part.id) - 1)) * gradeOf(part ? this.gradeOf(part.id) : null).mul;   // 세트 등급 바닥 포함
         return { hp: Math.round((s.hp || 0) * k), dps: Math.round((s.dps || 0) * k), range: s.range || 0, speed: s.speed || 0 };
     }
 
@@ -316,5 +340,7 @@ class Progress {
         return { newStars, bonus };
     }
 }
+
+Object.assign(Progress.prototype, GrowthMethods);
 
 export const progress = new Progress();

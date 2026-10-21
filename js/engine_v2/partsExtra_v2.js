@@ -93,7 +93,7 @@ export const V2_PARTS = {
             cost: 750,
             stats: { hp: 1100, dps: 50, range: 0, speed: 5 },
             look: '머리 위 가시 왕관',
-            skillDesc: '필살기 가시 폭풍: 등 가시를 사방으로 쏴 범위 피해 + 4초 출혈(지속 피해)'
+            skillDesc: '필살기 가시 폭풍: 등 가시를 사방으로 쏴 범위 피해 + 4초 가시 독(지속 피해)'
         },
         {
             id: 'head_kaiju_b',
@@ -226,14 +226,14 @@ export const V2_PARTS = {
         },
         {
             id: 'body_hero_a',
-            name: '피의 망토 갑옷',
+            name: '찢어진 망토 갑옷',   // 12세 기준(Q-008 S6): 피의 망토 갑옷 → 찢어진 망토 갑옷
             faction: '타락 히어로 (세뇌)',
             set: 'A 타락 기사',
             rigVariant: 'a',
             cost: 800,
             stats: { hp: 1700, dps: 110, range: 0, speed: 15 },
             look: '붉게 물든 찢어진 망토',
-            skillDesc: '스킬 2 피의 서약 (15초): 6초간 준 피해의 20%만큼 체력 회복'
+            skillDesc: '스킬 2 어둠의 서약 (15초): 6초간 준 피해의 20%만큼 체력 회복'
         },
         {
             id: 'body_hero_b',

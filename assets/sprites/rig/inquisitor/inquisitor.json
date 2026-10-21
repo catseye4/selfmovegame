@@ -1,16 +1,17 @@
 {
-  "frameWidth": 107,
+  "frameWidth": 108,
   "frameHeight": 97,
   "anchorX": 56.0,
+  "res": 2.0,
   "clips": {
     "walk": {
-      "src": "assets/sprites/rig/inquisitor/inquisitor_walk.png",
-      "frames": 12,
+      "src": "assets/sprites/rig/inquisitor/inquisitor_walk.webp",
+      "frames": 16,
       "duration": 0.8
     },
     "attack": {
-      "src": "assets/sprites/rig/inquisitor/inquisitor_attack.png",
-      "frames": 10,
+      "src": "assets/sprites/rig/inquisitor/inquisitor_attack.webp",
+      "frames": 14,
       "duration": 0.8
     }
   }

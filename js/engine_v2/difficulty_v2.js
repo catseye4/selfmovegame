@@ -13,20 +13,23 @@
      time     : 제한 시간·별 목표 시간
      reward   : DM 보상(처치·요새·기지)과 새 별 보너스
      maxLevel : 이 난이도가 열리면 파츠 강화 한도 (progress_v2.js maxLevel)
+     mutators : 전장 변이 (나이트메어, 주마다 하나 — growth_v2.js MUTATORS, 효과는 battle/growth.js)
    배율은 tools/tests/balance_sim.py --diff=<id>로 재서 맞춘다 (MD/밸런스_기록.md "난이도").
    ========================================================================== */
 
 import { STAGES } from './stages_v2.js';
+import { MUTATORS, weeklyMutator } from './growth_v2.js';
 
 export const DIFFICULTIES = [
     { id: 'normal', name: '노말', en: 'NORMAL', color: '120, 220, 140',
         enemyHp: 1, enemyDps: 1, base: 1, elite: 0, affixes: 0, bossHaste: 1, time: 1, reward: 1, maxLevel: 5 },
     { id: 'hard', name: '하드', en: 'HARD', color: '255, 176, 32',
-        enemyHp: 1.25, enemyDps: 1.15, base: 1.15, elite: 0.03, affixes: 0, bossHaste: 1, time: 1.05, reward: 1.5, maxLevel: 7 },
+        enemyHp: 1.4, enemyDps: 1.3, base: 1.3, elite: 0.05, affixes: 0, bossHaste: 1, time: 1.05, reward: 1.6, maxLevel: 7 },
     { id: 'hell', name: '헬', en: 'HELL', color: '255, 74, 58',
-        enemyHp: 1.5, enemyDps: 1.3, base: 1.35, elite: 0.06, affixes: 2, bossHaste: 1, time: 1.1, reward: 2.2, maxLevel: 9 },
+        enemyHp: 1.9, enemyDps: 1.6, base: 1.65, elite: 0.1, affixes: 2, bossHaste: 1, time: 1.1, reward: 2.4, maxLevel: 9 },
     { id: 'nightmare', name: '나이트메어', en: 'NIGHTMARE', color: '180, 92, 255',
-        enemyHp: 2, enemyDps: 1.6, base: 1.7, elite: 0.12, affixes: 2, affixesLate: 3, bossHaste: 1.2, time: 1.15, reward: 3, maxLevel: 10 }
+        enemyHp: 2.5, enemyDps: 2, base: 2.1, elite: 0.15, affixes: 2, affixesLate: 3, bossHaste: 1.25, time: 1.2, reward: 3.5, maxLevel: 10,
+        mutators: true }
 ];
 export const DEFAULT_DIFFICULTY = 'normal';
 /** 다음 난이도를 여는 스테이지 (마지막 구역 보스전) */
@@ -77,17 +80,20 @@ const stageCache = new Map();
  * 난이도 배율을 곱한 스테이지. 노말은 원래 객체 그대로 (stage.difficulty 없음 = 노말).
  * 같은 난이도·스테이지는 같은 객체를 돌려줌.
  */
-export function stageFor(stage, id = DEFAULT_DIFFICULTY) {
+export function stageFor(stage, id = DEFAULT_DIFFICULTY, now = Date.now()) {
     const d = difficultyOf(id);
     if (d.id === DEFAULT_DIFFICULTY || !stage) return stage;
-    const key = `${d.id}:${stage.id}`;
+    const mutator = d.mutators ? weeklyMutator(now) : null;   // 나이트메어: 이번 주 전장 변이
+    const key = `${d.id}:${stage.id}:${mutator || ''}`;
     if (stageCache.has(key)) return stageCache.get(key);
     const s = {
         ...stage,
         difficulty: d.id,
         timeLimit: roundTo(stage.timeLimit * d.time, 5),
         starTime: roundTo(stage.starTime * d.time, 5),
-        enemy: { ...stage.enemy, hp: round2(stage.enemy.hp * d.enemyHp), dps: round2(stage.enemy.dps * d.enemyDps) },
+        enemy: { ...stage.enemy, hp: round2(stage.enemy.hp * d.enemyHp), dps: round2(stage.enemy.dps * d.enemyDps),
+            spawn: round2(stage.enemy.spawn * (mutator && MUTATORS[mutator].spawnMul || 1)) },
+        mutator,
         elite: Math.min(0.5, round2((stage.elite || 0) + d.elite)),
         affixCount: affixCountFor(stage.zone, d),
         bossHaste: d.bossHaste,

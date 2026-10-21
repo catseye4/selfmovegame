@@ -8,6 +8,8 @@
    물대포 팔(armF)은 어깨에서 오른쪽 아래 35°를 향하므로 rot -는 총구를 들어 올림.
    팔 한 장이 몸통 옆면에 붙어 있어 피벗을 어깨와 몸통이 맞닿은 가운데에 두고, 20°쯤 넘게 돌리면 이음새가 벌어짐.
    앵커 쥔 손(armB)은 손목에서 매달린 앵커가 오른쪽 아래로 늘어져 있어 rot -는 앵커를 앞으로, +는 뒤로.
+   손목 관절 (Q-008 단계 2, D-067): 뒷손에 매달린 앵커(anchorB)를 손(armB)에서 떼어 쥔 자리로 돌림 — tools/rig/cut_joints.py diver
+     (Gemini "앵커 지운 전신"과 원래 전신의 차이). 스프링으로 한 박자 늦게 흔들리고, 앵커를 던질 때 휨
    ========================================================================== */
 
 export const DIVER_ASSET_DIR = 'assets/sprites/rig/diver/';
@@ -20,26 +22,28 @@ export const DIVER_BONES = [
     { name: 'torso', parent: 'root', part: 'torso', z: 3 },
     { name: 'head', parent: 'torso', part: 'head', z: 4 },
     { name: 'armB', parent: 'torso', part: 'armB', z: 5 },
+    { name: 'anchorB', parent: 'armB', part: 'anchorB', z: 4.5 },   // 앵커는 쥔 손 뒤에
     { name: 'armF', parent: 'torso', part: 'armF', z: 6 }
 ];
 
 /** 강화 그림 (D-044): 슬롯별로 강화 파츠를 끼우면 그 부위 뼈의 그림만 <부위>_up으로 (rigAvatar.applyUpgrades)
  *  강화 물대포는 60px 더 길어 총구 소켓도 바꿈 */
 export const DIVER_UPGRADE = {
-    parts: { head: ['head'], body: ['torso'], arm: ['armF', 'armB'], leg: ['legF', 'legB'] },
+    parts: { head: ['head'], body: ['torso'], arm: ['armF', 'armB', 'anchorB'], leg: ['legF', 'legB'] },
     sockets: { arm: { muzzle: 'muzzleUp' } }
 };
 
 export const DIVER_SPRINGS = [
     // 앵커: 몸이 앞으로 가속하면 매달린 앵커가 한 박자 늦게 뒤로(+) 흔들림
     { bone: 'armB', channel: 'rot', axis: 0, gain: -0.08, k: 70, damping: 5, limit: 10 },
+    { bone: 'anchorB', channel: 'rot', axis: 0, gain: -0.12, k: 45, damping: 3.5, limit: 16 },   // 앵커가 시계추처럼
     // 무거운 잠수모: 착지 때 살짝 눌렸다 돌아옴
     { bone: 'head', channel: 'y', axis: 1, gain: 0.3, k: 220, damping: 11, limit: 5 }
 ];
 
 export const DIVER_DEBUG_SOCKETS = [
     ['muzzle', 'armF'],
-    ['anchor', 'armB'],
+    ['anchor', 'anchorB'],
     ['eye', 'head'],
     ['lamp', 'torso'],
     ['footF', 'legF'],
@@ -56,6 +60,7 @@ export const DIVER_CLIPS = {
         duration: 2.6,
         loop: true,
         tracks: {
+            anchorB: { rot: [[0, 0], [1.3, 3], [2.6, 0]] },
             torso: { y: [[0, 0], [1.3, 5], [2.6, 0]] },
             head: { rot: [[0, 0], [1.3, 1.2], [2.6, 0]] },
             armF: { rot: [[0, 0], [1.3, 3], [2.6, 0]] },
@@ -68,6 +73,7 @@ export const DIVER_CLIPS = {
         duration: 1.3,
         loop: true,
         tracks: {
+            anchorB: { rot: [[0, -3], [0.33, 4], [0.65, 3], [0.98, -4], [1.3, -3]] },
             legF: {
                 y: [[0, 0, 'out'], [0.25, -34, 'in'], [0.5, 0, 'linear'], [1.3, 0]],
                 rot: [[0, 0, 'out'], [0.25, -6, 'in'], [0.5, 0, 'linear'], [1.3, 0]]
@@ -97,6 +103,7 @@ export const DIVER_CLIPS = {
         loop: true,
         loopFrom: 0.6,
         tracks: {
+            anchorB: { rot: [[0, 0], [0.3, -4], [1.2, -4]] },
             armF: {
                 rot: [[0, 0, 'out'], [0.3, AIM], [0.45, AIM + 1.5], [0.6, AIM, 'out'],
                       [0.63, AIM - 4], [0.8, AIM, 'out'], [0.83, AIM - 4], [1.0, AIM, 'out'], [1.03, AIM - 4], [1.2, AIM]]
@@ -124,6 +131,7 @@ export const DIVER_CLIPS = {
         duration: 1.3,
         loop: false,
         tracks: {
+            anchorB: { rot: [[0, 0], [0.3, -18, 'out'], [0.45, 25, 'out'], [0.7, 10], [0.95, -12, 'in'], [1.3, 0]] },
             armB: { rot: [[0, 0], [0.3, 38, 'out'], [0.45, -75, 'out'], [0.7, -60], [0.95, 20, 'in'], [1.3, 0]] },
             armF: { rot: [[0, 0], [0.3, 8], [0.45, -6], [0.95, 6], [1.3, 0]] },
             torso: {
@@ -136,7 +144,7 @@ export const DIVER_CLIPS = {
         },
         events: [
             [0.45, 'cast'],
-            [0.95, 'impact', { socket: 'anchor', bone: 'armB', color: ABYSS }]
+            [0.95, 'impact', { socket: 'anchor', bone: 'anchorB', color: ABYSS }]
         ]
     },
 
@@ -145,6 +153,7 @@ export const DIVER_CLIPS = {
         duration: 0.9,
         loop: false,
         tracks: {
+            anchorB: { rot: [[0, 0], [0.3, -8], [0.42, 12, 'out'], [0.9, 0]] },
             torso: { y: [[0, 0], [0.3, 12, 'out'], [0.42, -4, 'out'], [0.9, 0]],
                      rot: [[0, 0], [0.3, 2], [0.42, -3, 'out'], [0.9, 0]] },
             armF: { rot: [[0, 0], [0.3, 8, 'out'], [0.42, -22, 'out'], [0.62, -19], [0.9, 0]] },
@@ -164,6 +173,7 @@ export const DIVER_CLIPS = {
         duration: 1.0,
         loop: true,
         tracks: {
+            anchorB: { rot: [[0, 8], [0.5, -8], [1.0, 8]] },
             armF: { rot: [[0, -20], [0.5, -24], [1.0, -20]] },
             armB: { rot: [[0, -25], [0.5, 15], [1.0, -25]] },
             torso: { y: [[0, 6], [0.5, -4], [1.0, 6]], rot: [[0, -4], [0.5, -6], [1.0, -4]] },

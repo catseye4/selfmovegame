@@ -5,6 +5,8 @@
    - 오른쪽: 부위 탭 + 파츠 카드(리그 부위 그림, 캐릭터 색, 세트, 레벨, 능력치, 부여 스킬, 장착·보유·가격) + 선택 파츠 강화
      카드는 고른 캐릭터의 파츠만, [파츠제거]는 없음 — 부위마다 하나는 꼭 낌 (D-051)
    - 아래: 변경 수, 구매 비용, 개조 후 잔액, 되돌리기, 개조 확정
+   세트 장비 (Q-008, sets_v2.js): 카드에 "레어 ① 포격 사령부"·등급 바닥, 스킬 구성 아래에 세트 효과(2·4부위),
+     안 가진 세트 파츠는 등급 칸 버튼이 "만들기"(파츠 조각), 드랍 전용(유니크 세트)은 DM으로 못 삼
    파츠 소유·강화·저장은 js/engine_v2/progress_v2.js (D-015). 파츠 데이터는 js/data/parts.js (구버전과 공용, 읽기만), 캐릭터별 목록은 roster_v2.js
    ========================================================================== */
 
@@ -18,6 +20,9 @@ import { rosterOf, characterOfPart, partsOfCharacter, partSetLabel } from '../en
 import { sound } from '../engine_v2/audio/sound_v2.js';
 import { icon, fillIcons } from './icons.js';
 import { openSettings } from './settingsPanel_v2.js';
+import { gradeOf, SKILL_LEVEL } from '../engine_v2/growth_v2.js';
+import { gradeTag, optionText, resChipHtml } from './growthUi_v2.js';
+import { setOf, setBonusList, isDropOnly } from '../engine_v2/sets_v2.js';
 
 const $ = id => document.getElementById(id);
 const ROLE = { arm: { tag: '1', label: '스킬 1' }, body: { tag: '2', label: '스킬 2' }, head: { tag: 'ULT', label: '필살기' }, leg: { tag: 'P', label: '패시브' } };
@@ -102,6 +107,31 @@ export class LabController {
             }
         });
 
+        // 등급 올리기 (파츠 조각, Q-006) · 안 가진 세트 파츠는 조각으로 만들기 (Q-008)
+        $('btn-grade-v2')?.addEventListener('click', () => {
+            const id = gameState.cartParts[this.activeSlot];
+            if (!progress.isOwned(id) && progress.craftCost(id)) {
+                const res = progress.craftPart(id);
+                sound.play(res.success ? 'ui_equip' : 'ui_error');
+                this.showNotification(res.success ? `제작 완료! ${res.name} (${gradeOf(res.grade).name}, 조각 -${res.shards})` : res.reason, res.success ? 'success' : 'error');
+                if (res.success) this.refresh();
+                return;
+            }
+            const res = progress.upgradeGradeWithShards(id);
+            sound.play(res.success ? 'ui_equip' : 'ui_error');
+            this.showNotification(res.success ? `등급 상승! ${gradeOf(res.grade).name}` : res.reason, res.success ? 'success' : 'error');
+            if (res.success) this.refresh();
+        });
+        // 스킬 강화 (스킬 코어 + DM, Q-006) — 스킬 구성 목록의 ▲ 버튼
+        $('lab-loadout-v2')?.addEventListener('click', e => {
+            const b = e.target.closest('.v2-skillup');
+            if (!b || b.disabled) return;
+            const res = progress.upgradeSkill(b.dataset.skill);
+            sound.play(res.success ? 'ui_equip' : 'ui_error');
+            this.showNotification(res.success ? `스킬 강화! Lv${res.level}` : res.reason, res.success ? 'success' : 'error');
+            if (res.success) this.refresh();
+        });
+
         $('btn-upgrade-v2')?.addEventListener('click', () => {
             const id = gameState.cartParts[this.activeSlot];
             const res = progress.upgrade(id);
@@ -148,19 +178,23 @@ export class LabController {
             const owned = progress.isOwned(part.id);
             const badge = part.id === equippedId ? ['EQUIPPED', 'is-equipped']
                 : owned ? [part.cost ? 'OWNED' : 'FREE', part.cost ? 'is-owned' : 'is-free']
-                    : [`${part.cost.toLocaleString()} DM`, part.cost > gameState.darkMatter ? 'is-poor' : ''];
+                    : isDropOnly(part) ? ['드랍·조각', 'is-drop']
+                        : [`${part.cost.toLocaleString()} DM`, part.cost > gameState.darkMatter ? 'is-poor' : ''];
+            const isSet = !!setOf(part);
             const st = progress.partStats(part);
             const lv = progress.levelOf(part.id);
             const card = document.createElement('div');
-            card.className = `part-card v2-partcard${part.id === cartId ? ' is-selected' : ''}`;
+            const grade = owned || isSet ? gradeOf(progress.gradeOf(part.id)) : gradeOf('common');   // 세트 파츠는 안 가져도 등급 바닥을 보임
+            card.className = `part-card v2-partcard${part.id === cartId ? ' is-selected' : ''}${grade.id !== 'common' ? ' has-grade' : ''}`;
             card.style.setProperty('--fc', color);
+            card.style.setProperty('--grade', grade.color);
             card.innerHTML = `
                 <div class="v2-partcard__side">
                     <div class="v2-partcard__thumb">${thumb ? `<img src="${thumb.src}" alt=""${thumb.filter ? ` style="filter: ${thumb.filter}"` : ''}>` : icon('retreat', 30)}</div>
                     <span class="v2-partcard__badge ${badge[1]}">${badge[0]}</span>
                 </div>
                 <div class="v2-partcard__body">
-                    <div class="v2-partcard__name">${part.name}${part.id !== 'none' && lv > 1 ? `<span class="v2-partcard__lv">Lv${lv}</span>` : ''}</div>
+                    <div class="v2-partcard__name">${part.name}${part.id !== 'none' && lv > 1 ? `<span class="v2-partcard__lv">Lv${lv}</span>` : ''}${owned || isSet ? gradeTag(part.id) : ''}</div>
                     <div class="v2-partcard__faction">세트 · ${partSetLabel(part)}</div>
                     <div class="v2-partcard__stats">HP +${st.hp} · DPS +${st.dps}${st.range ? ` · RNG +${st.range}` : ''}</div>
                     ${sk ? `<div class="v2-partcard__skill" style="--sk:${sk.color}"><em>${ROLE[slot].tag}</em>${icon(sk.icon, 13)}${sk.name}</div>` : '<div class="v2-partcard__skill">스킬 없음</div>'}
@@ -176,6 +210,8 @@ export class LabController {
 
     updateMvvmFeedback() {
         if (this.domDmCount) this.domDmCount.textContent = gameState.darkMatter.toLocaleString();
+        const res = $('lab-res-v2');
+        if (res) res.innerHTML = resChipHtml();   // 별·조각·코어 (Q-006)
         this.renderCompare();
         this.renderLoadout();
         this.renderCart();
@@ -207,13 +243,33 @@ export class LabController {
             const before = slot === 'leg' ? skillOf('leg', eq.leg) : eqSkills[slot];
             const changed = (sk && sk.name) !== (before && before.name);
             const meta = !sk ? '' : sk.ult ? '게이지' : sk.passive ? '상시' : `${sk.cd}초`;
+            // 스킬 레벨·강화 (Q-006): 팔·몸통·필살기, 그 파츠를 가졌을 때만
+            const part = cart[slot];
+            const lvl = sk && !sk.passive && sk.id ? progress.skillLevel(sk.id) : 0;
+            const cost = lvl ? progress.skillUpgradeCost(sk.id) : null;
+            const canUp = lvl && part && progress.isOwned(part.id);
+            const up = !lvl ? '' : cost == null ? `<button class="v2-skillup is-max" disabled>Lv${lvl} MAX</button>`
+                : `<button class="v2-skillup" data-skill="${sk.id}" ${!canUp || cost.cores > progress.cores || cost.dm > gameState.darkMatter ? 'disabled' : ''}`
+                    + ` title="다음 레벨: 스킬 피해 +${Math.round(SKILL_LEVEL.dmgPer * 100)}%${SKILL_LEVEL.cdCut[lvl + 1] ? ' · 쿨다운 단축' : ''}">Lv${lvl} ▲<small>코어${cost.cores}·${cost.dm.toLocaleString()}</small></button>`;
             return `<li class="${changed ? 'is-changed' : ''}" style="--sk:${sk ? sk.color : '#3a4150'}">
                 <span class="v2-loadout__icon">${icon(sk ? sk.icon : 'retreat', 20)}</span>
                 <div class="v2-loadout__body">
-                    <div class="v2-loadout__name"><em>${ROLE[slot].tag}</em>${sk ? sk.name : '없음'}${changed ? '<b>NEW</b>' : ''}<i>${meta}</i></div>
+                    <div class="v2-loadout__name"><em>${ROLE[slot].tag}</em>${sk ? sk.name : '없음'}${changed ? '<b>NEW</b>' : ''}<i>${meta}</i>${up}</div>
                     <div class="v2-loadout__desc">${sk ? (sk.desc || '') : `${ROLE[slot].label} 파츠가 없습니다`}</div>
                 </div></li>`;
         }).join('');
+        this.renderSetBonus(cart);
+    }
+
+    /** 세트 효과 (Q-008): 장바구니 장착에 걸린 세트마다 "레어 ① 포격 사령부 3/4 · 4부위: …" (켜지면 밝게) */
+    renderSetBonus(cart) {
+        const box = $('lab-setbonus-v2');
+        if (!box) return;
+        // 자리가 좁아 2부위 이상 모은 세트만, 두 줄까지: 켜진 효과 먼저, 그다음 많이 모은 세트
+        const list = setBonusList(cart).filter(b => b.count >= 2).sort((p, q) => (q.on - p.on) || (q.count - p.count)).slice(0, 2);
+        box.hidden = !list.length;
+        box.innerHTML = list.map(b => `<div class="v2-setbonus__row${b.on ? ' is-on' : ''}" title="${b.label} — ${b.need}부위: ${b.desc}">`
+            + `<b>${b.on ? '◆' : '◇'} ${b.name} ${Math.min(b.count, b.need)}/${b.need}</b><span>${b.desc}</span></div>`).join('');
     }
 
     renderCart() {
@@ -226,9 +282,11 @@ export class LabController {
         rem.textContent = remain.toLocaleString();
         rem.classList.toggle('is-poor', remain < 0);
         if (this.btnEquip) {
-            this.btnEquip.disabled = changes === 0 || remain < 0;
+            const locked = progress.cartLocked();   // 안 가진 드랍 전용 파츠 (유니크 세트)
+            this.btnEquip.disabled = changes === 0 || remain < 0 || locked.length > 0;
             this.btnEquip.querySelector('small').textContent = changes === 0 ? '변경한 파츠 없음'
-                : remain < 0 ? 'DM 부족' : cost ? `구매 ${cost.toLocaleString()} DM · ${changes}개 장착` : `${changes}개 장착 (보유 파츠)`;
+                : locked.length ? '드랍·조각 전용 파츠가 있음'
+                    : remain < 0 ? 'DM 부족' : cost ? `구매 ${cost.toLocaleString()} DM · ${changes}개 장착` : `${changes}개 장착 (보유 파츠)`;
         }
     }
 
@@ -240,6 +298,26 @@ export class LabController {
         const valid = part && part.id !== 'none';
         const lv = valid ? progress.levelOf(part.id) : 0;
         $('lab-upg-name-v2').textContent = valid ? `${part.name}  Lv${lv}` : '파츠 없음';
+        // 등급·옵션·조각으로 등급 올리기 (Q-006)
+        const owned0 = valid && progress.isOwned(part.id);
+        const g = gradeOf(owned0 ? progress.gradeOf(part.id) : 'common');
+        const gTag = $('lab-upg-grade-v2');
+        const gShow = valid && (owned0 || !!setOf(part));   // 세트 파츠는 안 가져도 등급 바닥
+        const gv = gShow ? gradeOf(progress.gradeOf(part.id)) : g;
+        if (gTag) { gTag.textContent = gShow ? gv.name : ''; gTag.style.setProperty('--grade', gv.color); }
+        const opts = $('lab-upg-opts-v2');
+        const craft = valid && !owned0 ? progress.craftCost(part.id) : null;   // 안 가진 세트 파츠: 조각으로 만들기 (Q-008)
+        if (opts) opts.textContent = valid && owned0 ? (optionText(part.id) || (g.id === 'common' ? '옵션 없음 — 레어부터 (하드 이상 드랍·조각)' : ''))
+            : craft ? `${isDropOnly(part) ? '드랍 전용 — 헬 이상에서 떨어짐, ' : '하드 이상에서도 떨어짐, '}파츠 조각 ${craft.shards}개로 만들 수 있음 (보유 ${progress.shards})` : '';
+        const gc = valid ? progress.shardUpgradeCost(part.id) : null;
+        const gBtn = $('btn-grade-v2');
+        if (gBtn) {
+            gBtn.querySelector('span').textContent = craft ? '만들기' : '등급 ▲';
+            gBtn.disabled = craft ? craft.shards > progress.shards : !gc || gc.shards > progress.shards;
+            $('lab-grade-cost-v2').textContent = !valid ? '' : craft ? `조각 ${craft.shards}` : !owned0 ? '구매 후' : gc ? `조각 ${gc.shards}` : 'MAX';
+            gBtn.title = craft ? `파츠 조각 ${craft.shards}개로 만들기 — ${gradeOf(craft.grade).name} (보유 ${progress.shards})`
+                : gc ? `파츠 조각 ${gc.shards}개로 ${gradeOf(gc.grade).name} (보유 ${progress.shards})` : '';
+        }
         // 강화 한도는 열린 난이도에 따라 Lv5 → 7 → 9 → 10 (D-063)
         const max = progress.maxLevel();
         $('lab-upg-pips-v2').innerHTML = valid ? Array.from({ length: max }, (_, i) => `<i class="${i < lv ? 'is-on' : ''}"></i>`).join('') : '';
@@ -250,7 +328,7 @@ export class LabController {
         $('lab-upg-effect-v2').textContent = !valid ? '강화할 파츠를 골라 주세요'
             : cost == null ? `최대 레벨 · HP·DPS +${pct * (lv - 1)}%${next ? ` — ${top.name} ${FINAL_STAGE_ID}를 깨면 ${next.name} · 한도 Lv${next.maxLevel}` : ''}`
                 : !owned ? '구매(개조 확정) 후 강화할 수 있습니다'
-                    : `다음 레벨: 이 파츠의 HP·DPS +${pct}% (현재 +${pct * (lv - 1)}%)`;
+                    : `다음 Lv: HP·DPS +${pct}% (지금 +${pct * (lv - 1)}%)`;
         $('lab-upg-cost-v2').textContent = cost == null ? (valid ? 'MAX' : '') : `${cost.toLocaleString()} DM`;
         btn.disabled = !valid || cost == null || !owned || cost > gameState.darkMatter;
     }

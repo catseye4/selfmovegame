@@ -147,16 +147,18 @@ export class BattleHud {
         const row = document.createElement('div');
         row.className = 'v2-skills';
         this.slotEls = {};
-        for (const slot of ['arm', 'body', 'head']) {
+        // 전술 모듈(mod1·mod2, 키 4·5, Q-006)은 필살기 앞에 작은 칸으로
+        for (const slot of ['arm', 'body', 'mod1', 'mod2', 'head']) {
             const sk = this.b.skills[slot];
             if (!sk) continue;
             const wrap = document.createElement('div');
-            wrap.className = 'v2-skill-wrap';
+            wrap.className = `v2-skill-wrap${sk.module ? ' is-mod' : ''}`;
             const btn = document.createElement('button');
-            btn.className = `v2-skill${sk.ult ? ' v2-skill--ult' : ''}`;
+            btn.className = `v2-skill${sk.ult ? ' v2-skill--ult' : ''}${sk.module ? ' v2-skill--mod' : ''}`;
+            btn.dataset.slot = slot;
             btn.style.setProperty('--sk', sk.color);
             btn.title = `${sk.name} — ${sk.desc}`;
-            btn.innerHTML = `<span class="v2-skill__icon">${icon(sk.icon, sk.ult ? 50 : 40)}</span>`
+            btn.innerHTML = `<span class="v2-skill__icon">${icon(sk.icon, sk.ult ? 50 : sk.module ? 28 : 40)}</span>`
                 + `${sk.ult ? '' : '<span class="v2-skill__cd"></span>'}<span class="v2-skill__num"></span>`
                 + `<kbd>${SLOT_KEYS[slot]}</kbd>`;
             btn.addEventListener('click', () => this.trySkill(slot));
@@ -342,6 +344,8 @@ export class BattleHud {
         } else if (k === '3' || k === ' ') {
             e.preventDefault();
             this.trySkill('head');
+        } else if ((k === '4' || k === '5') && this.b.skills[k === '4' ? 'mod1' : 'mod2']) {
+            this.trySkill(k === '4' ? 'mod1' : 'mod2');   // 전술 모듈
         } else if (k === 'a') {
             this.toggleAuto();
         } else {

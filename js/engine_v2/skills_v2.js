@@ -15,7 +15,7 @@ import { aimAt } from './bases_v2.js';
 import { sound } from './audio/sound_v2.js';
 import { SET, FOOT_B } from './battle/tuning.js';
 
-export const SLOT_KEYS = { arm: '1', body: '2', head: '3' };
+export const SLOT_KEYS = { arm: '1', body: '2', head: '3', mod1: '4', mod2: '5' };   // mod = 전술 모듈 (Q-006)
 export const ULT_FILL = { perSec: 1 / 24, perHit: 0.03 };   // 필살기 게이지: 24초 + 기본 공격 1타당 3%
 
 const aim = aimAt;   // 적 몸통 중앙 (건물은 그림 크기의 가운데)
@@ -337,7 +337,8 @@ Object.assign(SKILLS, {
             monster.playSkillAnim('attack');
             const muzzle = () => monster.getMuzzlePoint() || { x: b.monsterX + 90, bottom: 120 };
             b.fx.play(SET_VFX.railCharge, muzzle().x, muzzle().bottom, { follow: () => [muzzle().x, muzzle().bottom] });
-            b.schedule(1.0, () => {
+            const charge = b.setOn('mech_a') ? SET.setBonus.railCharge : 1.0;   // 포격 사령부 4부위
+            b.schedule(charge, () => {
                 const from = muzzle();
                 b.fx.play(SET_VFX.railBig, from.x, from.bottom, { to: [1300, from.bottom - 10] });
                 enemiesAhead(b, -60, Infinity).sort((p, q) => p.x - q.x).forEach((e, i) => b.schedule(i * 0.03, () => {
@@ -370,6 +371,7 @@ Object.assign(SKILLS, {
                 b.dealDamageToEnemy(e, b.unit() * 2, false, { knock: 3, stop: true });
                 if (isSoldier(e) && b.enemies.includes(e)) b.stunEnemy(e, 0.4);
             }, SET_VFX.rocketTrail);
+            if (b.setOn('mech_b')) b.schedule(0.33, () => b.dashShockwave());   // 돌격 강습대 4부위
         }
     },
     pileBunker: {
@@ -391,7 +393,7 @@ Object.assign(SKILLS, {
     // ===== 거대괴수 A 「가시 갑각」 =====
     spikeStorm: {
         name: '가시 폭풍', slot: 'head', ult: true, icon: 'spikes', color: '#a0ff32', target: 'enemy', range: 300,
-        desc: '등 가시를 사방으로 쏴 범위 피해 + 4초 출혈',
+        desc: '등 가시를 사방으로 쏴 범위 피해 + 4초 가시 독 (지속 피해)',
         use(b) {
             monster.playSkillAnim('victory');
             b.schedule(0.35, () => {
@@ -436,7 +438,8 @@ Object.assign(SKILLS, {
             b.schedule(0.35, () => {
                 const x = b.frontX() + 10;
                 b.fx.play(SET_VFX.toxicBreath, x + 150, FOOT_B);
-                b.addZone({ x, w: 300, sec: 6, dps: b.playerDps * 0.4, slow: true, puff: SET_VFX.toxicPuff, every: 0.18 });
+                b.addZone({ x, w: 300, sec: 6, dps: b.playerDps * 0.4, slow: true, puff: SET_VFX.toxicPuff, every: 0.18,
+                    baseMul: b.setOn('kaiju_b') ? SET.setBonus.toxicBaseMul : 1 });   // 독안개 4부위: 거점 2배
             });
         }
     },
@@ -511,7 +514,7 @@ Object.assign(SKILLS, {
         }
     },
     bloodOath: {
-        name: '피의 서약', slot: 'body', cd: 15, icon: 'blood', color: '#ff4d6d', target: 'self',
+        name: '어둠의 서약', slot: 'body', cd: 15, icon: 'oath', color: '#b04dff', target: 'self',   // 12세 기준(Q-008 S6): 피의 서약 → 어둠의 서약
         desc: '6초간 준 피해의 20%만큼 내구도 회복',
         use(b) {
             b.fx.play(SET_VFX.bloodOn, b.monsterX + 35, FOOT_B);
@@ -523,12 +526,15 @@ Object.assign(SKILLS, {
         desc: '제자리 3회전 — 둘레 적 모두 피해',
         use(b) {
             monster.playSkillAnim('attack');
-            for (let i = 0; i < 3; i++) {
+            const knight = b.setOn('hero_a');   // 타락 기사 4부위: 4회전 + 도는 동안 앞으로
+            const spins = knight ? SET.setBonus.whirlSpins : 3;
+            if (knight) b.dashForward(SET.setBonus.whirlAdvance, 0.1 + spins * 0.2, () => {}, null);
+            for (let i = 0; i < spins; i++) {
                 b.schedule(0.1 + i * 0.2, () => {
                     const cx = b.monsterX + 60;
                     b.fx.play(SET_VFX.whirl, cx, 110);
                     [...b.enemies].forEach(e => {
-                        if (Math.abs(aim(e).x - cx) < 170) b.dealDamageToEnemy(e, b.unit() * 1.3, false, { knock: 0.8, stop: i === 2 });
+                        if (Math.abs(aim(e).x - cx) < 170) b.dealDamageToEnemy(e, b.unit() * 1.3, false, { knock: 0.8, stop: i === spins - 1 });
                     });
                 });
             }
@@ -661,7 +667,8 @@ export const PART_SKILL = {
     head_hero_a: 'judgmentBlade', body_hero_a: 'bloodOath', arm_hero_a: 'whirlwind',
     head_hero_b: 'shadowClones', body_hero_b: 'curseChains', arm_hero_b: 'blackHole',
     head_chimera_a: 'maulCharge', body_chimera_a: 'adrenaline', arm_chimera_a: 'earthSmash',
-    head_chimera_b: 'mobilize', body_chimera_b: 'boostShot', arm_chimera_b: 'flamethrower',
+    head_chimera_b: 'mobilize', body_chimera_b: 'boostShot', arm_chimera_b: 'flamethrower'
+,
     // 심연의 길잡이 (기본·강화 파츠가 같은 스킬 — 강화는 능력치와 그림)
     arm_diver: 'anchorPull', arm_diver_up: 'anchorPull', body_diver: 'pressureSurge', body_diver_up: 'pressureSurge',
     head_diver: 'abyssHands', head_diver_up: 'abyssHands',
@@ -691,7 +698,8 @@ export const LEG_PASSIVES = {
     leg_hero_a: { name: '불굴', desc: '내구도 30% 아래에서 받는 피해 40% 감소' },
     leg_hero_b: { name: '그림자 회피', desc: '25% 확률로 받는 피해 무시' },
     leg_chimera_a: { name: '짓밟기', desc: '걸음마다 앞쪽 작은 충격파 피해' },
-    leg_chimera_b: { name: '졸개 지휘', desc: '졸개 하나마다 주는 피해 +5% (최대 4기)' },
+    leg_chimera_b: { name: '졸개 지휘', desc: '졸개 하나마다 주는 피해 +5% (최대 4기)' }
+,
     leg_diver: { name: '잠수화', desc: '밀려남 60% 감소, 감속·속박 시간 절반' },
     leg_diver_up: { name: '잠수화 (강화)', desc: '밀려남 80% 감소, 감속·속박 시간 70% 감소' },
     leg_saint: { name: '자가 봉합', desc: '잃은 내구도가 많을수록 빨리 회복 (최대 초당 2%)' },
@@ -719,6 +727,7 @@ export function skillsForParts(equipped) {
 /** 지금 사용할 대상이 있는지 */
 export function hasTarget(b, skill) {
     if (skill.target === 'self') return true;
+    if (skill.target === 'building') return b.enemies.some(e => e.isBuilding && e.x - b.frontX() <= skill.reach);   // 궤도 지원 사격
     const list = b.enemiesInRange(b.playerRange + (skill.range || 0));
     return skill.target === 'minion' ? list.some(e => !e.isBuilding) : list.length > 0;
 }

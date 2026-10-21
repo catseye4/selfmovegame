@@ -36,6 +36,13 @@ const FIRE = '255, 120, 40';
 const EMBER = '255, 190, 80';
 const DUST = '70, 60, 70';
 export const BATTLE_VFX = {
+    // 밀려남 (Q-008 Q4, battle/player.js knockPlayerBack): 발밑에서 끌린 흙먼지 — 캐릭터 공통
+    knockDust: {
+        layers: [
+            { type: 'dust', at: 0, count: 4, speed: 120, dir: 'both', size: 22, life: 0.8, color: '150, 140, 130', dy: 0 },
+            { type: 'shockwave', at: 0, dur: 0.3, r: 50, ground: true, color: '200, 190, 170', width: 10 }
+        ]
+    },
     enemyDefeat: {
         layers: [
             { type: 'smoke', at: 0, count: 7, spread: 18, spreadY: 32, size: 18, life: [0.6, 1.0], rise: 45, color: '100, 90, 125', dy: -30 },

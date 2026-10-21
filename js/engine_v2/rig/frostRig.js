@@ -9,6 +9,9 @@
      뒷팔(armB) = 왼쪽 얼음 부채, 어깨에서 왼쪽 아래 20° → rot +가 들어 올림 (왼쪽을 향해 있어 방향이 반대)
    몸 뒤로 흘러내린 긴 포니테일(hair)은 머리에 붙은 따로 한 조각 — 몸통 뒤에 그리고 스프링으로 한 박자 늦게 흔들림.
    치마가 허벅지를 덮어 다리는 몸통 뒤에서 짧게 들어 올리는 가벼운 걸음 (다리는 루트에 붙어 발이 미끄러지지 않음).
+   손목 관절 (Q-008 단계 2, D-067): 손+부채(handF·handB)를 소매(armF·armB)에서 떼어 손목으로 돌림 —
+     tools/rig/cut_joints.py frost (Gemini "손 지운 전신" 그림과 원래 전신의 차이). 소매가 손목을 덮어 이음새가 안 보임.
+     안전한 쪽: 앞손은 +(부채가 소매 밑으로), 뒷손은 -. 반대쪽은 10° 안팎까지만 (부채의 가려졌던 가장자리가 드러나지 않게)
    ========================================================================== */
 
 export const FROST_ASSET_DIR = 'assets/sprites/rig/frost/';
@@ -22,24 +25,29 @@ export const FROST_BONES = [
     { name: 'head', parent: 'torso', part: 'head', z: 4 },
     { name: 'hair', parent: 'head', part: 'hair', z: 0 },
     { name: 'armB', parent: 'torso', part: 'armB', z: 5 },
-    { name: 'armF', parent: 'torso', part: 'armF', z: 6 }
+    { name: 'handB', parent: 'armB', part: 'handB', z: 4.5 },   // 손+부채는 소매 밑에
+    { name: 'armF', parent: 'torso', part: 'armF', z: 6 },
+    { name: 'handF', parent: 'armF', part: 'handF', z: 5.5 }
 ];
 
 /** 강화 그림 (D-044): 강화 부채가 조금 더 커서 앞 부채 소켓도 바꿈. 뒷머리는 머리 슬롯과 같이 바뀜 */
 export const FROST_UPGRADE = {
-    parts: { head: ['head', 'hair'], body: ['torso'], arm: ['armF', 'armB'], leg: ['legF', 'legB'] },
+    parts: { head: ['head', 'hair'], body: ['torso'], arm: ['armF', 'armB', 'handF', 'handB'], leg: ['legF', 'legB'] },
     sockets: { arm: { fanF: 'fanFUp' } }
 };
 
 export const FROST_SPRINGS = [
     // 뒷머리: 몸이 앞으로 가속하면 뒤로(시계 반대, -) 날리고 끝이 출렁임
     { bone: 'hair', channel: 'rot', axis: 0, gain: 0.10, k: 55, damping: 4.5, limit: 9 },
-    { bone: 'head', channel: 'y', axis: 1, gain: 0.25, k: 240, damping: 11, limit: 4 }
+    { bone: 'head', channel: 'y', axis: 1, gain: 0.25, k: 240, damping: 11, limit: 4 },
+    // 부채가 팔보다 한 박자 늦게 따라옴 (손목)
+    { bone: 'handF', channel: 'rot', axis: 1, gain: 0.05, k: 110, damping: 8, limit: 5 },
+    { bone: 'handB', channel: 'rot', axis: 1, gain: -0.05, k: 110, damping: 8, limit: 5 }
 ];
 
 export const FROST_DEBUG_SOCKETS = [
-    ['fanF', 'armF'],
-    ['fanB', 'armB'],
+    ['fanF', 'handF'],
+    ['fanB', 'handB'],
     ['crown', 'head'],
     ['chest', 'torso'],
     ['footF', 'legF'],
@@ -59,7 +67,9 @@ export const FROST_CLIPS = {
             head: { rot: [[0, 0], [1.2, 2], [2.4, 0]] },
             hair: { rot: [[0, 0], [1.2, -3], [2.4, 0]] },
             armF: { rot: [[0, 0], [0.6, -5], [1.2, 0], [1.8, -3], [2.4, 0]] },
-            armB: { rot: [[0, 0], [0.6, 4], [1.2, 0], [1.8, 3], [2.4, 0]] }
+            armB: { rot: [[0, 0], [0.6, 4], [1.2, 0], [1.8, 3], [2.4, 0]] },
+            handF: { rot: [[0, 0], [0.75, 5], [1.35, 0], [1.95, 3], [2.4, 0]] },     // 팔보다 조금 늦게 살랑
+            handB: { rot: [[0, 0], [0.75, -5], [1.35, 0], [1.95, -3], [2.4, 0]] }
         }
     },
 
@@ -84,7 +94,9 @@ export const FROST_CLIPS = {
             head: { rot: [[0, 0], [0.35, 1.5, 'out'], [0.5, 0], [0.85, 1.5, 'out'], [1.0, 0]] },
             hair: { rot: [[0, -2], [0.5, -5], [1.0, -2]] },
             armF: { rot: [[0, -6], [0.5, 4], [1.0, -6]] },
-            armB: { rot: [[0, -4], [0.5, 6], [1.0, -4]] }
+            armB: { rot: [[0, -4], [0.5, 6], [1.0, -4]] },
+            handF: { rot: [[0, 6], [0.25, 2], [0.5, -4], [0.75, 2], [1.0, 6]] },     // 팔과 반대로 꺾여 춤추듯
+            handB: { rot: [[0, -6], [0.25, -2], [0.5, 4], [0.75, -2], [1.0, -6]] }
         },
         events: [
             [0.35, 'step', { foot: 'footF', bone: 'legF' }],
@@ -105,7 +117,10 @@ export const FROST_CLIPS = {
                 rot: [[0, 0], [0.3, -2, 'in'], [0.42, 2, 'out'], [0.72, -1.5], [0.8, 1.5, 'out'], [1.0, -2]]
             },
             head: { rot: [[0, 0], [0.42, 2], [0.8, -1], [1.0, 0]] },
-            hair: { rot: [[0, 0], [0.42, -4, 'out'], [0.8, -2], [1.0, 0]] }
+            hair: { rot: [[0, 0], [0.42, -4, 'out'], [0.8, -2], [1.0, 0]] },
+            // 손목 스냅: 모을 때 꺾었다가 치는 순간 반대로 탁 (앞 0.42 · 뒤 0.8)
+            handF: { rot: [[0, 0], [0.3, 12, 'in'], [0.42, -9, 'out'], [0.6, 2], [0.72, 6], [0.8, -3, 'out'], [1.0, 12]] },
+            handB: { rot: [[0, 0], [0.3, -4], [0.62, -12, 'in'], [0.78, 8, 'out'], [1.0, -4]] }
         },
         events: [
             [0.42, 'fire', { hit: 0.35, color: ICE, size: 1.2 }],
@@ -123,7 +138,9 @@ export const FROST_CLIPS = {
             torso: { x: [[0, 0], [0.28, -6, 'in'], [0.4, 8, 'out'], [0.9, 0]],
                      rot: [[0, 0], [0.28, -3, 'in'], [0.4, 3, 'out'], [0.9, 0]] },
             head: { rot: [[0, 0], [0.28, -3], [0.4, 3], [0.9, 0]] },
-            hair: { rot: [[0, 0], [0.4, -6, 'out'], [0.9, 0]] }
+            hair: { rot: [[0, 0], [0.4, -6, 'out'], [0.9, 0]] },
+            handF: { rot: [[0, 0], [0.28, 15, 'in'], [0.4, -10, 'out'], [0.6, -5], [0.9, 0]] },   // 크게 젖혔다 그어 냄
+            handB: { rot: [[0, 0], [0.28, -6], [0.4, 6, 'out'], [0.9, 0]] }
         },
         events: [
             [0.38, 'cast'],
@@ -143,7 +160,9 @@ export const FROST_CLIPS = {
             head: { rot: [[0, 0], [0.25, -4], [0.45, 3], [0.65, -4], [1.0, 0]] },
             hair: { rot: [[0, 0], [0.25, -7], [0.45, 4], [0.65, -7], [1.0, 0]] },
             legF: { y: [[0, 0], [0.25, -8], [0.45, 0], [1.0, 0]] },
-            legB: { y: [[0, 0], [0.45, 0], [0.65, -8], [0.85, 0], [1.0, 0]] }
+            legB: { y: [[0, 0], [0.45, 0], [0.65, -8], [0.85, 0], [1.0, 0]] },
+            handF: { rot: [[0, 0], [0.25, -8, 'out'], [0.45, 10], [0.65, -8], [1.0, 0]] },   // 부채를 뒤집으며 돎
+            handB: { rot: [[0, 0], [0.25, 8, 'out'], [0.45, -10], [0.65, 8], [1.0, 0]] }
         },
         events: [
             [0.05, 'charge', { socket: 'chest', bone: 'torso', color: DUST }],
@@ -162,7 +181,9 @@ export const FROST_CLIPS = {
             torso: { y: [[0, 0], [0.3, -6], [0.48, 4, 'out'], [1.0, 0]],
                      rot: [[0, 0], [0.3, -3], [0.48, 2, 'out'], [1.0, 0]] },
             head: { rot: [[0, 0], [0.3, -6], [0.48, 2, 'out'], [1.0, 0]] },
-            hair: { rot: [[0, 0], [0.3, -5], [0.48, 3, 'out'], [1.0, 0]] }
+            hair: { rot: [[0, 0], [0.3, -5], [0.48, 3, 'out'], [1.0, 0]] },
+            handF: { rot: [[0, 0], [0.3, -8, 'out'], [0.48, 8, 'out'], [1.0, 0]] },
+            handB: { rot: [[0, 0], [0.3, 8, 'out'], [0.48, -8, 'out'], [1.0, 0]] }
         },
         events: [
             [0.05, 'charge', { socket: 'crown', bone: 'head', color: DUST }],
@@ -181,7 +202,9 @@ export const FROST_CLIPS = {
             armB: { rot: [[0, 36], [0.7, 42], [1.4, 36]] },
             torso: { y: [[0, 0], [0.7, -4], [1.4, 0]], rot: [[0, -2], [0.7, 2], [1.4, -2]] },
             head: { rot: [[0, -5], [0.7, -3], [1.4, -5]] },
-            hair: { rot: [[0, -3], [0.7, -7], [1.4, -3]] }
+            hair: { rot: [[0, -3], [0.7, -7], [1.4, -3]] },
+            handF: { rot: [[0, -6], [0.7, -1], [1.4, -6]] },
+            handB: { rot: [[0, 6], [0.7, 1], [1.4, 6]] }
         },
         events: [[0.1, 'roar', { socket: 'crown', bone: 'head', color: DUST }]]
     }
@@ -193,18 +216,19 @@ export const FROST = {
     assetDir: FROST_ASSET_DIR,
     bones: FROST_BONES,
     springs: FROST_SPRINGS,
+    wind: [{ bone: 'hair', rot: -6 }],   // 빨리 걸을수록 뒷머리가 뒤로 (Q-008 Q6, reactions.js WIND)
     clips: FROST_CLIPS,
     arms: null,
     attack: 'attack_fan',
-    hitSocket: ['fanF', 'armF'],
+    hitSocket: ['fanF', 'handF'],
     upgrade: FROST_UPGRADE,
     skillClips: [['초승달 참격', 'crescent'], ['눈보라 춤', 'spin'], ['영원한 안식', 'cast']],   // rig_test.html 동작 버튼
     // 부채에서 흩날리는 서리 가루, 발밑에 깔리는 찬 안개
     ambient: [
-        { kind: 'ember', socket: 'fanF', bone: 'armF', layer: 'front', rate: 3,
+        { kind: 'ember', socket: 'fanF', bone: 'handF', layer: 'front', rate: 3,
           offset: [0, 0], spread: [90, 90], size: [1.6, 2.8], life: [0.8, 1.4],
           vel: [[-10, 10], [10, 35]], color: DUST },
-        { kind: 'ember', socket: 'fanB', bone: 'armB', layer: 'front', rate: 2,
+        { kind: 'ember', socket: 'fanB', bone: 'handB', layer: 'front', rate: 2,
           offset: [0, 0], spread: [90, 90], size: [1.6, 2.6], life: [0.8, 1.4],
           vel: [[-10, 10], [10, 35]], color: DUST },
         { kind: 'smoke', socket: 'footF', bone: 'legF', layer: 'back', rate: 3,

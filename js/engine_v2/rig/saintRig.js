@@ -7,6 +7,8 @@
    작은 몸(1.6m)에 로브가 다리를 덮음 → 다리는 몸통 뒤에서 짧게 들어 올리는 종종걸음 (다리는 루트에 붙어 발이 미끄러지지 않음).
    앞팔(armF) = 큰 주사기를 앞으로 겨눈 팔(어깨에서 수평), rot -는 주사기를 들어 올림.
    뒷팔(armB) = 작은 주사기(강화: 황동 집게)를 왼쪽 아래로 늘어뜨린 팔, rot -는 앞(오른쪽)으로 휘두름.
+   손목 관절 (Q-008 단계 2, D-067): 앞손+주사기(handF)를 소매(armF)에서 떼어 손목으로 돌림 — tools/rig/cut_joints.py saint
+     (Gemini "주사기·손 지운 전신"과 원래 전신의 차이). 쏠 때마다 반동으로 주사기 끝이 튐(-가 위로). 소매가 작아 ±8° 안
    ========================================================================== */
 
 export const SAINT_ASSET_DIR = 'assets/sprites/rig/saint/';
@@ -19,12 +21,13 @@ export const SAINT_BONES = [
     { name: 'torso', parent: 'root', part: 'torso', z: 3 },
     { name: 'head', parent: 'torso', part: 'head', z: 4 },
     { name: 'armB', parent: 'torso', part: 'armB', z: 5 },
-    { name: 'armF', parent: 'torso', part: 'armF', z: 6 }
+    { name: 'armF', parent: 'torso', part: 'armF', z: 6 },
+    { name: 'handF', parent: 'armF', part: 'handF', z: 5.5 }   // 손+주사기는 소맷부리 밑에
 ];
 
 /** 강화 그림 (D-044): 강화 주사기 팔은 이중 주사기 → 바늘 소켓, 뒷손은 집게 → 끝 소켓도 바꿈 */
 export const SAINT_UPGRADE = {
-    parts: { head: ['head'], body: ['torso'], arm: ['armF', 'armB'], leg: ['legF', 'legB'] },
+    parts: { head: ['head'], body: ['torso'], arm: ['armF', 'armB', 'handF'], leg: ['legF', 'legB'] },
     sockets: { arm: { muzzle: 'muzzleUp', backTip: 'backTipUp' } }
 };
 
@@ -36,7 +39,7 @@ export const SAINT_SPRINGS = [
 ];
 
 export const SAINT_DEBUG_SOCKETS = [
-    ['muzzle', 'armF'],
+    ['muzzle', 'handF'],
     ['backTip', 'armB'],
     ['halo', 'head'],
     ['chest', 'torso'],
@@ -53,6 +56,7 @@ export const SAINT_CLIPS = {
         duration: 2.4,
         loop: true,
         tracks: {
+            handF: { rot: [[0, 0], [1.4, -2], [2.4, 0]] },
             torso: { y: [[0, 0], [1.2, 4], [2.4, 0]] },
             head: { rot: [[0, 0], [1.2, 1.5], [2.4, 0]] },
             armF: { rot: [[0, 0], [1.2, 2], [2.4, 0]] },
@@ -65,6 +69,7 @@ export const SAINT_CLIPS = {
         duration: 0.9,
         loop: true,
         tracks: {
+            handF: { rot: [[0, 1], [0.45, -2], [0.9, 1]] },
             legF: {
                 y: [[0, 0, 'out'], [0.16, -20, 'in'], [0.32, 0, 'linear'], [0.9, 0]],
                 rot: [[0, 0, 'out'], [0.16, -6, 'in'], [0.32, 0, 'linear'], [0.9, 0]]
@@ -94,6 +99,7 @@ export const SAINT_CLIPS = {
         loop: true,
         loopFrom: 0.35,
         tracks: {
+            handF: { rot: [[0, 0], [0.44, 0], [0.48, -7, 'out'], [0.62, 0], [0.79, 0], [0.83, -7, 'out'], [1.0, 0]] },
             armF: {
                 rot: [[0, 0, 'out'], [0.35, -3], [0.45, -3, 'out'], [0.48, -9], [0.62, -3, 'out'],
                       [0.8, -3, 'out'], [0.83, -9], [1.0, -3]]
@@ -117,6 +123,7 @@ export const SAINT_CLIPS = {
         duration: 0.95,
         loop: false,
         tracks: {
+            handF: { rot: [[0, 0], [0.2, -6, 'out'], [0.3, 0], [0.38, -6, 'out'], [0.48, 0], [0.56, -6, 'out'], [0.7, 0], [0.95, 0]] },
             armF: { rot: [[0, 0], [0.18, -4, 'out'], [0.2, -11], [0.32, -4, 'out'], [0.38, -11], [0.5, -4, 'out'],
                           [0.56, -12], [0.95, 0]] },
             torso: { x: [[0, 0], [0.18, -2], [0.2, -7], [0.32, -3], [0.38, -8], [0.5, -4], [0.56, -10], [0.95, 0]],
@@ -137,6 +144,7 @@ export const SAINT_CLIPS = {
         duration: 1.0,
         loop: false,
         tracks: {
+            handF: { rot: [[0, 0], [0.3, -6], [0.45, 4, 'out'], [1.0, 0]] },
             armF: { rot: [[0, 0], [0.3, -28, 'out'], [0.45, 6, 'out'], [0.65, 2], [1.0, 0]] },
             armB: { rot: [[0, 0], [0.3, 18, 'out'], [0.45, -24, 'out'], [0.7, -18], [1.0, 0]] },
             torso: { y: [[0, 0], [0.3, 6], [0.45, -4, 'out'], [1.0, 0]],
@@ -156,6 +164,7 @@ export const SAINT_CLIPS = {
         duration: 1.0,
         loop: true,
         tracks: {
+            handF: { rot: [[0, -4], [0.5, -7], [1.0, -4]] },
             armF: { rot: [[0, -30], [0.5, -36], [1.0, -30]] },
             armB: { rot: [[0, -15], [0.5, 15], [1.0, -15]] },
             torso: { y: [[0, 4], [0.5, -6], [1.0, 4]], rot: [[0, -2], [0.5, -3], [1.0, -2]] },
@@ -176,7 +185,7 @@ export const SAINT = {
     clips: SAINT_CLIPS,
     arms: null,
     attack: 'attack_needle',
-    hitSocket: ['muzzle', 'armF'],
+    hitSocket: ['muzzle', 'handF'],
     upgrade: SAINT_UPGRADE,
     skillClips: [['봉합 주사 3연발', 'triple'], ['시전 동작', 'cast']],   // rig_test.html 동작 버튼
     // 후광 둘레에 떠오르는 금빛 가루, 주사기 바늘 끝에서 떨어지는 붉은 약물
@@ -184,7 +193,7 @@ export const SAINT = {
         { kind: 'ember', socket: 'halo', bone: 'head', layer: 'front', rate: 3,
           offset: [0, 0], spread: [90, 20], size: [1.6, 2.8], life: [0.8, 1.3],
           vel: [[-8, 8], [-40, -20]], color: HOLY },
-        { kind: 'drip', socket: 'muzzle', bone: 'armF', rate: 1, spread: [8, 4], size: [3.5, 5],
+        { kind: 'drip', socket: 'muzzle', bone: 'handF', rate: 1, spread: [8, 4], size: [3.5, 5],
           life: [3, 3], vel: [[-6, 6], [0, 20]], color: BLOOD }
     ],
     debugSockets: SAINT_DEBUG_SOCKETS,

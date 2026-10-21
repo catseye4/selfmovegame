@@ -16,6 +16,7 @@ import { gameTime } from './gameTime.js';
 import { MECH_VFX } from './vfx/mechVfx.js';
 import { KAIJU_VFX } from './vfx/kaijuVfx.js';
 import { sound } from './audio/sound_v2.js';
+import { displayRes } from './displayRes.js';
 
 // 새끼 괴수 걷기 스프라이트 (tools/rig/bake_sprite.py 결과 assets/sprites/rig/kaiju/baby_walk.json 과 맞춤)
 export const BABY_KAIJU = { src: 'assets/sprites/rig/kaiju/baby_walk.png', frameWidth: 80, frameHeight: 64, frames: 12, duration: 1.2 };
@@ -63,8 +64,9 @@ export class BattleFx {
         this.reset();
     }
 
+    /** 이펙트 좌표계 높이 (CSS px — 캔버스 픽셀은 해상도 배율만큼 더 큼, displayRes.js) */
     get H() {
-        return (this.canvas && this.canvas.height) || (document.getElementById(this.layerId) || {}).clientHeight || 600;
+        return (this.canvas && this.canvas.height / (this.res || 1)) || (document.getElementById(this.layerId) || {}).clientHeight || 600;
     }
 
     // ---- 스킬 이펙트 (VfxPlayer) ----
@@ -201,13 +203,15 @@ export class BattleFx {
     }
 
     _resize() {
-        const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
+        const res = displayRes();
+        const w = Math.round(this.canvas.clientWidth * res), h = Math.round(this.canvas.clientHeight * res);
         if (w && (this.canvas.width !== w || this.canvas.height !== h)) {
             this.canvas.width = w;
             this.canvas.height = h;
             this.ground.width = w;
             this.ground.height = h;
         }
+        if (w) this.res = res;
     }
 
     _update(dt) {
@@ -268,10 +272,15 @@ export class BattleFx {
 
     _draw() {
         const ctx = this.ctx;
-        const H = this.canvas.height;
-        ctx.clearRect(0, 0, this.canvas.width, H);
-        const Y = b => H - b;
+        const r = this.res || 1;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.gctx.setTransform(1, 0, 0, 1, 0, 0);
         this.gctx.clearRect(0, 0, this.ground.width, this.ground.height);
+        ctx.setTransform(r, 0, 0, r, 0, 0);          // 아래부터 CSS px 좌표 (해상도 배율은 변환으로)
+        this.gctx.setTransform(r, 0, 0, r, 0, 0);
+        const H = this.canvas.height / r;
+        const Y = b => H - b;
         this.vfx.draw(this.gctx, 'ground');
 
         for (const e of this.eggs) drawEgg(ctx, e, Y);

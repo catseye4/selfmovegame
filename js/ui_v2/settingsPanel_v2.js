@@ -16,7 +16,8 @@ const SLIDERS = [
 ];
 const TOGGLES = [
     { key: 'mute', label: '음소거', desc: '모든 소리 끄기' },
-    { key: 'shake', label: '화면 흔들림', desc: '폭발·착지·타격 때 화면이 흔들림' }
+    { key: 'shake', label: '화면 흔들림', desc: '폭발·착지·타격 때 화면이 흔들림' },
+    { key: 'sharp', label: '선명한 그림', desc: '큰 화면에서 캐릭터·이펙트를 높은 해상도로 (느리면 끄기)' }
 ];
 
 export function openSettings() {

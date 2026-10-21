@@ -2,15 +2,16 @@
   "frameWidth": 83,
   "frameHeight": 92,
   "anchorX": 52.9,
+  "res": 2.0,
   "clips": {
     "walk": {
-      "src": "assets/sprites/rig/shock/shock_walk.png",
-      "frames": 12,
+      "src": "assets/sprites/rig/shock/shock_walk.webp",
+      "frames": 16,
       "duration": 0.7
     },
     "attack": {
-      "src": "assets/sprites/rig/shock/shock_attack.png",
-      "frames": 10,
+      "src": "assets/sprites/rig/shock/shock_attack.webp",
+      "frames": 14,
       "duration": 0.8
     }
   }
