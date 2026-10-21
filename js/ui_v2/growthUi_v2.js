@@ -64,8 +64,32 @@ export function openGrowthPanel(startTab = 'modules', changed = null) {
     document.body.appendChild(panel);   // 설정 창처럼 화면 전체 위 (settingsPanel_v2.js)
     render();
     clearInterval(timer);
-    timer = setInterval(() => { if (tab === 'dispatch' && panel.isConnected) render(); }, 1000);
+    timer = setInterval(updateDispatchTimes, 1000);
     sound.play('ui_click');
+}
+
+function updateDispatchTimes() {
+    if (!panel?.isConnected || tab !== 'dispatch') return;
+    const now = Date.now();
+    let needFullRender = false;
+    progress.dispatch.forEach((d, i) => {
+        const left = d.end - now;
+        const itemEl = panel.querySelector(`.v2-dispatch[data-dispatch-idx="${i}"]`);
+        if (!itemEl) {
+            needFullRender = true;
+            return;
+        }
+        if (left <= 0) {
+            if (!itemEl.classList.contains('is-done')) needFullRender = true;
+        } else {
+            const pct = Math.min(100, Math.max(0, ((now - d.start) / (d.end - d.start)) * 100));
+            const barI = itemEl.querySelector('.v2-dispatch__bar i');
+            if (barI) barI.style.width = `${pct}%`;
+            const timeSpan = itemEl.querySelector(`[data-dispatch-time="${i}"]`);
+            if (timeSpan) timeSpan.textContent = `${clock(left)} 남음`;
+        }
+    });
+    if (needFullRender) render();
 }
 
 export function closeGrowthPanel() {
@@ -154,10 +178,10 @@ function dispatchHtml() {
         const left = d.end - now, done = left <= 0;
         const pct = Math.min(100, ((now - d.start) / (d.end - d.start)) * 100);
         const r = rosterOf(d.character);
-        return `<div class="v2-dispatch${done ? ' is-done' : ''}" style="--sk:${r ? r.color : '#888'}">
+        return `<div class="v2-dispatch${done ? ' is-done' : ''}" data-dispatch-idx="${i}" style="--sk:${r ? r.color : '#888'}">
             <b>${r ? r.faction : d.character}</b><small>구역 ${d.zone} · ${CHAPTERS[d.zone - 1]?.name.split('·')[1]?.trim() || ''}</small>
             <div class="v2-dispatch__bar"><i style="width:${pct}%"></i></div>
-            ${done ? `<button data-act="collect" data-index="${i}">받기</button>` : `<span>${clock(left)} 남음</span>`}</div>`;
+            ${done ? `<button data-act="collect" data-index="${i}">받기</button>` : `<span data-dispatch-time="${i}">${clock(left)} 남음</span>`}</div>`;
     }).join('');
     const free = slots - progress.dispatch.length;
     const cands = ROSTER.filter(c => c.id !== progress.character && progress.isCharacterUnlocked(c.id) && !progress.isDispatched(c.id));
