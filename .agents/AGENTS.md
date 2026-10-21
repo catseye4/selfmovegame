@@ -17,3 +17,15 @@
      - [js/main_v2.js](file:///e:/Project/SelfMovingGame/js/main_v2.js) 전용 메인 진입 스크립트
      - [index.html](file:///e:/Project/SelfMovingGame/index.html) 및 [index.css](file:///e:/Project/SelfMovingGame/index.css) 내의 `*-v2` 관련 뷰포트 레이아웃 및 스타일 클래스
      - [playground.html](file:///e:/Project/SelfMovingGame/playground.html) 플레이그라운드 관련 리소스
+
+---
+
+## 📝 문서화 규칙 (2026-09-30 추가)
+
+작업과 기획 변경은 반드시 `MD/` 문서에 남긴다. 자세한 규칙은 [MD/README.md](../MD/README.md).
+
+1. 작업을 시작하기 전에 `MD/README.md` → `MD/로드맵.md` → `MD/작업기록.md`(최근 항목)를 읽는다.
+2. 작업을 마치면 `MD/작업기록.md` 맨 위에 항목을 추가한다 (한 일, 바뀐 파일, 확인 결과, 커밋, 남은 일).
+3. 무언가를 정하거나 바꾸면 `MD/결정기록.md`에 번호(D-/Q-)를 붙여 남기고, 기획서와 달라지면 `MD/기획.MD`의 해당 절과 변경 이력을 고친다.
+4. 로드맵의 진행 상태는 실제로 게임에서 확인한 것만 완료로 표시한다.
+

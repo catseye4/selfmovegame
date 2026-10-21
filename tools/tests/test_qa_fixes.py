@@ -1,0 +1,44 @@
+"""QA 회귀 검사: 긴 스테이지 설명의 화면 넘침, 요새 파괴 뒤 배속·표시, 거점 너머 아군 소환"""
+
+CLEAR = ("(await import('/js/engine_v2/stages_v2.js')).STAGES.filter(s => [1, 2].includes(s.zone))"
+         ".forEach(s => progress.stages[s.id] = { stars: [true,true,true], cleared: true, bestTime: 60 });")
+
+
+def run(ctx):
+    g = ctx.game(fresh=True, viewport=(1280, 720))
+    g.enter_v2()
+
+    # 긴 적 설명이 있는 2-B: 메뉴 안 모든 요소가 화면 오른쪽을 넘지 않음
+    g.js(CLEAR + "window.madOverlordGameV2.menuController.selectStage('2-B');")
+    g.wait(300)
+    st = g.js("""return { stage: progress.selectedStage, width: window.innerWidth,
+        overflow: [...document.querySelectorAll('#screen-menu-v2 *')].map(el => ({
+            tag: el.tagName, id: el.id, cls: el.getAttribute('class'), right: el.getBoundingClientRect().right
+        })).filter(el => el.right > window.innerWidth + 0.5) };""")
+    ctx.check(st['stage'] == '2-B' and not st['overflow'], '2-B 메뉴: 모든 요소가 1280px 화면 안에 표시', str(st))
+
+    # 1-1에서 2배속으로 중간 요새를 부숴도 배속과 버튼 표시가 유지됨
+    g.js("progress.selectStage('1-1');")
+    g.battle('mech', wait_ms=2900)
+    g.js("b.setAutoSkills(false); b.spawnInterval = 999; b.playerSpeed = 0; b.playerDps = 0;"
+         "b.enemies.forEach(e => e.dom && e.dom.remove()); b.enemies = [];"
+         "b.midBaseSpawned = true; b.spawnBase('mid');")
+    g.page.click('#btn-speed-v2')
+    g.js("const f = b.enemies.find(e => e.isBuilding && !e.isFinal); b.dealDamageToEnemy(f, f.hp + 10, false);")
+    g.wait(2500)
+    st = g.js("""return { destroyed: b.midBaseDestroyed, speed: gameTime.speed,
+        text: document.getElementById('btn-speed-v2').textContent.trim() };""")
+    ctx.check(st['destroyed'] and st['speed'] == 2 and st['text'] == '2x', '중간 요새 파괴 2.5초 뒤: 2배속·2x 유지', str(st))
+
+    # HUD 외부에서 배속을 바꾸면 다음 프레임에 버튼도 따라감
+    st = g.js("""gameTime.speed = 1;
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        return document.getElementById('btn-speed-v2').textContent.trim();""")
+    ctx.check(st == '1x', '외부에서 1배속으로 변경 → 다음 프레임 버튼 1x', str(st))
+
+    # 거점 오른쪽에서 부활한 봉합 아군은 거점보다 40px 이상 앞에 생김
+    st = g.js("""const f = b.spawnBase('mid');
+        b.spawnAllyMinion(f.x + 200, 'stitch', { art: 'guard', hp: 300, dps: 10 });
+        const a = b.allies[b.allies.length - 1];
+        return { base: f.x, ally: a && a.x };""")
+    ctx.check(st['ally'] is not None and st['ally'] <= st['base'] - 40, '봉합 아군 소환: 거점 x - 40 이하', str(st))

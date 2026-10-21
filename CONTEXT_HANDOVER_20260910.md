@@ -1,5 +1,7 @@
 # 🚀 MAD OVERLORD // AI 대화 맥락 인계 문서 (Context Handover)
 
+> ⚠️ **2026-09-30 이후 최신 상태는 [MD/README.md](MD/README.md)부터 본다** (작업기록·결정기록·로드맵·기술구조). 이 문서는 9월 10일 시점 기록이다.
+
 **생성 일시**: 2026년 9월 10일  
 **프로젝트**: MAD OVERLORD (Decoupled Engine v2)  
 **깃 저장소**: `https://github.com/catseye4/selfmovegame.git` (`main` 브랜치)  

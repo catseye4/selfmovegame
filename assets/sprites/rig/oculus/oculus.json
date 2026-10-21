@@ -1,0 +1,28 @@
+{
+  "frameWidth": 220,
+  "frameHeight": 237,
+  "anchorX": 140.3,
+  "res": 1.5,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/oculus/oculus_walk.webp",
+      "frames": 16,
+      "duration": 1.3
+    },
+    "attack": {
+      "src": "assets/sprites/rig/oculus/oculus_attack.webp",
+      "frames": 16,
+      "duration": 0.9
+    },
+    "magnet": {
+      "src": "assets/sprites/rig/oculus/oculus_magnet.webp",
+      "frames": 16,
+      "duration": 0.8
+    },
+    "drop": {
+      "src": "assets/sprites/rig/oculus/oculus_drop.webp",
+      "frames": 16,
+      "duration": 1.1
+    }
+  }
+}

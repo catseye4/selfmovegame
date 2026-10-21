@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAD OVERLORD // RIG TEST</title>
+    <script>if (new URLSearchParams(location.search).get('capture') === '1') document.documentElement.classList.add('capture');</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <!-- 테스트 화면: 게임과 같은 리그 엔진(js/engine_v2/rig/)·이펙트 정의로 캐릭터 동작·스킬과 적 이펙트를 한 화면에서 확인 (전투 로직 없음) -->
+    <style>
+        :root {
+            --bg: #05050c;
+            --panel: rgba(16, 16, 30, 0.94);
+            --pink: #ff0055;
+            --cyan: #00ffcc;
+            --gold: #ffd24a;
+            --text: #e8e8ff;
+            --muted: #8f8fb8;
+            --line: #2a2a48;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 16px 16px 32px;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Chakra Petch', 'Noto Sans KR', sans-serif;
+        }
+        header { max-width: 1480px; margin: 0 auto 12px; }
+        h1 {
+            margin: 0;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px;
+            color: var(--cyan);
+            text-shadow: 0 0 12px rgba(0, 255, 204, 0.5);
+        }
+        header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+        .rig-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 420px;
+            gap: 16px;
+            max-width: 1480px;
+            margin: 0 auto;
+            align-items: start;
+        }
+        /* 왼쪽: 무대는 스크롤해도 늘 보이게 */
+        .stage-col { position: sticky; top: 12px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+        .stage-panel {
+            position: relative;
+            border: 2px solid var(--pink);
+            border-radius: 10px;
+            box-shadow: 0 0 22px rgba(255, 0, 85, 0.35);
+            overflow: hidden;
+            background: #000;
+        }
+        #rig-canvas { display: block; width: 100%; height: auto; }
+        #rig-loading {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center; text-align: center;
+            color: var(--cyan); background: rgba(5, 5, 12, 0.85);
+        }
+        .stage-bar {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 10px 14px;
+            align-items: center;
+            padding: 10px 12px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            font-size: 13px;
+        }
+        .stage-bar .who { display: flex; flex-direction: column; gap: 2px; }
+        .stage-bar .who b { font-size: 15px; }
+        .stage-bar .who span { color: var(--muted); font-size: 12px; }
+        .stage-bar .vs { color: var(--pink); font-family: 'Orbitron', sans-serif; font-size: 13px; text-align: center; }
+        .stage-bar .who.enemy { text-align: right; }
+        .stage-bar .bar-row { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+        .stage-bar .bar-row .lbl { color: var(--muted); font-size: 12px; margin-right: 2px; }
+        .stage-bar .bar-row .sep { width: 1px; height: 22px; background: var(--line); margin: 0 6px; }
+
+        /* 오른쪽: 탭 패널 (안에서만 스크롤) */
+        .control-panel {
+            position: sticky;
+            top: 12px;
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 24px);
+            background: var(--panel);
+            border: 1px solid rgba(0, 255, 204, 0.35);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .tabs { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--line); }
+        .tabs button {
+            border: 0; border-radius: 0; padding: 12px 6px; background: transparent; color: var(--muted);
+            font-weight: 700; font-size: 14px; border-bottom: 3px solid transparent;
+        }
+        .tabs button.active { color: var(--cyan); background: rgba(0, 255, 204, 0.06); border-bottom-color: var(--cyan); }
+        .tab-body { padding: 12px 14px 16px; overflow-y: auto; }
+        .tab-body[hidden] { display: none; }
+        .group + .group { margin-top: 14px; }
+        .group h3 {
+            margin: 0 0 8px;
+            font-size: 12px;
+            letter-spacing: 1px;
+            color: var(--pink);
+            display: flex; justify-content: space-between; align-items: baseline;
+        }
+        .group h3 small { color: var(--muted); font-weight: 400; letter-spacing: 0; }
+        .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+        button {
+            flex: 1 1 auto;
+            padding: 8px 10px;
+            font: inherit;
+            font-size: 13px;
+            color: var(--text);
+            background: #151529;
+            border: 1px solid #34345a;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        button:hover { border-color: var(--cyan); }
+        button:disabled { opacity: 0.35; cursor: default; border-color: #34345a; }
+        button.active {
+            color: #05050c;
+            background: var(--cyan);
+            border-color: var(--cyan);
+            font-weight: 700;
+        }
+        /* 캐릭터 카드 (4 × 2) */
+        .char-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .char-grid button { padding: 8px 4px; font-size: 12px; border-left: 3px solid var(--cc, #34345a); }
+        .char-grid button.active { background: var(--cc, var(--cyan)); border-color: var(--cc, var(--cyan)); }
+        .sub-row { margin-top: 6px; display: flex; gap: 6px; align-items: center; }
+        .sub-row .lbl { color: var(--muted); font-size: 12px; white-space: nowrap; }
+        .sub-row button { flex: 0 1 auto; padding: 5px 9px; font-size: 12px; }
+        /* 파츠·스킬 목록 (부위별) */
+        .slot { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+        .slot + .slot { margin-top: 8px; }
+        .slot-head {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 6px 10px; background: rgba(255, 0, 85, 0.08); font-size: 12px; color: var(--pink); font-weight: 700;
+        }
+        .slot-head small { color: var(--muted); font-weight: 400; }
+        .part-row {
+            display: grid; grid-template-columns: minmax(0, 1fr) 40px; gap: 6px; align-items: center;
+            padding: 6px 8px 6px 10px; border-top: 1px solid var(--line); cursor: pointer;
+        }
+        .part-row:hover { background: rgba(0, 255, 204, 0.05); }
+        .part-row.is-on { background: rgba(0, 255, 204, 0.1); box-shadow: inset 3px 0 0 var(--cyan); }
+        .part-row .name { font-size: 13px; line-height: 1.35; }
+        .part-row .name small { color: var(--muted); font-size: 11px; margin-left: 4px; }
+        .part-row .skill { display: block; font-size: 12px; color: var(--gold); }
+        .part-row .desc { display: none; font-size: 11px; color: var(--muted); line-height: 1.45; margin-top: 2px; }
+        .part-row.is-on .desc { display: block; }
+        .part-row .play { flex: none; padding: 7px 0; font-size: 13px; }
+        .tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 0 5px; border-radius: 4px; margin-right: 4px;
+            background: rgba(255, 255, 255, 0.08); color: var(--muted); vertical-align: 1px; }
+        .tag.a { background: rgba(255, 140, 60, 0.18); color: #ffad6b; }
+        .tag.b { background: rgba(120, 160, 255, 0.18); color: #9fb7ff; }
+        .tag.up { background: rgba(255, 210, 74, 0.16); color: var(--gold); }
+        .tag.boss { background: rgba(255, 0, 85, 0.2); color: #ff7aa2; }
+        /* 적 목록 */
+        .zone-block + .zone-block { margin-top: 8px; }
+        .zone-block .zone-name { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+        .enemy-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+        .enemy-chips button { flex: 0 1 auto; padding: 5px 9px; font-size: 12px; }
+        .enemy-chips button.boss { border-color: rgba(255, 0, 85, 0.6); }
+        .fx-list { display: flex; flex-direction: column; gap: 5px; }
+        .fx-row {
+            display: grid; grid-template-columns: minmax(0, 1fr) 40px; gap: 6px; align-items: center;
+            padding: 6px 8px 6px 10px; border: 1px solid var(--line); border-radius: 7px;
+        }
+        .fx-row .name { font-size: 13px; }
+        .fx-row .name small { display: block; font-size: 11px; color: var(--muted); }
+        .fx-row .play { padding: 7px 0; }
+        .vfx-variant-row { display: grid; grid-template-columns: minmax(0, 1fr) repeat(4, 36px); gap: 5px;
+            align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+        .vfx-variant-row button { padding: 6px 0; }
+        #capture-label { display: none; }
+        .capture body { padding: 0; overflow: hidden; }
+        .capture header, .capture .control-panel, .capture .stage-bar, .capture .notes { display: none; }
+        .capture .rig-layout { display: block; max-width: none; margin: 0; }
+        .capture .stage-col { position: static; display: block; }
+        .capture .stage-panel { border: 0; border-radius: 0; box-shadow: none; height: 100vh; }
+        .capture #rig-canvas { width: 100vw; height: 100vh; object-fit: contain; }
+        .capture #capture-label { display: block; position: fixed; top: 14px; left: 20px; z-index: 2;
+            color: #fff; font: 700 22px 'Noto Sans KR', sans-serif; pointer-events: none;
+            background: rgba(10, 8, 20, 0.72); border: 1px solid rgba(242, 154, 58, 0.8); border-radius: 6px; padding: 4px 12px; }
+        .capture #capture-label:empty { display: none; }
+        .empty { color: var(--muted); font-size: 12px; padding: 6px 2px; }
+        label.opt {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 5px 0;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        label.opt small { display: block; color: var(--muted); font-size: 12px; }
+        label.opt input { margin-top: 3px; accent-color: var(--cyan); }
+        .speed-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .speed-row input { flex: 1; accent-color: var(--pink); }
+        #event-log {
+            list-style: none;
+            margin: 0;
+            padding: 8px;
+            min-height: 120px;
+            background: #020207;
+            border-radius: 6px;
+            font-family: Consolas, monospace;
+            font-size: 12px;
+            color: #9dffe9;
+        }
+        #event-log li + li { margin-top: 3px; opacity: 0.75; }
+        .notes {
+            max-width: 1480px;
+            margin: 14px auto 0;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        .notes b { color: var(--text); }
+        @media (max-width: 1100px) {
+            .rig-layout { grid-template-columns: 1fr; }
+            .stage-col, .control-panel { position: static; max-height: none; }
+        }
+    </style>
+</head>
+<body>
+    <div id="capture-label"></div>
+    <header>
+        <h1>RIG TEST // 캐릭터 · 스킬 · 적 이펙트</h1>
+        <p>게임과 같은 리그·이펙트 정의로, 캐릭터 동작과 스킬을 적에게 써 보고 적·보스·엘리트 이펙트를 한 화면에서 확인 (전투 로직·소리 없음)</p>
+    </header>
+
+    <main class="rig-layout">
+        <section class="stage-col">
+            <div class="stage-panel">
+                <canvas id="rig-canvas" width="960" height="600"></canvas>
+                <div id="rig-loading">파츠 불러오는 중...</div>
+            </div>
+            <div class="stage-bar">
+                <div class="who"><b id="who-char">-</b><span id="who-parts">-</span></div>
+                <div class="vs">VS</div>
+                <div class="who enemy"><b id="who-enemy">-</b><span id="who-enemy-sub">-</span></div>
+                <div class="bar-row">
+                    <span class="lbl">캐릭터</span>
+                    <button data-mode="idle">대기</button>
+                    <button data-mode="walk">걷기</button>
+                    <button data-mode="attack">공격</button>
+                    <button data-mode="victory">승리</button>
+                    <span class="sep"></span>
+                    <span class="lbl">적</span>
+                    <button data-enemy-mode="walk">걷기</button>
+                    <button data-enemy-mode="attack">공격</button>
+                    <span class="sep"></span>
+                    <button id="btn-pause-2">❚❚</button>
+                </div>
+            </div>
+        </section>
+
+        <aside class="control-panel">
+            <nav class="tabs">
+                <button data-tab="char" class="active">캐릭터 · 스킬</button>
+                <button data-tab="enemy">적 · 이펙트</button>
+                <button data-tab="vfx">이펙트 안</button>
+                <button data-tab="opt">설정</button>
+            </nav>
+
+            <!-- 캐릭터 · 스킬 -->
+            <div class="tab-body" id="tab-char">
+                <div class="group">
+                    <h3>캐릭터</h3>
+                    <div class="char-grid" id="char-grid"></div>
+                    <div class="sub-row"><span class="lbl">아군</span><div class="btn-row" id="ally-row"></div></div>
+                </div>
+
+                <div class="group" id="action-group">
+                    <h3>동작 <small>캐릭터 고유 동작</small></h3>
+                    <div class="btn-row" id="action-row"></div>
+                </div>
+
+                <div class="group" id="parts-group">
+                    <h3>파츠 · 스킬 <small>줄을 누르면 장착(그림 바뀜) · ▶ 스킬 이펙트</small></h3>
+                    <div id="parts-list"></div>
+                </div>
+
+                <div class="group" id="common-group">
+                    <h3>기본 공격 · 그 밖의 이펙트</h3>
+                    <div class="btn-row" id="vfx-preview-row"></div>
+                </div>
+            </div>
+
+            <!-- 적 · 이펙트 -->
+            <div class="tab-body" id="tab-enemy" hidden>
+                <div class="group">
+                    <h3>적 <small>무대 오른쪽에 섬 (게임과 같은 그림)</small></h3>
+                    <div id="enemy-list"></div>
+                    <div class="sub-row">
+                        <span class="lbl">표시</span>
+                        <button data-enemy-count="1">1마리</button>
+                        <button data-enemy-count="3">3마리</button>
+                        <button id="btn-elite">엘리트</button>
+                        <button id="btn-enemy-rig">리그로 크게 보기</button>
+                    </div>
+                </div>
+
+                <div class="group">
+                    <h3>이 적의 기술 · 이펙트 <small>적 → 캐릭터</small></h3>
+                    <div class="fx-list" id="enemy-skill-list"></div>
+                </div>
+
+                <div class="group">
+                    <h3>엘리트 속성 <small>누르면 이 적에 붙이고 이펙트</small></h3>
+                    <div class="btn-row" id="affix-row"></div>
+                </div>
+
+                <div class="group">
+                    <h3>구역 기믹 · 거점</h3>
+                    <div class="fx-list" id="zone-fx-list"></div>
+                </div>
+            </div>
+
+            <div class="tab-body" id="tab-vfx" hidden>
+                <div class="group">
+                    <h3>이펙트 안 <small>A 지금 · B 만화풍 · C 묵직한</small></h3>
+                    <label class="opt"><input type="checkbox" id="vfx-pixel">
+                        <span>이펙트 픽셀풍<small>이펙트만 1/3 해상도 · 선택은 게임에도 적용</small></span></label>
+                    <div id="vfx-variant-list"></div>
+                </div>
+            </div>
+
+            <!-- 설정 -->
+            <div class="tab-body" id="tab-opt" hidden>
+                <div class="group">
+                    <h3>비교 옵션</h3>
+                    <label class="opt"><input type="checkbox" data-opt="crossfade">
+                        <span>상태 전환 보간<small>끄면 기존처럼 동작이 뚝 바뀜</small></span></label>
+                    <label class="opt"><input type="checkbox" data-opt="springs">
+                        <span>2차 모션 (스프링)<small>꼬리·캐니스터·돔 등의 관성 흔들림</small></span></label>
+                    <label class="opt"><input type="checkbox" data-opt="pixel">
+                        <span>도트 모드<small>1/4 해상도로 그린 뒤 확대 (2단계 미리보기)</small></span></label>
+                    <label class="opt"><input type="checkbox" data-opt="stepped">
+                        <span>12fps 끊어 재생<small>도트 게임식 프레임 타이밍</small></span></label>
+                    <label class="opt"><input type="checkbox" data-opt="bones">
+                        <span>뼈대·소켓 표시<small>피벗, 부모-자식 연결, 총구/발 위치</small></span></label>
+                    <label class="opt"><input type="checkbox" data-opt="dummies">
+                        <span>적 표시<small>무대 오른쪽의 적 (적 · 이펙트 탭에서 고름)</small></span></label>
+                    <label class="opt"><input type="checkbox" data-opt="scroll">
+                        <span>걷기 중 배경 스크롤</span></label>
+                </div>
+
+                <div class="group">
+                    <h3>재생</h3>
+                    <div class="speed-row">
+                        <input id="opt-speed" type="range" min="0.1" max="2" step="0.05" value="1">
+                        <span id="opt-speed-value">1.00x</span>
+                    </div>
+                    <div class="btn-row">
+                        <button id="btn-pause">❚❚ 일시정지</button>
+                        <button id="btn-step">한 프레임 ▸</button>
+                    </div>
+                </div>
+
+                <div class="group">
+                    <h3>이벤트 로그</h3>
+                    <ul id="event-log"></ul>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <section class="notes">
+        <b>확인 포인트</b> ·
+        캐릭터 · 스킬: 캐릭터를 고르고 부위마다 파츠 줄을 누르면 세트·강화 그림으로 바뀜, ▶는 그 파츠 스킬의 이펙트를 적에게 ·
+        적 · 이펙트: 적을 고르면 무대 오른쪽에 서고, 그 적의 기술(보스 기술 포함)·엘리트 속성·구역 기믹 이펙트가 캐릭터 쪽으로 ·
+        이펙트 정의는 게임과 같음(<b>js/engine_v2/vfx/</b>), 스킬 미리보기 연결은 <b>js/rig_test/skillPreviews.js</b>, 파츠·스킬 목록은 <b>node tools/data/export_parts.mjs MD</b>로 다시 만듦
+    </section>
+
+    <script>
+        // 파일을 바로 열면(file://) 모듈·그림을 못 불러와 "불러오는 중"에서 멈춤 → 여는 방법 안내
+        if (location.protocol === 'file:') {
+            document.getElementById('rig-loading').innerHTML =
+                '이 화면은 파일로 바로 열면 동작하지 않아요.<br>' +
+                '같은 폴더의 <b>open_rig_test.bat</b>을 더블클릭하세요.<br>' +
+                '<small>(또는 python serve.py 실행 후 http://localhost:8099/rig_test.html)</small>';
+        }
+    </script>
+    <script type="module" src="js/rig_test/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "frameWidth": 106,
+  "frameHeight": 104,
+  "anchorX": 56.3,
+  "res": 2.0,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/builder/builder_walk.webp",
+      "frames": 16,
+      "duration": 0.85
+    },
+    "attack": {
+      "src": "assets/sprites/rig/builder/builder_attack.webp",
+      "frames": 14,
+      "duration": 1
+    }
+  }
+}

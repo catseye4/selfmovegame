@@ -6,21 +6,42 @@ import { gameState } from './engine/state.js';
 import { battleEngineV2 } from './engine_v2/battle_v2.js';
 import { MenuController } from './ui_v2/menu_v2.js';
 import { LabController } from './ui_v2/lab_v2.js';
+import { SelectController } from './ui_v2/select_v2.js';
+import { sound } from './engine_v2/audio/sound_v2.js';
+import { progress } from './engine_v2/progress_v2.js';
+import { registerV2Parts } from './engine_v2/partsExtra_v2.js';
+import { runLoading } from './ui_v2/loading_v2.js';
+import { applyVfxChoices, readVfxChoices, readVfxStyle } from './engine_v2/vfx/vfxVariants.js';
+import { preloadVfxSheets } from './engine_v2/vfx/vfxPlayer.js';
+import { setFitScale } from './engine_v2/displayRes.js';
 
 class GameRouterV2 {
     constructor() {
         this.currentScreen = 'menu';
+        // v2 전용 추가 파츠(괴수 팔 등)를 등록한 뒤, 저장된 진행(DM, 장착, 보유 파츠, 강화, 스테이지)을 적용
+        registerV2Parts();
+        progress.init();
         
         // 라우터 바인딩된 화면 전환 함수 (v2)
         const switchFn = (name) => this.switchScreen(name);
         
         this.menuController = new MenuController(switchFn);
         this.labController = new LabController(switchFn);
+        this.selectController = new SelectController(switchFn);
 
         this.init();
     }
 
     init() {
+        // 사운드: 첫 입력에서 켜짐 (모드 선택 클릭으로 들어왔으면 바로)
+        sound.listenForUnlock();
+        // 메뉴/연구소/선택창 버튼 클릭음 (연구소 장착 확정·캐릭터 카드는 소리를 따로 냄)
+        document.addEventListener('click', e => {
+            const t = e.target.closest('#screen-menu-v2 button, #screen-lab-v2 button, #screen-lab-v2 .part-card, #screen-select-v2 button');
+            if (!t || t.id === 'btn-equip-confirm-v2') return;
+            sound.play(t.matches('.tab-btn-v2, .part-card') ? 'ui_tab' : 'ui_click');
+        });
+
         // 전장 퇴각 버튼 이벤트 (v2)
         const btnLeave = document.getElementById('btn-battle-leave-v2');
         if (btnLeave) {
@@ -29,6 +50,9 @@ class GameRouterV2 {
                 this.switchScreen('menu');
             });
         }
+
+        // 결과 화면 버튼 (다시 출격 / 연구소 / 메인 메뉴) → 화면 전환
+        battleEngineV2.onNavigate = name => this.switchScreen(name);
 
         // 특수 스킬 강제 발동 버튼 이벤트 (v2)
         const btnSpecial = document.getElementById('btn-trigger-special-v2');
@@ -69,6 +93,10 @@ class GameRouterV2 {
         if (this.currentScreen === 'battle' && screenName !== 'battle') {
             battleEngineV2.stopBattle();
         }
+        // 떠나는 화면의 애니메이션 루프 정지 (메인 레이더, 연구소 미리보기)
+        if (this.currentScreen === 'menu' && screenName !== 'menu') this.menuController.onLeave();
+        if (this.currentScreen === 'lab' && screenName !== 'lab') this.labController.onLeave();
+        if (this.currentScreen === 'select' && screenName !== 'select') this.selectController.onLeave();
 
         const screens = document.querySelectorAll('.screen-v2');
         screens.forEach(s => {
@@ -88,8 +116,11 @@ class GameRouterV2 {
         gameState.currentScreen = screenName;
 
         // 화면 전환 시 각 화면별 데이터 리프레시
+        if (screenName === 'menu' || screenName === 'lab' || screenName === 'select') sound.playBgm('menu');
         if (screenName === 'menu') {
             this.menuController.updateDisplay();
+        } else if (screenName === 'select') {
+            this.selectController.render();
         } else if (screenName === 'lab') {
             this.labController.renderPartsGrid();
             this.labController.updateMvvmFeedback();
@@ -99,6 +130,27 @@ class GameRouterV2 {
     }
 }
 
+// 화면 크기 맞춤: 1280x720 화면(테두리 포함 1288x728)을 창 크기에 맞게 비율 유지 확대·축소, 가운데 정렬 (ui_v2.css 'v2-fit')
+const FRAME = { w: 1288, h: 728, min: 0.5, max: 2 };
+function fitScreens() {
+    const app = document.getElementById('app');
+    if (!app) return;
+    const aw = app.clientWidth, ah = app.clientHeight;
+    const k = Math.max(FRAME.min, Math.min(FRAME.max, aw / FRAME.w, ah / FRAME.h));
+    setFitScale(k);   // 캔버스 해상도 배율 (displayRes.js — 큰 화면에서 선명하게)
+    const st = document.documentElement.style;
+    st.setProperty('--v2-scale', k.toFixed(4));
+    st.setProperty('--v2-x', `${Math.round((aw - FRAME.w * k) / 2)}px`);
+    st.setProperty('--v2-y', `${Math.round((ah - FRAME.h * k) / 2)}px`);
+}
+
 export function initGameRouterV2() {
+    applyVfxChoices(readVfxChoices());
+    battleEngineV2.fx.vfx.style = readVfxStyle();
+    preloadVfxSheets();   // 그림 프레임 이펙트(D-060) 미리 받기
+    document.body.classList.add('v2-fit');
+    fitScreens();
+    window.addEventListener('resize', fitScreens);
+    runLoading();   // 캐릭터·사운드 미리 받기 (메인 화면은 뒤에서 바로 준비)
     window.madOverlordGameV2 = new GameRouterV2();
 }

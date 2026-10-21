@@ -1,0 +1,18 @@
+{
+  "frameWidth": 99,
+  "frameHeight": 81,
+  "anchorX": 48.9,
+  "res": 2.0,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/slime/slime_walk.webp",
+      "frames": 16,
+      "duration": 0.8
+    },
+    "attack": {
+      "src": "assets/sprites/rig/slime/slime_attack.webp",
+      "frames": 14,
+      "duration": 0.8
+    }
+  }
+}

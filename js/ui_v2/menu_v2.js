@@ -1,47 +1,260 @@
 /* ==========================================================================
-   PROJECT: MAD OVERLORD // MAIN MENU CONTROLLER (PORTRAIT KIOSK) (v2)
+   PROJECT: MAD OVERLORD // 메인 화면: 전술 그리드 (v2, 가로 1280x720)
+   ① 오버로드 대기실: 장착 파츠로 조립된 캐릭터(리그 idle) + 부위별 파츠·스킬 설명 + 능력치 + CHARACTER(선택창) · MUTATION LAB
+   ② 전술 레이더: 챕터 스테이지 점(누르면 선택), 선택한 스테이지 정보 (STORY / SPECIAL 전환 — SPECIAL은 준비 중)
+      화면 오른쪽 위 난이도 노말·하드·헬·나이트메어 (D-063): 고른 난이도의 잠금·별·배율로 표시
+   ③ ATTACK / SORTIE 출격 버튼 + 상태 줄(보유 DM, 장착 스킬)
+   ④ 우상단: 재화, 설정(톱니바퀴)
    ========================================================================== */
 
 import { gameState } from '../engine/state.js';
 import { monsterControllerV2 } from '../engine_v2/monster_v2.js';
+import { skillsForParts, legPassiveOf } from '../engine_v2/skills_v2.js';
+import { progress } from '../engine_v2/progress_v2.js';
+import { rosterOf } from '../engine_v2/roster_v2.js';
+import { CHAPTERS, stageById, isUnlocked, defaultStage, chapterOf, chapterUnlocked, defaultStageIn } from '../engine_v2/stages_v2.js';
+import { DIFFICULTIES, difficultyOf, difficultyUnlocked, stageFor, FINAL_STAGE_ID } from '../engine_v2/difficulty_v2.js';
+import { ENEMY_TYPES } from '../engine_v2/enemies_v2.js';
+import { sound } from '../engine_v2/audio/sound_v2.js';
+import { icon, fillIcons } from './icons.js';
+import { openSettings } from './settingsPanel_v2.js';
+import { TacticalRadar } from './radar_v2.js';
+import { resChipHtml, openGrowthPanel } from './growthUi_v2.js';
+import { MUTATORS } from '../engine_v2/growth_v2.js';
+
+const $ = id => document.getElementById(id);
+const SLOTS = [
+    { slot: 'head', label: 'HEAD', role: 'ULT' },
+    { slot: 'arm', label: 'ARM', role: '1' },
+    { slot: 'body', label: 'BODY', role: '2' },
+    { slot: 'leg', label: 'LEG', role: 'P' }
+];
 
 export class MenuController {
     constructor(switchScreenFn) {
         this.switchScreen = switchScreenFn;
-        this.domDmCount = document.getElementById('menu-dm-count-v2');
-        this.domFactionName = document.getElementById('menu-faction-name-v2');
-
+        this.root = $('screen-menu-v2');
+        this.domDmCount = $('menu-dm-count-v2');
+        this.domFactionName = $('menu-faction-name-v2');
+        this.map = 'story';
+        this.radar = new TacticalRadar($('menu-radar-v2'));
+        fillIcons(this.root);
+        const chip = this.root && this.root.querySelector('.v2-chip--dm');
+        if (chip) chip.insertAdjacentHTML('afterbegin', icon('gem', 18));
         this.initEvents();
     }
 
     initEvents() {
-        const btnLab = document.getElementById('btn-to-lab-v2');
-        const btnBattle = document.getElementById('btn-to-battle-v2');
+        $('btn-to-select-v2')?.addEventListener('click', () => this.switchScreen('select'));
+        $('btn-to-lab-v2')?.addEventListener('click', () => {
+            gameState.resetCartToEquipped();
+            this.switchScreen('lab');
+        });
+        $('btn-to-battle-v2')?.addEventListener('click', () => {
+            if (this.map !== 'story') return;
+            if (!progress.isReady()) {   // 몸통을 아직 안 산 캐릭터 (D-051)
+                sound.play('ui_error');
+                $('menu-map-foot-v2').innerHTML = '<b>출격 불가</b> — 몸통 파츠가 없습니다. MUTATION LAB에서 파츠를 구매하세요';
+                return;
+            }
+            this.switchScreen('battle');
+        });
+        $('btn-menu-settings-v2')?.addEventListener('click', () => openSettings());
+        $('btn-menu-support-v2')?.addEventListener('click', () => openGrowthPanel('modules', () => this.updateDisplay()));
+        this.root?.querySelectorAll('.v2-maptab').forEach(tab => tab.addEventListener('click', () => this.setMap(tab.dataset.map)));
+    }
 
-        if (btnLab) {
-            btnLab.addEventListener('click', () => {
-                gameState.resetCartToEquipped();
-                this.switchScreen('lab');
-            });
-        }
-
-        if (btnBattle) {
-            btnBattle.addEventListener('click', () => {
-                this.switchScreen('battle');
-            });
+    setMap(map) {
+        this.map = map;
+        this.radar.setMode(map);
+        this.root.querySelectorAll('.v2-maptab').forEach(t => t.classList.toggle('is-on', t.dataset.map === map));
+        const story = map === 'story';
+        $('menu-radar-locked-v2').hidden = story;
+        $('menu-map-name-v2').textContent = story ? chapterOf(this.currentStage()).name : 'SPECIAL · 무한 파밍 / 엘리트 챌린지';
+        $('menu-zones-v2').hidden = !story;
+        const sortie = $('btn-to-battle-v2');
+        sortie.disabled = !story;
+        if (story) this.renderStages();
+        else {
+            $('menu-map-foot-v2').textContent = 'SPECIAL MAP · 준비 중';
+            $('menu-sortie-sub-v2').textContent = 'SPECIAL MAP 준비 중 — STORY MAP으로 출격';
         }
     }
 
+    // ---- 스테이지 선택 (레이더 점) ----
+    /** 지금 고른 스테이지 (저장된 선택이 열려 있으면 그것, 아니면 아직 못 깬 첫 스테이지) */
+    currentStage() {
+        const sel = progress.selectedStage;
+        return sel && isUnlocked(sel, progress) ? stageById(sel) : defaultStage(progress);
+    }
+
+    selectStage(id) {
+        if (!isUnlocked(id, progress)) {
+            sound.play('ui_error');
+            $('menu-map-foot-v2').innerHTML = `<b>${id}</b> 잠김 — 이전 스테이지를 먼저 클리어하세요`;
+            return;
+        }
+        sound.play('ui_tab');
+        progress.selectStage(id);
+        this.renderStages();
+    }
+
+    /** 구역 탭: 구역 1 / 구역 2(1-B를 깨면 열림) — 누르면 그 구역의 아직 못 깬 첫 스테이지 */
+    selectZone(id) {
+        const ch = CHAPTERS.find(c => c.id === id);
+        if (!ch) return;
+        if (!chapterUnlocked(ch, progress)) {
+            sound.play('ui_error');
+            const prev = CHAPTERS[CHAPTERS.indexOf(ch) - 1];
+            const last = prev && prev.stages[prev.stages.length - 1];
+            $('menu-map-foot-v2').innerHTML = `<b>구역 ${ch.zone}</b> 잠김 — ${last ? `${last.id} ${last.name}을(를) ` : '이전 구역을 '}클리어하세요`;
+            return;
+        }
+        sound.play('ui_tab');
+        progress.selectStage(defaultStageIn(ch, progress).id);
+        this.renderStages();
+    }
+
+    /** 난이도 버튼: 잠긴 난이도는 바로 앞 난이도의 마지막 스테이지를 깨야 열림 */
+    selectDifficulty(id) {
+        if (!difficultyUnlocked(id, progress)) {
+            sound.play('ui_error');
+            const i = DIFFICULTIES.findIndex(d => d.id === id);
+            const prev = DIFFICULTIES[i - 1];
+            $('menu-map-foot-v2').innerHTML = `<b>${difficultyOf(id).name}</b> 잠김 — ${prev.name} ${FINAL_STAGE_ID}까지 클리어하면 열립니다`;
+            return;
+        }
+        if (id === progress.difficulty) return;
+        sound.play('ui_tab');
+        progress.selectDifficulty(id);
+        this.renderStages();
+    }
+
+    renderDifficulties() {
+        const box = $('menu-diffs-v2');
+        if (!box) return;
+        box.innerHTML = DIFFICULTIES.map(d => {
+            const open = difficultyUnlocked(d.id, progress);
+            const on = d.id === progress.difficulty;
+            return `<button class="v2-difftab${on ? ' is-on' : ''}${open ? '' : ' is-locked'}" data-diff="${d.id}" style="--diff:${d.color}"`
+                + ` aria-pressed="${on}" title="${d.name}${open ? '' : ' (잠김)'}">${open ? '' : icon('lock', 10)}${d.name}</button>`;
+        }).join('');
+        box.querySelectorAll('.v2-difftab').forEach(b => b.addEventListener('click', () => this.selectDifficulty(b.dataset.diff)));
+    }
+
+    renderZones(cur) {
+        const box = $('menu-zones-v2');
+        if (!box) return;
+        const curCh = chapterOf(cur);
+        box.innerHTML = CHAPTERS.map(ch => {
+            const open = chapterUnlocked(ch, progress);
+            return `<button class="v2-zonetab${ch === curCh ? ' is-on' : ''}${open ? '' : ' is-locked'}" data-zone="${ch.id}" title="${ch.name}">`
+                + `${open ? '' : icon('lock', 11)}구역 ${ch.zone}</button>`;
+        }).join('');
+        box.querySelectorAll('.v2-zonetab').forEach(b => b.addEventListener('click', () => this.selectZone(b.dataset.zone)));
+    }
+
+    renderStages() {
+        const cur = this.currentStage();
+        progress.selectedStage = cur.id;
+        const ch = chapterOf(cur);
+        $('menu-map-name-v2').textContent = ch.name;
+        const diff = difficultyOf(progress.difficulty);
+        const radar = this.root.querySelector('.v2-radar');
+        if (radar) { radar.dataset.difficulty = diff.id; radar.style.setProperty('--diff', diff.color); }
+        this.renderDifficulties();
+        this.renderZones(cur);
+        const nodes = ch.stages.map(st => ({
+            id: st.id, at: st.map, boss: !!st.boss, name: `${st.id} ${st.name}`,
+            state: progress.stage(st.id).cleared ? 'cleared' : isUnlocked(st.id, progress) ? 'open' : 'locked',
+            stars: progress.starCount(st.id)
+        }));
+        this.radar.setStages(nodes, cur.id, id => this.selectStage(id));
+        const stars = progress.stage(cur.id).stars.map(f => (f ? '★' : '☆')).join('');
+        const enemies = Object.keys(cur.enemy.mix).map(k => ENEMY_TYPES[k].name).join(' · ');
+        const best = progress.stage(cur.id).bestTime;
+        const clock = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+        const shown = stageFor(cur, diff.id);   // 제한·별 시간은 난이도 배율 반영
+        // 노말이 아니면 레이더 왼쪽 아래에 배율 요약
+        const note = $('menu-diffnote-v2');
+        if (note) {
+            note.hidden = diff.id === 'normal';
+            const mut = shown.mutator && MUTATORS[shown.mutator];   // 나이트메어 이번 주 전장 변이 (Q-006)
+            note.innerHTML = diff.id === 'normal' ? '' : `<b>${diff.en}</b><span>적 체력 ×${diff.enemyHp} · 공격력 ×${diff.enemyDps} · 거점 ×${diff.base}</span>`
+                + `<span>엘리트 속성 ${shown.affixCount}개${diff.bossHaste > 1 ? ' · 보스 기술 빨라짐' : ''} · 보상 ×${diff.reward}</span>`
+                + (mut ? `<span class="v2-mutnote">이번 주 변이: ${mut.name} — ${mut.desc} (대응: ${mut.counter})</span>` : '');
+        }
+        $('menu-map-foot-v2').innerHTML = `<b>${cur.id} ${cur.name}</b> <span class="v2-stars">${stars}</span>`
+            + `<span class="v2-radar__time">⏱ 제한 ${clock(shown.timeLimit)} · ★ ${shown.starTime}초 안에${best ? ` · 최고 ${clock(best)}` : ''}</span>`
+            + `<small>${cur.desc} · 적: ${enemies}${cur.boss ? ' · 보스' : ''}</small>`;
+        $('menu-sortie-sub-v2').textContent = progress.isReady()
+            ? `STAGE ${cur.id} ${cur.name}${diff.id === 'normal' ? '' : ` · ${diff.name}`} 출격` : '몸통 파츠 필요 — 연구소에서 구매';
+    }
+
+    /** 메인 화면이 보일 때마다: 장착 상태로 캐릭터/설명/능력치/상태 줄 갱신, 레이더 시작 */
     updateDisplay() {
-        if (this.domDmCount) {
-            this.domDmCount.textContent = gameState.darkMatter.toLocaleString();
+        if (this.domDmCount) this.domDmCount.textContent = gameState.darkMatter.toLocaleString();
+        const res = $('menu-res-v2');
+        if (res) res.innerHTML = resChipHtml();   // 별·조각·코어 (Q-006)
+        const badge = $('menu-support-badge-v2');   // 받을 파견이 있으면 빨간 점
+        if (badge) badge.textContent = progress.dispatch.some(d => d.end <= Date.now()) ? ' ' : '';
+        const equipped = gameState.getEquippedObjects();
+        monsterControllerV2.renderVisuals(equipped, progress.character);
+
+        // 캐릭터 이름/팩션 (캐릭터는 선택창에서 고름 — 몸통을 아직 안 샀으면 흐린 모습)
+        const portrait = monsterControllerV2.getPortrait();
+        const body = equipped.body && equipped.body.id !== 'none' ? equipped.body : null;
+        const ros = rosterOf(progress.character);
+        $('menu-unit-name-v2').textContent = portrait ? portrait.name : 'OVERLORD';
+        if (this.domFactionName) this.domFactionName.textContent = body ? body.faction : `${ros ? ros.faction : ''} · 몸통 파츠 없음 — 연구소에서 구매`;
+        const tag = $('menu-unit-tag-v2');
+        if (tag) {
+            tag.textContent = body ? 'UNIT READY' : 'NO BODY';
+            tag.classList.toggle('is-warn', !body);
         }
 
-        const equippedObjs = gameState.getEquippedObjects();
-        monsterControllerV2.renderVisuals(equippedObjs);
+        this.renderCallouts(equipped);
+        this.renderStats();
+        this.renderStatusBar(equipped);
+        if (this.map === 'story') this.renderStages();
+        if (gameState.currentScreen === 'menu' || !gameState.currentScreen) this.radar.start();
+    }
 
-        if (this.domFactionName && equippedObjs.head) {
-            this.domFactionName.textContent = equippedObjs.head.faction || '합성괴인';
-        }
+    renderCallouts(equipped) {
+        const skills = skillsForParts(equipped);
+        $('menu-callouts-v2').innerHTML = SLOTS.map(({ slot, label, role }, i) => {
+            const part = equipped[slot];
+            const has = part && part.id !== 'none';
+            const sk = skills[slot];
+            const leg = slot === 'leg' ? legPassiveOf(part) : null;
+            const lv = has ? progress.levelOf(part.id) : 1;
+            const skillLine = sk ? `<span style="--sk:${sk.color}">${icon(sk.icon, 12)}<i>${role === 'ULT' ? '필살기' : `스킬 ${role}`} · ${sk.name}</i></span>`
+                : leg ? `<span><i>패시브 · ${leg.name}</i></span>` : '<span><i>—</i></span>';
+            return `<li data-slot="${slot}" class="${i >= 2 ? 'is-right' : ''}">
+                <b>${label}${lv > 1 ? ` · Lv${lv}` : ''}</b><strong>${has ? part.name : '비어 있음'}</strong>${skillLine}</li>`;
+        }).join('');
+    }
+
+    renderStats() {
+        const st = progress.equippedStats();   // 강화 레벨 반영
+        const rows = [['ARMOR', st.hp], ['POWER', st.dps], ['RANGE', st.range], ['SPEED', st.speed]];
+        $('menu-stats-v2').innerHTML = rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${Number(v).toLocaleString()}</dd></div>`).join('');
+    }
+
+    renderStatusBar(equipped) {
+        const skills = skillsForParts(equipped);
+        const list = ['arm', 'body', 'head'].map(s => skills[s]).filter(Boolean)
+            .map(sk => `<span class="v2-statusbar__skill" style="--sk:${sk.color}">${icon(sk.icon, 14)}${sk.name}</span>`).join('');
+        const ready = !!(equipped.body && equipped.body.id !== 'none');
+        $('menu-statusbar-v2').innerHTML = `
+            <span><b>DARK MATTER</b><strong>${gameState.darkMatter.toLocaleString()}</strong></span>
+            <span><b>SKILLS</b>${list || '<em>장착 스킬 없음</em>'}</span>
+            <span><b>SQUAD</b><strong style="color:${ready ? 'var(--v2-green)' : 'var(--v2-amber)'}">${ready ? 'DEPLOYABLE' : 'NO BODY'}</strong></span>`;
+    }
+
+    /** 메인 화면을 떠날 때: 레이더 멈춤 */
+    onLeave() {
+        this.radar.stop();
     }
 }
+

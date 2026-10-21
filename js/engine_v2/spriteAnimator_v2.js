@@ -66,6 +66,14 @@ export class SpriteAnimator {
         this.running = false;
     }
 
+    // pause() 후 같은 애니메이션을 이어서 재생 (play()는 같은 이름이면 무시하므로 별도 제공)
+    resume() {
+        if (this.running || !this.currentName) return;
+        this.running = true;
+        this.lastTime = performance.now();
+        requestAnimationFrame(this._boundTick);
+    }
+
     _tick(now) {
         if (!this.running) return;
 

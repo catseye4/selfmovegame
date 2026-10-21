@@ -1,0 +1,18 @@
+{
+  "frameWidth": 98,
+  "frameHeight": 92,
+  "anchorX": 50.9,
+  "res": 2.0,
+  "clips": {
+    "walk": {
+      "src": "assets/sprites/rig/minion/minion_walk.webp",
+      "frames": 16,
+      "duration": 0.75
+    },
+    "attack": {
+      "src": "assets/sprites/rig/minion/minion_attack.webp",
+      "frames": 14,
+      "duration": 0.8
+    }
+  }
+}
