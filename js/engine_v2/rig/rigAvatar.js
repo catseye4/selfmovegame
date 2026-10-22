@@ -647,7 +647,7 @@ export class RigAvatar {
         // 히트스톱/일시정지 0, 배속 적용 × 이 캐릭터만의 동작 속도(감속 0.55, 기절 0)
         const walk = this.mode === 'walk' ? this.walkScale ?? 1 : 1;   // 걷기 동작은 실제 진격 속도에 맞춤 (Q2)
         const real = Math.min(0.1, (now - this.last) / 1000) * gameTime.scale(now);   // 히트스톱·일시정지만 (반응 동작용)
-        const dt = real * (this.timeScale ?? 1) * walk;
+        const dt = real * (this.timeScale ?? 1) * walk * (this.mode === 'attack' ? this.supportAttackSpeed ?? 1 : 1);
         this.last = now;
         if (this.animator) {
             const reacting = this.reacts && this.reacts.length;

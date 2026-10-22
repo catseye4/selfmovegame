@@ -45,7 +45,7 @@ export const AttackMethods = {
             const from = muzzle || { x: monsterFireX, bottom: 120 };
             const aim = aimOf(targetEnemy);
             this.fx.play(MECH_VFX.laser, from.x, from.bottom, { to: [aim.x, aim.b] });
-            this.dealDamageToEnemy(targetEnemy, finalDmg, isCrit, { knock: 0.3 });
+            this.dealDamageToEnemy(targetEnemy, finalDmg, isCrit, { knock: 0.3, delivery: 'ranged', area: false });
         }
         else if (this.attackType === 'wave') {
             // 어둠 파동: 칼을 휘두른 타격 순간 파동 발사 (피해는 파동이 적을 지날 때)
@@ -100,7 +100,7 @@ export const AttackMethods = {
                     hit.add(e);
                     this.fx.play(HERO_VFX.waveHit, cx, 88);
                     if (!solid) this.slowEnemy(e);
-                    this.dealDamageToEnemy(e, dmg * mul * (solid ? HERO.waveBaseMul : 1), isCrit, { knock: 0.6 });
+                    this.dealDamageToEnemy(e, dmg * mul * (solid ? HERO.waveBaseMul : 1), isCrit, { knock: 0.6, delivery: 'ranged', area: true });
                     mul *= HERO.wavePierce;
                 });
             }
@@ -119,11 +119,11 @@ export const AttackMethods = {
             this.fx.play(MECH_VFX.missileBlast, aim.x, aim.b);
             if (!this.isActive) return;
             if (this.enemies.includes(targetEnemy)) {
-                this.dealDamageToEnemy(targetEnemy, dmg, isCrit, { knock: 0.8 });
+                this.dealDamageToEnemy(targetEnemy, dmg, isCrit, { knock: 0.8, delivery: 'ranged', area: true });
             }
             [...this.enemies].forEach(other => {
                 if (other !== targetEnemy && Math.abs(other.x - targetEnemy.x) < 90) {
-                    this.dealDamageToEnemy(other, dmg * 0.45, false, { knock: 0.5 });
+                    this.dealDamageToEnemy(other, dmg * 0.45, false, { knock: 0.5, delivery: 'ranged', area: true });
                 }
             });
         }, { dur: 0.5, apex: 55, ...opts });
@@ -149,7 +149,7 @@ export const AttackMethods = {
                     const dmg = this.playerDps * DRONE.dmgMul;
                     [...this.enemies].forEach(e => {
                         const d = Math.abs(aimOf(e).x - pos.x);
-                        if (d < DRONE.splash) this.dealDamageToEnemy(e, e === target ? dmg : dmg * 0.5, false, { knock: 0.8 });
+                        if (d < DRONE.splash) this.dealDamageToEnemy(e, e === target ? dmg : dmg * 0.5, false, { knock: 0.8, delivery: 'ranged', area: true });
                     });
                 }
             });

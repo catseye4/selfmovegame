@@ -14,11 +14,18 @@ import { PHASE2, HERO, PASSIVE, LEG, PLAYER_STATUS, OVERLOAD, FOOT_B, FROST, WAL
 export const PlayerMethods = {
     // 몬스터가 받는 피해: 실드가 있으면 먼저 흡수
     // dt: 계속 맞는 근접 피해면 프레임 시간(한 방이면 0), src: 때린 적 (가시 갑옷 되돌림)
-    damagePlayer(amount, dt, src = null) {
+    // attacker는 지원 약화 판정용. src(기존 반격 대상)와 분리해 원거리 반격 규칙을 바꾸지 않는다.
+    damagePlayer(amount, dt, src = null, attacker = src) {
         if (this.overloadT > 0) return;   // 과부하(긴급 수리) 중에는 피해 없음
         if (this.equippedLegId === 'leg_hero_hover') amount *= 1 - LEG.hoverReduce;   // 다리 패시브 '반중력 부양'
         if (this.blizzard) amount *= 1 - FROST.blizzardGuard;                         // 서리의 무희 '눈보라 춤' 동안
         amount = this.setIncoming(amount, dt, src);   // A·B 세트: 회피·감소·되돌림 (battle/sets.js)
+        amount *= this.supportEnemyDamageMul(attacker);
+        if (this.supportShield > 0) {
+            const absorbed = Math.min(this.supportShield, amount);
+            this.supportShield -= absorbed;
+            amount -= absorbed;
+        }
         if (this.shieldHp > 0) {
             const absorbed = Math.min(this.shieldHp, amount);
             this.shieldHp -= absorbed;

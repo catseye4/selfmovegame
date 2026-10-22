@@ -55,7 +55,7 @@ export const AllyMethods = {
 
         this.domEnemies.appendChild(el);
 
-        this.allies.push({
+        const ally = {
             id: allyId,
             kind,
             x: startX,
@@ -65,15 +65,22 @@ export const AllyMethods = {
             speed: opts.speed ?? this.playerSpeed * (baby ? BABY.speedMul : 0.55),
             dom: el,
             hpBar: hpBar
-        });
+        };
+        this.allies.push(ally);
 
         if (kind === 'chimera') this.fx.play(CHIMERA_VFX.summon, startX + 38, FOOT_B);
         const label = { baby_kaiju: '🥚 새끼 괴수 부화!', chimera: '👹 졸개 소환!', stitch: '✚ 봉합 부활!', rabbit: '🐰 인형 가족!' }[kind] || '★ 세뇌 징집! (MIND CONTROL)';
         this.createDamagePopup(startX, 180, label, false);
+        return ally;
     },
 
     // 아군 미니언이 피해를 받음 (0 이하면 사라짐)
     damageAlly(ally, amount) {
+        if (ally.supportShield > 0) {
+            const absorbed = Math.min(ally.supportShield, amount);
+            ally.supportShield -= absorbed;
+            amount -= absorbed;
+        }
         ally.hp -= amount;
         if (ally.hpBar) ally.hpBar.style.width = `${Math.max(0, (ally.hp / ally.maxHp) * 100)}%`;
         if (ally.hp <= 0) this.removeAlly(ally);
@@ -109,14 +116,14 @@ export const AllyMethods = {
                 ally.dom.classList.toggle('is-attacking', fighting);
             }
             if (fighting) {
-                this.dealDamageToEnemy(closestEnemyToAlly, ally.dps * this.allyDmgMul() * dt, false, { dot: true });   // 총동원령·강화 주사
+                if (!ally.supportOwner || this.support?.active?.elapsed < 4.5) {
+                    const mul = ally.supportOwner ? 1 : this.allyDmgMul() * this.supportAttackMul();
+                    this.dealDamageToEnemy(closestEnemyToAlly, ally.dps * mul * dt, false,
+                        { dot: true, source: ally.supportOwner ? 'support' : 'ally', supportGear: ally.supportGear });
+                }
 
                 if (closestEnemyToAlly.isBuilding) {
-                    ally.hp -= 25 * dt;
-                    if (ally.hpBar) {
-                        ally.hpBar.style.width = `${Math.max(0, (ally.hp / ally.maxHp) * 100)}%`;
-                    }
-                    if (ally.hp <= 0) this.removeAlly(ally);
+                    this.damageAlly(ally, 25 * dt);
                 }
             } else if (closestEnemyToAlly || ally.x < this.monsterX + 180) {
                 ally.x += ally.speed * dt;

@@ -57,6 +57,7 @@ export const EnemyMethods = {
     /** 적 이동·공격 (기절한 적은 멈춤), 감속·기절 시간 줄이기. frontX: 주인공 앞면 x */
     tickEnemies(dt, frontX) {
         this.enemies.forEach(enemy => {
+            if (this.supportHeld(enemy)) return; // 지원 소유의 구속: 주인공 상태 시간을 덮어쓰지 않음
             if (enemy.slowT > 0) {
                 enemy.slowT -= dt;
                 if (enemy.slowT <= 0) this.updateEnemyFilter(enemy);
@@ -96,7 +97,7 @@ export const EnemyMethods = {
                 if (!this.isActive) return;
                 if (d.hitFx) this.fx.play(ZONE_VFX[d.hitFx], tx, d.puddle ? FOOT_B + 10 : 120);
                 const k = this.rangedMul();   // 자기장 방벽: 원거리 피해·효과 절반
-                this.damagePlayer(d.dmg * this.stage.enemy.dps * k, 0);
+                this.damagePlayer(d.dmg * this.stage.enemy.dps * k, 0, null, e);
                 if (d.puddle) this.addPuddle(tx - d.puddle.width / 2, d.puddle.width, d.puddle.sec * k);
             };
             if (d.puddle) this.fx.launchOrb(from, () => ({ x: tx, b: FOOT_B + 6 }), d.color, 0.5, onArrive, null);
@@ -109,15 +110,20 @@ export const EnemyMethods = {
     // react: { knock(넉백 배율), stop(히트스톱), pierce(방어 무시 비율) } — 몬스터/스킬의 직접 타격일 때만 (지속 피해는 생략)
     // react.dot: 지속 피해 — 피격 반응 없이 합산해 0.5초마다 숫자 표시
     dealDamageToEnemy(enemy, damage, isCrit, react = null) {
+        if (!enemy || !this.enemies.includes(enemy) || enemy.hp <= 0) return;
+        const supportSource = react?.source === 'support';
+        const modified = this.supportModifyDamage(enemy, damage, react);
+        damage = modified.damage;
         if (damage > 0) enemy.lastHit = this.stats.time;
         const purified = this.isPurified(enemy);   // 정화 파동: 엘리트 효과 꺼짐 (growth.js)
         if (damage > 0) {
-            damage *= this.gearDamageMul(enemy);    // 파츠 옵션(엘리트·보스·공성) · 철벽 변이 (growth.js)
-            if (this.gear?.healBlock) enemy.healBlockUntil = this.stats.time + this.gear.healBlock;   // 치유 방해 옵션
+            damage *= this.gearDamageMul(enemy, supportSource ? react.supportGear : this.gear);
+            const gear = supportSource ? react.supportGear : this.gear;
+            if (gear?.healBlock) enemy.healBlockUntil = this.stats.time + gear.healBlock;
         }
-        if (enemy.armor && damage > 0) damage *= 1 - enemy.armor * (1 - (react?.pierce || 0));   // 방패병·보스: 받는 피해 감소 (인형사 가위는 일부 무시)
+        if (enemy.armor && damage > 0) damage *= 1 - enemy.armor * (1 - modified.pierce);
         if (enemy.barrierT > 0 && damage > 0) damage *= 1 - enemy.t.barrier.cut;
-        if (enemy.frozenT > 0 && damage > 0) damage *= 1 + this.shatterBonus();   // 서리의 무희 다리 '빙판 걸음' (frost.js)
+        if (!supportSource && enemy.frozenT > 0 && damage > 0) damage *= 1 + this.shatterBonus();
         if (enemy.affixes?.includes('iron') && !purified && damage > 0) {
             damage *= 1 - ELITE_AFFIXES.iron.cut;
             if (this.stats.time - (enemy.ironFxAt ?? -Infinity) >= 0.3) {
@@ -126,7 +132,7 @@ export const EnemyMethods = {
             }
         }
         if (enemy.shield > 0 && damage > 0) {
-            const sm = 1 + (this.gear?.shieldDmg || 0);   // 보호막 파쇄 옵션: 보호막에는 더 세게
+            const sm = 1 + ((supportSource ? react.supportGear : this.gear)?.shieldDmg || 0);
             const absorbed = Math.min(enemy.shield, damage * sm);
             enemy.shield -= absorbed;
             damage -= absorbed / sm;
@@ -136,7 +142,7 @@ export const EnemyMethods = {
                 this.updateEnemyFilter(enemy);
             }
         }
-        if (enemy.affixes?.includes('thorns') && !purified && react && !react.dot && damage > 0) {
+        if (!supportSource && enemy.affixes?.includes('thorns') && !purified && react && !react.dot && damage > 0) {
             const thorns = ELITE_AFFIXES.thorns;
             const cut = 1 - (this.gear?.reflectCut || 0);   // 반사 차단 옵션
             this.damagePlayer(Math.min(damage * thorns.reflect, this.maxPlayerHp * thorns.cap) * cut, 0);
@@ -145,9 +151,10 @@ export const EnemyMethods = {
                 this.fx.play(ELITE_VFX.thornsSpark, enemy.x + 38, FOOT_B + 55);
             }
         }
+        if (supportSource) this.stats.supportDamage = (this.stats.supportDamage || 0) + Math.min(Math.max(0, enemy.hp), damage);
         enemy.hp -= damage;
         if (enemy.isBuilding && damage > 0 && this.stats.time - (enemy.baseHitFxAt ?? -Infinity) >= 0.25) { enemy.baseHitFxAt = this.stats.time; this.fx.play(BATTLE_VFX.baseHit, aimOf(enemy).x, aimOf(enemy).b); }
-        if (react && !react.dot) this.lifesteal(damage);           // 어둠의 서약 (battle/sets.js)
+        if (!supportSource && react && !react.dot) this.lifesteal(damage);
         if (react && !react.dot && enemy.hp > 0) this.hitReact(enemy, react);
         if (react && react.dot) {
             enemy.dotAcc = (enemy.dotAcc || 0) + damage;
@@ -186,6 +193,7 @@ export const EnemyMethods = {
         }
         if (enemy.isFinal) {
             this.finalBaseDestroyed = true;
+            this.clearSupport();
             this.starFlags[1] = true;
             gameState.addDarkMatter(this.stage.reward.final);
             this.updateHud();
@@ -241,6 +249,7 @@ export const EnemyMethods = {
     /** 정문 뒤 보스 격파 = 승리: 남은 적 패주 → 격파 연출 → MISSION COMPLETE → 결과 */
     bossVictory(boss) {
         this.finalBaseDestroyed = true;   // 전투 정지 (loop)
+        this.clearSupport();
         this.enemies.forEach(e => {
             if (!e.dom || e.isBuilding) return;
             e.dom.classList.add('v2-rout');

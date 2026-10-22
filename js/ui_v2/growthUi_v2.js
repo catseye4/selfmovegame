@@ -12,6 +12,7 @@ import { CHAPTERS } from '../engine_v2/stages_v2.js';
 import { MODULES, MODULE_MAX_LEVEL, RESEARCH, DISPATCH, gradeOf, OPTIONS } from '../engine_v2/growth_v2.js';
 import { sound } from '../engine_v2/audio/sound_v2.js';
 import { icon } from './icons.js';
+import { supportHtml } from './supportUi_v2.js';
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -48,6 +49,7 @@ let onChange = null;
 
 export function openGrowthPanel(startTab = 'modules', changed = null) {
     tab = startTab;
+    if (tab === 'coop') { progress.supportHelpSeen = true; progress.save(); }
     onChange = changed;
     if (!panel) {
         panel = document.createElement('div');
@@ -85,8 +87,15 @@ function toast(msg, ok = true) {
 
 function act(name, d) {
     let r = null;
-    if (name === 'tab') { tab = d.tab; sound.play('ui_tab'); return render(); }
+    if (name === 'tab') {
+        tab = d.tab;
+        if (tab === 'coop') { progress.supportHelpSeen = true; progress.save(); }
+        sound.play('ui_tab'); return render();
+    }
     if (name === 'close') return closeGrowthPanel();
+    if (name === 'selectSupport') { progress.selectSupport(d.id || null); return render(); }
+    if (name === 'randomSupport') { progress.randomSupport(); return render(); }
+    if (name === 'supportAuto') { progress.setSupportAuto(!progress.supportAuto); return render(); }
     if (name === 'buyModule') r = progress.buyModule(d.id);
     if (name === 'equipModule') { progress.equipModule(Number(d.slot), d.id || null); sound.play('ui_tab'); return render(); }
     if (name === 'upModule') r = progress.upgradeModule(d.id);
@@ -109,8 +118,8 @@ function act(name, d) {
 
 function render() {
     if (!panel) return;
-    const tabs = [['modules', '전술 모듈'], ['dispatch', '파견'], ['research', '계정 연구']];
-    const body = tab === 'dispatch' ? dispatchHtml() : tab === 'research' ? researchHtml() : modulesHtml();
+    const tabs = [['coop', '협력 출격'], ['modules', '전술 모듈'], ['dispatch', '파견'], ['research', '계정 연구']];
+    const body = tab === 'coop' ? supportHtml() : tab === 'dispatch' ? dispatchHtml() : tab === 'research' ? researchHtml() : modulesHtml();
     panel.innerHTML = `<div class="v2-growth__box v2-panel">
         <div class="v2-growth__head">
             <h2>작전 지원</h2>

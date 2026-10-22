@@ -1563,6 +1563,77 @@ div.v2-settings__row > span { flex: 1; }
     align-items: center;
     gap: 12px;
 }
+
+/* D-069 협력 편성 / 전투 지원. 고정 1280×720 화면의 기존 도크와 분리. */
+.v2-coop-menu { position: absolute; left: 0; top: 5px; width: 268px; min-height: 76px; padding: 12px;
+    text-align: left; color: var(--v2-cyan); border: 1px solid #3ee6ff70; background: #10242ee8; cursor: pointer; }
+.v2-coop-menu strong, .v2-coop-menu small { display: block; }
+.v2-coop-menu strong { font: 900 17px var(--v2-font); }
+.v2-coop-menu small { margin-top: 6px; font: 12px/1.5 var(--v2-font); color: #c2dce2; }
+.v2-coop-menu.is-new { box-shadow: 0 0 18px #3ee6ff35; }
+.v2-coop-menu.is-warn small, .v2-coop-summary.is-warn { color: var(--v2-amber); }
+.v2-coop-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+.v2-coop-summary { margin: 0; padding: 10px 12px; background: #3ee6ff10; color: var(--v2-cyan); font-size: 13px; }
+.v2-coop-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.v2-coop-card { display: flex; align-items: flex-start; gap: 12px; text-align: left; padding: 12px !important;
+    color: #d7e5e9 !important; border-color: #52636f !important; background: #111c27 !important; }
+.v2-coop-card.is-selected { border-color: var(--support) !important; box-shadow: inset 0 0 20px #3ee6ff12; }
+.v2-coop-card img { width: 62px; height: 74px; object-fit: contain; flex-shrink: 0; }
+.v2-coop-card b, .v2-coop-card small, .v2-coop-card strong, .v2-coop-card em { display: block; }
+.v2-coop-card b { color: var(--support); font-size: 15px; }
+.v2-coop-card small { color: #9fb5c2; margin: 3px 0 10px; }
+.v2-coop-card strong { font-size: 12px; }
+.v2-coop-card strong svg { vertical-align: middle; }
+.v2-coop-card p { margin: 7px 0; font-size: 12px; line-height: 1.6; font-weight: 400; }
+.v2-coop-card em { color: var(--support); font-size: 11px; font-style: normal; }
+.v2-support-hud { position: absolute; left: 14px; top: 110px; width: 350px; display: flex; align-items: center;
+    box-sizing: border-box; padding: 8px 10px; gap: 10px; pointer-events: auto; font-family: var(--v2-font);
+    background: linear-gradient(90deg, #09141df0, #09141dd9); border: 1px solid #344554; border-left: 2px solid var(--support); }
+.v2-support-call.v2-skill { --sk: var(--support); flex: none; width: 64px; height: 64px; }
+.v2-support-call img { width: 48px; height: 50px; object-fit: contain; padding-top: 5px; }
+.v2-support-call kbd { background: var(--support); }
+.v2-support-call .v2-skill__num { font-size: 18px; }
+.v2-support-call:disabled { cursor: default; }
+.v2-support-call.is-cooling .v2-skill__icon { filter: saturate(.65); }
+.v2-support-call:focus-visible { outline: none; background: #fff; }
+.v2-support-hud.is-active .v2-support-call { background: var(--support); }
+.v2-support-summary { min-width: 0; flex: 1; text-shadow: 0 1px 3px #000; }
+.v2-support-heading { display: flex; align-items: center; gap: 7px; }
+.v2-support-label { padding: 1px 4px; border: 1px solid #536371; font-size: 9px; color: var(--support); }
+.v2-support-summary b { color: #fff; font-size: 13px; }
+.v2-support-state { margin-left: auto; color: var(--support); font-size: 10px; white-space: nowrap; }
+.v2-support-preview { margin: 4px 0 0; color: #c2d4e1; font-size: 11px; line-height: 1.4; white-space: nowrap; }
+.v2-support-actions { display: flex; gap: 6px; margin-top: 6px; }
+.v2-support-info, .v2-support-auto { min-height: 26px; padding: 3px 9px; border: 1px solid #536371; background: #08151eee;
+    color: #b7c8d7; cursor: pointer; font: 700 10px var(--v2-font); }
+.v2-support-info:hover, .v2-support-info[aria-expanded="true"], .v2-support-auto[aria-pressed="true"] {
+    color: var(--support); border-color: var(--support); }
+.v2-support-detail { position: absolute; left: -1px; top: -1px; z-index: 5; width: 350px; max-height: 230px; overflow-y: auto;
+    box-sizing: border-box; padding: 14px; border: 1px solid var(--support); background: #09141dfc; box-shadow: 0 8px 28px #0009;
+    scrollbar-width: thin; scrollbar-color: var(--support) #142431; }
+.v2-support-detail[hidden] { display: none; }
+.v2-support-hud.is-detail-open > .v2-support-call, .v2-support-hud.is-detail-open > .v2-support-summary { visibility: hidden; }
+.v2-support-detail small { color: #9eb3c5; font-size: 11px; }
+.v2-support-detail h3 { display: flex; align-items: center; gap: 7px; margin: 8px 0; color: var(--support); font-size: 15px; }
+.v2-support-detail p { margin: 0; color: #e0eaf2; font-size: 12px; line-height: 1.6; word-break: keep-all; }
+.v2-support-detail .v2-support-brief { margin-bottom: 7px; color: var(--support); font-size: 11px; }
+.v2-support-detail .v2-support-rule { margin-top: 10px; padding-top: 8px; border-top: 1px solid #354452; color: #9eb3c5; font-size: 11px; }
+.v2-support-close { position: absolute; right: 4px; top: 3px; min-width: 30px; min-height: 30px; padding: 2px 5px; border: 0; background: transparent;
+    color: #b7c8d7; cursor: pointer; font-size: 20px; }
+.v2-support-hud.is-empty { width: auto; padding: 0; border: 0; background: none; color: #8ea0b2; font-size: 12px; }
+.v2-support-actor { position: absolute; bottom: 25px; width: 360px; height: 300px; pointer-events: none; z-index: 12; }
+.v2-support-actor canvas { width: 360px; height: 300px; }
+.v2-support-actor > span { position: absolute; bottom: 32px; left: 95px; color: var(--support); font: 800 11px var(--v2-font);
+    text-shadow: 0 1px 3px black; }
+.v2-support-mark::after { content: '협력'; position: absolute; top: -20px; left: 15px; padding: 2px 5px; background: #07131de8;
+    color: var(--support-mark); font: 900 10px var(--v2-font); pointer-events: none; }
+.is-support-held { outline: 1px solid var(--support-mark); outline-offset: -6px; }
+.v2-support-minion { opacity: .8; }
+.v2-support-notice { position: absolute; z-index: 75; left: 50%; top: 112px; transform: translateX(-50%); padding: 10px 22px;
+    background: #091f2bf0; border: 1px solid #3ee6ff77; color: #dcfaff; font: 800 15px var(--v2-font); pointer-events: none;
+    animation: v2-support-notice .9s both; white-space: nowrap; }
+@keyframes v2-support-notice { 0% { opacity: 0; margin-top: 8px; } 15%, 75% { opacity: 1; margin-top: 0; } 100% { opacity: 0; } }
+@media (max-width: 640px) { .v2-coop-grid { grid-template-columns: 1fr; } }
 .v2-sortie {
     position: relative;
     width: 620px;
