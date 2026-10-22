@@ -360,6 +360,7 @@ export class BattleDirector {
         sound.stopBgm(0.8);
         const canvas = document.getElementById('player-sprite-canvas-v2');
         if (canvas) canvas.classList.add('v2-down');
+        monsterControllerV2.playReaction('slump');   // 지쳐 내려앉은 채 멈춤 (rig/reactions.js, Q4)
         this.stamp('TIME OVER', '제한 시간 초과 · 작전 실패', 'is-red is-big', 2200);
         this.sfx('mission_failed');
         await wait(900);
@@ -378,6 +379,7 @@ export class BattleDirector {
         this.frame.classList.add('v2-ending');
         const canvas = document.getElementById('player-sprite-canvas-v2');
         if (canvas) canvas.classList.add('v2-down');
+        monsterControllerV2.playReaction('down');    // 젖혀지며 주저앉은 채 멈춤 (rig/reactions.js, Q4)
         this.sfx('player_down');
         sound.stopBgm(0.8);
         await wait(900);

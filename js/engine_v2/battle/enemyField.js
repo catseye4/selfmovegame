@@ -14,6 +14,7 @@ import { sound } from '../audio/sound_v2.js';
 import { KAIJU_VFX, BATTLE_VFX, ZONE_VFX, ELITE_VFX } from '../vfx/vfxDefs.js';
 import { spawnEnemy, updateEnemy, pickType, killReward, ENEMY_TYPES, ELITE_AFFIXES } from '../enemies_v2.js';
 import { icon } from '../../ui_v2/icons.js';
+import { KIT_STATUS_ICON, KIT_STATUS_TINT } from './kit.js';
 import { BASE_STATE, baseArt, baseArtName, baseSize, aimAt as aimOf, dressBase, setBaseState } from '../bases_v2.js';
 import { HERO, HIT_REACT, ACID, POPUP, FOOT_B, BASE_X, ENEMY_REACT } from './tuning.js';
 
@@ -23,10 +24,11 @@ const ENEMY_TINT = {
     frozen: 'saturate(0.35) brightness(1.3) hue-rotate(170deg) drop-shadow(0 0 6px #9fe0ff)',   // 서리의 무희 빙결
     stun: 'grayscale(0.7) brightness(1.15) drop-shadow(0 0 6px #ffe066)',
     slow: 'drop-shadow(0 0 6px #b050ff) saturate(0.55) brightness(0.9)',
-    curse: 'brightness(0.72) saturate(0.7) drop-shadow(0 0 4px rgba(170, 80, 255, 0.9))'
+    curse: 'brightness(0.72) saturate(0.7) drop-shadow(0 0 4px rgba(170, 80, 255, 0.9))',
+    ...KIT_STATUS_TINT   // 2차 상태 (공포·잠·화상·취약 — battle/kit.js)
 };
 const STATUS_ICON = { curse: 'curse', slow: 'slow', stun: 'stun', acid: 'acid', root: 'net', bleed: 'thorns', abyss: 'hand', stitch: 'stitch',
-    frozen: 'snow', chill: 'snow', puppet: 'puppet' };
+    frozen: 'snow', chill: 'snow', puppet: 'puppet', ...KIT_STATUS_ICON };
 const PUDDLE_STICK = 1.5;   // 늪을 밟은 뒤 감속이 남는 시간(초)
 
 export const EnemyMethods = {
@@ -66,7 +68,9 @@ export const EnemyMethods = {
                 if (enemy.stunT <= 0) this.updateEnemyFilter(enemy);
                 return;   // 기절: 이동/공격 없음
             }
+            if (this.kitEnemyHeld(enemy, dt)) return;   // 공포: 뒤로 물러남 (battle/kit.js)
             if (!enemy.isBuilding && !enemy.isBarricade) updateEnemy(this, enemy, dt, frontX);   // 이동·공격·종류별 능력
+            this.kitWallHold(enemy);   // 강철 방벽 앞에서 멈춤 (battle/kit.js)
         });
         this.tickBaseDefense(dt, frontX);
     },
@@ -113,6 +117,8 @@ export const EnemyMethods = {
         const purified = this.isPurified(enemy);   // 정화 파동: 엘리트 효과 꺼짐 (growth.js)
         if (damage > 0) {
             damage *= this.gearDamageMul(enemy);    // 파츠 옵션(엘리트·보스·공성) · 철벽 변이 (growth.js)
+            damage *= this.kitTargetMul(enemy);     // 2차: 취약 상태 · 패시브 조건 (battle/kit.js)
+            if (react && !react.dot) this.kitWake(enemy);   // 잠든 적은 맞으면 깸
             if (this.gear?.healBlock) enemy.healBlockUntil = this.stats.time + this.gear.healBlock;   // 치유 방해 옵션
         }
         if (enemy.armor && damage > 0) damage *= 1 - enemy.armor * (1 - (react?.pierce || 0));   // 방패병·보스: 받는 피해 감소 (인형사 가위는 일부 무시)
@@ -146,6 +152,7 @@ export const EnemyMethods = {
             }
         }
         enemy.hp -= damage;
+        if (enemy.kitThreadT > 0 && damage > 0 && !react?.share) this.kitThreadShare(enemy, damage);   // 붉은 실 (battle/kit.js)
         if (enemy.isBuilding && damage > 0 && this.stats.time - (enemy.baseHitFxAt ?? -Infinity) >= 0.25) { enemy.baseHitFxAt = this.stats.time; this.fx.play(BATTLE_VFX.baseHit, aimOf(enemy).x, aimOf(enemy).b); }
         if (react && !react.dot) this.lifesteal(damage);           // 어둠의 서약 (battle/sets.js)
         if (react && !react.dot && enemy.hp > 0) this.hitReact(enemy, react);
@@ -297,6 +304,7 @@ export const EnemyMethods = {
         sound.play('enemy_die');
         this.onGrowthKill(enemy);   // 스킬 코어 · 핏빛 달 변이 (growth.js)
         this.onSetKill(enemy);      // 레어 세트 4부위 효과 (sets.js — 독안개 산성 옮기기)
+        this.kitOnKill(enemy);      // 2차 패시브·세트 효과 (kit.js)
         const purified = this.isPurified(enemy);   // 정화된 채 쓰러지면 독 구름·폭발 없음
         if (enemy.stitchT > 0) this.addCorpse(enemy);   // 봉합 성녀: 봉합된 채 쓰러지면 시체 (battle/saint.js)
         gameState.addDarkMatter(killReward(this, enemy));
@@ -419,8 +427,15 @@ export const EnemyMethods = {
         if (!e.dom) return;
         const states = [e.puppetT > 0 && 'puppet', e.frozenT > 0 && 'frozen', e.stunT > 0 && !(e.frozenT > 0) && !(e.puppetT > 0) && 'stun',
             e.rootT > 0 && 'root', e.slowT > 0 && 'slow', e.cursed && 'curse', e.acidT > 0 && 'acid', e.bleedT > 0 && 'bleed',
-            e.abyssT > 0 && 'abyss', e.stitchT > 0 && 'stitch', e.chill > 0 && 'chill'].filter(Boolean);
+            e.abyssT > 0 && 'abyss', e.stitchT > 0 && 'stitch', e.chill > 0 && 'chill', ...this.kitStates(e)].filter(Boolean);
         this.updateStatusIcons(e, states);
+        // 멈춘 적의 몸 (Q-008 Q5): 기절 = 비틀거림, 빙결 = 굳음, 속박 = 버둥거림 — 걷기·공격 그림이 제자리에서 돌지 않게 (ui_v2.css)
+        const held = e.frozenT > 0 ? 'frozen' : e.stunT > 0 && !(e.puppetT > 0) ? 'stunned' : e.rootT > 0 ? 'rooted' : '';
+        if (held !== (e.heldShown || '')) {
+            e.dom.classList.remove('is-held-frozen', 'is-held-stunned', 'is-held-rooted');
+            if (held) e.dom.classList.add(`is-held-${held}`);
+            e.heldShown = held;
+        }
         if (e.flashing) return;
         // 종류 색조(enemies_v2.js baseFilter) + 상태 색
         e.dom.style.filter = [e.baseFilter, states.length ? ENEMY_TINT[states[0]] || '' : '',
@@ -618,7 +633,7 @@ export const EnemyMethods = {
                 setTimeout(() => h.dom.remove(), 400);
                 return false;
             }
-            if (h.x < footR && h.x + h.w > footL) this.applyPlayerSlow(PUDDLE_STICK, true);   // 밟으면 끈적한 오물이 묻어 잠시 감속
+            if (h.x < footR && h.x + h.w > footL && !this.kitFlag('ignoreHazard')) this.applyPlayerSlow(PUDDLE_STICK, true);   // 밟으면 끈적한 오물이 묻어 잠시 감속 (2차 장판 무시 패시브는 빼고)
             return true;
         });
     },

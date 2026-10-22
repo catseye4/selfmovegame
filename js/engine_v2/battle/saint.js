@@ -104,7 +104,7 @@ export const SaintMethods = {
     /** 시체를 먼저, 모자라면 범위 안 체력이 가장 낮은 병사를 꿰매 아군으로 (최대 reviveMax, 아군 상한 allyMax) */
     forcedRevive(range) {
         this.fx.play(SAINT_VFX.reviveCall, this.monsterX + 35, FOOT_B);
-        const room = Math.max(0, SAINT.allyMax - this.allies.length);
+        const room = Math.max(0, SAINT.allyMax + (this.kitMod?.('allyMax') || 0) - this.allies.length);   // 2차 세트: 꿰맬 수 있는 아군 +
         let n = Math.min(SAINT.reviveMax, room);
         const corpses = [...this.corpses].sort((a, b) => a.x - b.x).slice(0, n);
         corpses.forEach((c, i) => this.schedule(0.15 + i * 0.12, () => this.raiseCorpse(c)));

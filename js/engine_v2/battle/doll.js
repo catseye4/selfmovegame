@@ -79,7 +79,7 @@ export const DollMethods = {
                 this.stunEnemy(e, DOLL.puppetBossStun);
                 return;
             }
-            e.puppetT = DOLL.puppetSec;
+            e.puppetT = DOLL.puppetSec + (this.kitMod?.('puppetSec') || 0);   // 2차 세트: 꼭두각시 시간 +
             e.puppetFx = 0;
             this.stunEnemy(e, 0.2);
             this.updateEnemyFilter(e);
@@ -119,7 +119,8 @@ export const DollMethods = {
                 this.fx.play(DOLL_VFX.puppetString, a.x, 470, { to: [a.x, a.b] });
                 if (t) this.fx.play(DOLL_VFX.puppetHit, hitX(t), aimOf(t).b);
             }
-            if (t) this.dealDamageToEnemy(t, (e.dps * DOLL.puppetDpsMul + this.unit() * DOLL.puppetUnit) * dt, false, { dot: true });
+            const pm = 1 + (this.kitMod?.('puppetDmg') || 0);   // 2차 세트: 꼭두각시 피해 + (인형극 연출가 4부위·충성 서약)
+            if (t) this.dealDamageToEnemy(t, (e.dps * DOLL.puppetDpsMul + this.unit() * DOLL.puppetUnit) * pm * dt, false, { dot: true });
             if (e.puppetT <= 0 && this.enemies.includes(e)) this.updateEnemyFilter(e);
         });
     }

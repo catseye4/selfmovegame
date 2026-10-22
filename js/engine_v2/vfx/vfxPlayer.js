@@ -8,7 +8,7 @@
      layer 공통: { type, at(시작 초), dur(길이 초), color('r, g, b'), layer?('ground'|'front'),
                   dy?(기준점 위아래 px), pos?('to' = 목표 지점에 표시) }
      type (모양)
-       sprite  : 그림 프레임 이펙트 (Gemini 손그림 시트, VFX_SHEETS) {sheet, size, angle?, flipX?, squash?, blend?, alpha?, glow?}
+       sprite  : 그림 프레임 이펙트 (Gemini 손그림 시트, VFX_SHEETS) {sheet, size, angle?, flipX?, squash?, blend?, alpha?, glow?, hue?(색 돌리기 도)}
        starburst: 윤곽 별 섬광 {r, points, inner, stretch?, angle?, outline?, width?} (처음 0.05초 최대)
        speedlines: 삼각 속도선 {count, len, angle?, cone?, width, outline?}
        ribbon  : 단색 불길/광선/기둥 {len, w, angle?, jag?, outline?, width?} (to가 있으면 두 점 연결)
@@ -932,9 +932,68 @@ export const VFX_SHEETS = {
     ground_impact: { src: 'assets/sprites/vfx/ground_impact.webp', frames: 9 },     // 지면 강타 (바닥 기준, 먼지는 가장자리 옅게)
     spore_burst: { src: 'assets/sprites/vfx/spore_burst.webp', frames: 9 },         // 독 포자 주머니 터짐 (가운데 기준)
     power_aura: { src: 'assets/sprites/vfx/power_aura.webp', frames: 9 },           // 주황·금빛 기운 불꽃 (바닥 기준, 아드레날린·2페이즈)
-    summon_portal: { src: 'assets/sprites/vfx/summon_portal.webp', frames: 9 }      // 주황·금빛 소환진 + 빛기둥 (원 가운데가 anchorY 0.76)
+    summon_portal: { src: 'assets/sprites/vfx/summon_portal.webp', frames: 9 },     // 주황·금빛 소환진 + 빛기둥 (원 가운데가 anchorY 0.76)
+    // 2차 세트 대표 시트 (D-071) — 거대괴수
+    primal_beam: { src: 'assets/sprites/vfx/primal_beam.webp', frames: 9 },         // 멸망의 숨결 초록 열선 (왼쪽 기준, 오른쪽으로)
+    lava_burst: { src: 'assets/sprites/vfx/lava_burst.webp', frames: 9 },           // 화산 분화 용암탄 (바닥 기준)
+    swamp_bubble: { src: 'assets/sprites/vfx/swamp_bubble.webp', frames: 9 },       // 늪 삼키기 진흙 거품 (바닥 기준)
+    tidal_wave: { src: 'assets/sprites/vfx/tidal_wave.webp', frames: 9 },           // 해일 파도 (바닥 기준, 오른쪽으로 덮침)
+    meteor_red: { src: 'assets/sprites/vfx/meteor_red.webp', frames: 9 },           // 대멸종 운석 충돌 (바닥 기준)
+    breath_gold: { src: 'assets/sprites/vfx/breath_gold.webp', frames: 9 },         // 용왕의 숨결 금빛 불길 (입 기준, 오른쪽으로)
+    // 2차 세트 대표 시트 (D-071) — 합성괴인
+    roar_triple: { src: 'assets/sprites/vfx/roar_triple.webp', frames: 9 },         // 삼두 포효 주황·보라 음파 (왼쪽 기준, 오른쪽으로)
+    web_purple: { src: 'assets/sprites/vfx/web_purple.webp', frames: 9 },           // 거미줄 덫 보라 거미줄 (바닥 기준)
+    sonic_ring: { src: 'assets/sprites/vfx/sonic_ring.webp', frames: 9 },           // 초음파 하늘색 음파 고리 (왼쪽에서 오른쪽으로)
+    blade_flurry: { src: 'assets/sprites/vfx/blade_flurry.webp', frames: 9 },       // 천 갈래 참격 보라·흰 칼날 (가운데 기준)
+    shark_bite: { src: 'assets/sprites/vfx/shark_bite.webp', frames: 9 },           // 상어 물기 물빛 상어 머리 (가운데 기준)
+    spirit_charge: { src: 'assets/sprites/vfx/spirit_charge.webp', frames: 9 },     // 만수 행진 금빛 사자 영혼 돌진 (왼쪽에서 오른쪽으로, hue로 다른 동물 색)
+    // 2차 세트 대표 시트 (D-071) — 거대로봇
+    thunder_storm: { src: 'assets/sprites/vfx/thunder_storm.webp', frames: 9 },     // 천둥 폭풍 먹구름 번개 (바닥 기준)
+    wrecking_ball: { src: 'assets/sprites/vfx/wrecking_ball.webp', frames: 9 },     // 철거 철구 경고 줄무늬 쇠공 (왼쪽에서 오른쪽으로)
+    plasma_white: { src: 'assets/sprites/vfx/plasma_white.webp', frames: 9 },       // 플라즈마 융단 청백 폭발 (바닥 기준)
+    dome_gold: { src: 'assets/sprites/vfx/dome_gold.webp', frames: 9 },             // 방주 방벽 금빛 육각 돔 (바닥 기준, 9칸 모두 돔 — 이어 틀어도 끊기지 않게)
+    apocalypse_beam: { src: 'assets/sprites/vfx/apocalypse_beam.webp', frames: 9 }, // 종말의 포 진홍 광선 (왼쪽 기준, 오른쪽으로)
+    meteor_cyan: { src: 'assets/sprites/vfx/meteor_cyan.webp', frames: 9 },         // 유성우 청록 별 운석 (바닥 기준)
+    // 2차 세트 대표 시트 (D-071) — 타락 히어로
+    eclipse_sun: { src: 'assets/sprites/vfx/eclipse_sun.webp', frames: 9 },         // 일식 검은 해 + 보라 코로나 (가운데 기준)
+    ghost_cavalry: { src: 'assets/sprites/vfx/ghost_cavalry.webp', frames: 9 },     // 기사단 돌격 흰·금 유령 기사 (왼쪽에서 오른쪽으로)
+    time_stop: { src: 'assets/sprites/vfx/time_stop.webp', frames: 9 },             // 시간 정지 시계 마법진 (가운데 기준)
+    shadow_rise: { src: 'assets/sprites/vfx/shadow_rise.webp', frames: 9 },         // 그림자 병사 솟아오름 (바닥 기준)
+    demon_king: { src: 'assets/sprites/vfx/demon_king.webp', frames: 9 },           // 마왕 강림 진홍 오라 (바닥 기준)
+    star_judgment: { src: 'assets/sprites/vfx/star_judgment.webp', frames: 9 },     // 별자리 심판 별빛 기둥 (바닥 기준)
+    // 2차 세트 대표 시트 (D-071) — 서리의 무희
+    aurora_ribbon: { src: 'assets/sprites/vfx/aurora_ribbon.webp', frames: 9 },     // 오로라 장막 빛띠 (9칸 모두 빛띠 — 이어 틀어도 끊기지 않게)
+    frost_wolf: { src: 'assets/sprites/vfx/frost_wolf.webp', frames: 9 },           // 얼음 늑대 물기 (가운데 기준)
+    glacier_giant: { src: 'assets/sprites/vfx/glacier_giant.webp', frames: 9 },     // 빙하 거인 등장 (바닥 기준)
+    feather_black: { src: 'assets/sprites/vfx/feather_black.webp', frames: 9 },     // 흑조 깃털 (가운데 기준)
+    eternal_winter: { src: 'assets/sprites/vfx/eternal_winter.webp', frames: 9 },   // 영겁의 겨울 냉기 파도 (가운데 기준)
+    moon_fall: { src: 'assets/sprites/vfx/moon_fall.webp', frames: 9 },             // 월식 낙하 달 (바닥 기준)
+    // 2차 세트 대표 시트 (D-071) — 심연의 길잡이
+    ghost_ship: { src: 'assets/sprites/vfx/ghost_ship.webp', frames: 9 },           // 유령선 돌격 (왼쪽에서 오른쪽으로)
+    coral_pink: { src: 'assets/sprites/vfx/coral_pink.webp', frames: 9 },           // 산호초 성벽 (바닥 기준)
+    jelly_glow: { src: 'assets/sprites/vfx/jelly_glow.webp', frames: 9 },           // 해파리 떼 감전 (가운데 기준)
+    steam_vent: { src: 'assets/sprites/vfx/steam_vent.webp', frames: 9 },           // 열수 분출 증기 기둥 (바닥 기준)
+    trident_gold: { src: 'assets/sprites/vfx/trident_gold.webp', frames: 9 },       // 해신의 삼지창 (바닥 기준)
+    leviathan: { src: 'assets/sprites/vfx/leviathan.webp', frames: 9 },             // 리바이어던 강림 (왼쪽에서 오른쪽으로)
+    star_current: { src: 'assets/sprites/vfx/star_current.webp', frames: 9 },       // 은하 해류 (왼쪽에서 오른쪽으로)
+    // 2차 세트 대표 시트 (D-071) — 봉합 성녀
+    heal_rain: { src: 'assets/sprites/vfx/heal_rain.webp', frames: 9 },             // 치유의 비 (칸 전체, 9칸 모두 비 — 이어 틀어도 끊기지 않게)
+    stone_grey: { src: 'assets/sprites/vfx/stone_grey.webp', frames: 9 },           // 석화의 눈물 (바닥 기준)
+    butterfly_red: { src: 'assets/sprites/vfx/butterfly_red.webp', frames: 9 },     // 나비 떼의 춤 (가운데 기준)
+    machine_needle: { src: 'assets/sprites/vfx/machine_needle.webp', frames: 9 },   // 기계 재봉 (바닥 기준)
+    fate_thread: { src: 'assets/sprites/vfx/fate_thread.webp', frames: 9 },         // 운명 재봉 (가운데 기준)
+    rose_petal: { src: 'assets/sprites/vfx/rose_petal.webp', frames: 9 },           // 장미 정원 (바닥 기준)
+    // 2차 세트 대표 시트 (D-071) — 뒤틀린 인형사
+    music_box: { src: 'assets/sprites/vfx/music_box.webp', frames: 9 },             // 자장가 오르골 (가운데 기준)
+    paper_crane: { src: 'assets/sprites/vfx/paper_crane.webp', frames: 9 },         // 종이학 (왼쪽에서 오른쪽으로)
+    shadow_play: { src: 'assets/sprites/vfx/shadow_play.webp', frames: 9 },         // 그림자 연극 (가운데 기준)
+    teacup_burst: { src: 'assets/sprites/vfx/teacup_burst.webp', frames: 9 },       // 티 파티 찻잔 (바닥 기준)
+    throne_thread: { src: 'assets/sprites/vfx/throne_thread.webp', frames: 9 },     // 실의 왕좌 (바닥 기준, 9칸 모두 왕좌 — 이어 틀어도 끊기지 않게)
+    clock_gear: { src: 'assets/sprites/vfx/clock_gear.webp', frames: 9 }            // 자정의 종 시계 (가운데 기준)
 };
 const sheetImages = new Map();
+/** 그림 시트 (처음 부르면 받기 + 압축 풀기 시작). 압축이 다 풀린 뒤에만 돌려줌 — 캔버스에 그리는 순간 억지로 풀면
+ *  한 프레임이 50~100ms 멈춤 (성능 측정 2026-10-21). 덜 풀린 그림은 그 이펙트의 그림 층만 잠깐 빠짐 */
 function sheetImage(name) {
     const sheet = VFX_SHEETS[name];
     if (!sheet || typeof Image === 'undefined') return null;
@@ -943,8 +1002,29 @@ function sheetImage(name) {
         img = new Image();
         img.src = sheet.src;
         sheetImages.set(name, img);
+        const done = () => { img.ready = true; };
+        if (img.decode) img.decode().then(done, done);
+        else img.onload = done;
     }
-    return img.complete && img.naturalWidth ? img : null;
+    return img.ready && img.naturalWidth ? img : null;
+}
+/** 색을 돌린 시트 (파츠 확장 2차, D-071 — 같은 그림을 다른 색 스킬에 다시 씀): 처음 한 번만 캔버스에 돌려 그려 둠 (그릴 때마다 filter는 느림) */
+const hueSheets = new Map();
+function hueSheet(name, hue) {
+    const key = `${name}|${hue}`;
+    if (hueSheets.has(key)) return hueSheets.get(key);
+    const img = sheetImage(name);
+    if (!img || typeof document === 'undefined') return null;
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+    const g = c.getContext('2d');
+    g.filter = `hue-rotate(${hue}deg)`;
+    g.drawImage(img, 0, 0);
+    c.naturalWidth = c.width;
+    c.naturalHeight = c.height;
+    hueSheets.set(key, c);
+    return c;
 }
 /** 시트를 미리 불러 둠 (첫 재생에 그림이 늦게 뜨지 않게) */
 export function preloadVfxSheets() {
@@ -955,7 +1035,7 @@ const DRAW = {
     // 그림 프레임 재생 {sheet, size(px), anchorX?·anchorY?(프레임 안 기준점 0~1, 기본 0.5 — 바닥 기준 그림은 anchorY 0.9,
     //   입에서 뿜는 그림은 anchorX 0.03), angle?, flipX?, squash?, blend?('lighter' 기본 | 'normal'), alpha?, glow?(뒤에 퍼지는 빛 배수)}
     sprite(ctx, x, y, it, u, s) {
-        const img = sheetImage(it.sheet);
+        const img = it.hue ? hueSheet(it.sheet, it.hue) : sheetImage(it.sheet);   // hue: 색 돌리기 (도)
         if (!img) return;
         const n = VFX_SHEETS[it.sheet].frames, fw = img.naturalWidth / n, fh = img.naturalHeight;
         const f = Math.min(n - 1, Math.floor(u * n));

@@ -1,13 +1,15 @@
 """
 Gemini 이펙트 프레임 시트(검은 배경, N×N 칸) → 게임용 가로 띠 (D-060, WebP는 D-062)
 
-실행: python tools/images/build_vfx_sheet.py <원본.png> <이름> [칸 수=3] [프레임 크기=256] [가장자리 옅게 폭=18] [round]
+실행: python tools/images/build_vfx_sheet.py <원본.png> <이름> [칸 수=3] [프레임 크기=256] [가장자리 옅게 폭=18] [round] [loop]
   → assets/sprites/vfx/png/<이름>.png  원본 띠 (무손실 PNG, 프레임을 가로로 이어 붙임, 알파 = 밝기 — 'lighter'로 겹쳐 그림)
   → assets/sprites/vfx/<이름>.webp     게임이 쓰는 띠 (WebP 품질 90 — PNG의 약 45% 용량, 눈으로 차이 없음)
 WebP만 다시 만들기: python tools/images/build_vfx_sheet.py --webp [이름 ...]   (이름 없으면 png/ 전부)
 칸 사이 회색 격자선은 칸 안쪽으로 몇 px 들여 잘라 지운다. 로고는 unlogo.py로 먼저 지움.
 먼지·연기가 칸 끝까지 번진 그림은 폭을 크게(예: 80) 주면 잘린 네모 테두리 대신 부드럽게 사라진다.
 칸을 꽉 채운 구름(가운데 기준 그림)은 round를 더하면 칸 가운데에서 둥글게 옅어진다.
+마지막 칸은 로고 자리를 네모로 지우므로, 그 칸에 그림이 남아 있으면 잘린 네모가 보임 → 앞 칸을 옅게(40%) 복사해 넣는다.
+9칸 모두 같은 그림을 이어 트는 시트(오라·왕좌·비)는 loop를 더하면 앞 칸을 그대로 복사한다.
 """
 import os
 import sys
@@ -33,6 +35,19 @@ def save_webp(name):
     print(out, f'{os.path.getsize(src) // 1024} KB → {os.path.getsize(out) // 1024} KB')
 
 
+def fix_last(frames, size, loop):
+    """마지막 칸에서 로고 자리(오른쪽 아래 네모) 바로 바깥에 그림이 있으면 앞 칸으로 바꿈"""
+    a = np.asarray(frames[-1])[..., 3] / 255
+    b0, b1, edge = int(size * 0.375), int(size * 0.453), int(size * 0.46)
+    if max(a[edge:, b0:b1].mean(), a[b0:b1, edge:].mean()) <= 0.02:
+        return
+    prev = np.asarray(frames[-2]).copy()
+    if not loop:
+        prev[..., 3] = (prev[..., 3] * 0.4).astype(np.uint8)
+    frames[-1] = Image.fromarray(prev, 'RGBA')
+    print('마지막 칸: 로고 자리에 잘린 그림 → 앞 칸', '그대로' if loop else '40%')
+
+
 def main():
     if sys.argv[1] == '--webp':
         names = sys.argv[2:] or sorted(f[:-4] for f in os.listdir(os.path.join(VFX_DIR, 'png')) if f.endswith('.png'))
@@ -43,7 +58,8 @@ def main():
     n = int(sys.argv[3]) if len(sys.argv) > 3 else 3
     size = int(sys.argv[4]) if len(sys.argv) > 4 else 256
     fade = float(sys.argv[5]) if len(sys.argv) > 5 else FADE
-    round_mask = len(sys.argv) > 6 and sys.argv[6] == 'round'
+    round_mask = 'round' in sys.argv[6:]
+    loop = 'loop' in sys.argv[6:]
     rgb, _ = load_clean(src)
     rgb = rgb.copy()
     h, w = rgb.shape[:2]
@@ -75,6 +91,7 @@ def main():
             col = np.where(a[..., None] > 0, cell / np.maximum(a[..., None] * 255, 1) * 255, 0)
             rgba = np.dstack([np.clip(col, 0, 255), a * 255]).astype(np.uint8)
             frames.append(Image.fromarray(rgba, 'RGBA').resize((size, size), Image.LANCZOS))
+    fix_last(frames, size, loop)
     strip = Image.new('RGBA', (size * len(frames), size), (0, 0, 0, 0))
     for i, f in enumerate(frames):
         strip.paste(f, (i * size, 0))

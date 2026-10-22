@@ -1,7 +1,7 @@
 """
 합성괴인 A·B 세트 부위 그림 자르기 (D-050 파츠 확장) → assets/sprites/rig/chimera/<부위>_a.png · <부위>_b.png + rig.json에 추가
 
-실행: 프로젝트 루트에서  python tools/rig/cut_chimera_sets.py   (기본 그림은 cut_chimera_parts.py가 만든 것을 그대로 둠)
+실행: 프로젝트 루트에서  python tools/rig/cut_chimera_sets.py [글자…]   (기본 a b — 2차 세트 u c d v w l m, D-071; 기본 그림은 cut_chimera_parts.py가 만든 것을 그대로 둠)
 
 입력 (Gemini 원본 크기 다운로드, assets/sprites/parts/chimera/src/, 2026-10-17)
  - chimera_<a|b>_base_gemini.png   : 세트 전신 — 기준 원본(chimera_base)을 첨부해 장비만 바꾼 것 (날개·꼬리는 그대로)
@@ -38,7 +38,10 @@ VIAL_RB = 25                  # 구멍 덩어리의 min(r, b) 평균이 이보�
 # 앞팔: 기본 선을 왼쪽·아래로 넓힘 (쇠망치 머리·산탄총 총열)
 ARM_F_POLY = [(0, 553), (80, 553), (170, 558), (178, 610), (166, 660), (160, 700), (158, 772), (128, 830),
               (122, 865), (0, 865)]
-HEAD_EXTRA = {'a': None, 'b': [(150, 100), (205, 100), (205, 300), (150, 300)]}   # B 투구 안테나
+HEAD_EXTRA = {'a': None, 'b': [(150, 100), (205, 100), (205, 300), (150, 300)],   # B 투구 안테나
+              'u': [(50, 180), (185, 180), (185, 315), (50, 315)],               # 2차 u 완전체 키메라: 어깨 위 독수리 머리
+              'd': [(360, 90), (520, 90), (520, 320), (360, 320)]}               # 2차 d 박쥐 음파: 큰 박쥐 귀
+WING_KEEP_ORANGE = {'u', 'm', 'd'}   # 날개가 금·갈색(주황 판정)인 세트 — 기본은 몸통 주황을 날개에서 빼지만 이 세트는 날개 색이라 빼지 않음
 
 
 def restore_vials(img):
@@ -86,13 +89,14 @@ def cut_set(v):
     rows = np.broadcast_to(np.arange(H)[:, None], (H, W))
 
     differs = (nowing[..., 3] == 0) | (np.abs(src[..., :3].astype(int) - nowing[..., :3].astype(int)).max(2) > 60)
-    wing = poly_mask(shape, base.WING_POLY) & opaque & differs & ~(base.is_orange(src) & (rows > 200))
+    orange_out = np.zeros(shape[:2], bool) if v in WING_KEEP_ORANGE else (base.is_orange(src) & (rows > 200))
+    wing = poly_mask(shape, base.WING_POLY) & opaque & differs & ~orange_out
     wing = cv2.morphologyEx(wing.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8)).astype(bool)
     wing = largest(wing & opaque)
     tail = largest(poly_mask(shape, base.TAIL_POLY) & opaque & differs)
 
     head_core = poly_mask(shape, base.HEAD_POLY) & opaque
-    if HEAD_EXTRA[v]:
+    if HEAD_EXTRA.get(v):
         head_core |= poly_mask(shape, HEAD_EXTRA[v]) & opaque
     head = grow(head_core, opaque, SEAM)
     arm_f = largest(poly_mask(shape, ARM_F_POLY) & opaque & ~head_core)
@@ -110,7 +114,13 @@ def cut_set(v):
     torso_img[fill] = nowing[fill]
 
     covered = torso | head | arm_f | arm_b | wing | tail | leg_f | leg_b
-    print(f'[{v}] 어느 조각에도 안 들어간 px: {int((opaque & ~covered).sum())}')
+    left = opaque & ~covered
+    print(f'[{v}] 어느 조각에도 안 들어간 px: {int(left.sum())}')
+    if v not in ('a', 'b'):   # 2차 세트 (D-071): 남은 픽셀은 날개 자리면 날개, 나머지는 몸통에 붙임 (장식이 기본 선 밖으로 큰 세트)
+        to_wing = left & poly_mask(shape, base.WING_POLY)
+        wing = wing | to_wing
+        torso_img[left & ~to_wing] = src[left & ~to_wing]
+        print(f'[{v}] → 날개 {int(to_wing.sum())}px · 몸통 {int((left & ~to_wing).sum())}px')
 
     parts = {
         'torso': torso_img,
@@ -127,6 +137,10 @@ def cut_set(v):
     if empty:
         raise SystemExit(f'[{v}] 비어 있는 조각: {empty}')
 
+    if v not in ('a',):   # 갇힌 배경 초록 찌꺼기 지우기 (A만 초록 약병이 있어 뺌) — 2차 세트 (D-071)
+        for p in parts.values():
+            r, g, bb = p[..., 0].astype(int), p[..., 1].astype(int), p[..., 2].astype(int)
+            p[(g > 150) & (g > r + 60) & (g > bb + 60), 3] = 0
     flipped = {f'{k}_{v}': np.ascontiguousarray(p[:, ::-1]) for k, p in parts.items()}
     layout_parts = save_parts(flipped, OUT_DIR)
     order = ['tail1', 'tail2', 'legB', 'legF', 'torso', 'wing', 'armB', 'armF', 'head']
@@ -139,7 +153,8 @@ def cut_set(v):
 def main():
     path = f'{OUT_DIR}/rig.json'
     layout = json.load(open(path, encoding='utf-8'))
-    for v in ('a', 'b'):
+    letters = sys.argv[1:] or ['a', 'b']   # 2차 세트 (D-071): python tools/rig/cut_chimera_sets.py u c d v w l m
+    for v in letters:
         layout['parts'].update(cut_set(v))
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(layout, f, ensure_ascii=False, indent=2)

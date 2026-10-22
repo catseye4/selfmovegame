@@ -151,7 +151,9 @@ export const GrowthBattleMethods = {
     /** 스킬 쿨다운 (스킬 레벨·재충전 옵션·과부하 변이) */
     skillCooldown(slot, sk) {
         const lvMul = sk.module ? 1 : skillCdMulOf(this.skillLevels?.[slot] || 1);
-        return sk.cd * lvMul * (1 - (this.gear?.cdr || 0)) * (this.mutator?.cdMul || 1);
+        const kitCd = sk.module ? 0 : (this.kitPatch?.[sk.id]?.cd || 0);   // 2차 세트 효과: 쿨다운 -초 (kit.js)
+        const kitCdr = sk.module ? 0 : this.kitMod('cdr');                  // 2차 패시브: 쿨다운 -%
+        return Math.max(1, (sk.cd + kitCd) * lvMul * (1 - (this.gear?.cdr || 0)) * (1 - kitCdr) * (this.mutator?.cdMul || 1));
     },
 
     /**
@@ -197,7 +199,7 @@ export const GrowthBattleMethods = {
     /** 상태 이상 시간 배율 (냉기 저항 옵션, 방벽 발생기 면역이면 0) */
     ccMul() {
         if (this.ccImmuneT > 0) return 0;
-        return 1 - (this.gear?.ccCut || 0);
+        return (1 - (this.gear?.ccCut || 0)) * this.kitCcMul();   // 2차 패시브 (kit.js)
     },
 
     /** 진격 속도 배율 (신속 진격 옵션 · 얼음 바닥 변이) */

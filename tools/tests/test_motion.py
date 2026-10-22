@@ -63,6 +63,19 @@ def run(ctx):
     ctx.check(st['ts'] == 0 and abs(st['a'] - st['c']) > 0.5 and 'stun' not in st['left'], 'Q4 기절: 동작은 멈추고 비틀거림, 풀리면 끝', str(st))
     st = g.js("const r = m.rigBattle; b.monsterX = 400; b.knockPlayerBack(100); return r.reacts.map(x => x.name);")
     ctx.check('knock' in st, 'Q4 밀림: 크게 젖혀짐', str(st))
+    st = g.js("""const r = m.rigBattle; gameTime.slowMo(0.3, 1.4); m.playReaction('down');""" + WAIT.format(ms=900) + """
+        const o = r._offsets().root || {}; const held = r.reacts.some(x => x.name === 'down'); r.resetSkills();
+        return { y: o.y || 0, rot: o.rot || 0, held, after: r.reacts.length };""")
+    ctx.check(st['held'] and st['y'] > 25 and st['rot'] < -3 and st['after'] == 0,
+              'Q4 패배: 느린 화면 중에도 0.9초 안에 주저앉은 자세까지 가서 유지, 다음 전투 시작 때 지움', str(st))
+
+    # ---- Q6: 쿵 눌림 (무거운 캐릭터 걸음 'stomp') ----
+    g.battle(('head_mutant', 'body_mutant', 'arm_mutant', 'leg_mutant'), wait_ms=1500)
+    clear(g)
+    st = g.js("""const r = m.rigBattle; let seen = 0, minSy = 0; for (let i = 0; i < 60; i++) { await new Promise(res => setTimeout(res, 25));
+        if (r.reacts.some(x => x.name === 'stomp')) { seen++; minSy = Math.min(minSy, (r._offsets().root || {}).sy || 0); } }
+        return { seen, minSy, wind: r.character.wind && r.character.wind.length };""")
+    ctx.check(st['seen'] > 0 and st['minSy'] < -0.005 and st['wind'] == 3, 'Q6 거대괴수 걸음마다 쿵 눌림 · 꼬리 바람', str(st))
 
     # ---- Q4: 적 반응 — 맞으면 젖혀짐, 쓰러지면 넘어지며 사라짐 ----
     clear(g)
@@ -73,6 +86,14 @@ def run(ctx):
         return { rec, falling, gone: !el.isConnected };""")
     ctx.check(st['rec'] in ('running', 'finished') and st['falling'] and st['gone'],
               'Q4 적: 맞으면 젖혀짐 · 쓰러지면 넘어지는 동안 남았다가 치움 (처치는 바로)', str(st))
+    st = g.js("""const e = b.spawnMinion('guard', { x: b.frontX() + 300 }); e.hp = e.maxHp = 5000; const sp = e.dom.querySelector('.v2-enemy__sprite');
+        const anim = () => getComputedStyle(sp).animationName + '/' + getComputedStyle(sp).animationPlayState;
+        const walk = anim(); b.stunEnemy(e, 2); const stun = anim(); e.stunT = 0; b.updateEnemyFilter(e);
+        e.frozenT = 2; b.updateEnemyFilter(e); const frozen = anim(); e.frozenT = 0; b.updateEnemyFilter(e);
+        b.rootEnemy(e, 2); const root = anim(); e.rootT = 0; b.updateEnemyFilter(e); const back = anim();
+        return { walk, stun, frozen, root, back };""")
+    ctx.check(st['stun'].startswith('v2-enemy-dizzy') and st['frozen'].endswith('paused') and st['root'].startswith('v2-enemy-struggle')
+              and st['back'] == st['walk'], 'Q5 멈춘 적: 기절 비틀거림 · 빙결 굳음 · 속박 버둥거림 → 풀리면 다시 걷기', str(st))
 
     # ---- Q5: 적 그림 2배 픽셀·프레임 늘림 (WebP) ----
     st = g.js("""const { ENEMY_ART } = await import('/js/engine_v2/enemyArt_v2.js'); const a = ENEMY_ART.guard;
@@ -108,4 +129,28 @@ def run(ctx):
             return {{ ok, moved: Math.hypot(after[0] - before[0], after[1] - before[1]), clips, char: r.character.id }};""")
         ctx.check(all(st['ok']) and st['moved'] > 5 and st['clips'] >= 5 and st['char'] == cid,
                   f"손목 관절 {cid}: 손 뼈 {hands} · 소켓 '{sock}'이 손을 따라 돎 · 동작 {st['clips']}개에 손목 움직임", str(st))
+
+    # ---- Q7 스킬 전용 동작: 거대괴수·합성괴인·거대로봇 스킬이 공격·승리 동작을 빌리지 않음 ----
+    Q7 = {
+        'kaiju': ('head_mutant', 'body_mutant', 'arm_mutant', 'leg_mutant'),
+        'kaiju_a': ('head_kaiju_a', 'body_kaiju_a', 'arm_kaiju_a', 'leg_kaiju_a'),
+        'kaiju_b': ('head_kaiju_b', 'body_kaiju_b', 'arm_kaiju_b', 'leg_kaiju_b'),
+        'chimera_a': ('head_chimera_a', 'body_chimera_a', 'arm_chimera_a', 'leg_chimera_a'),
+        'chimera_b': ('head_chimera_b', 'body_chimera_b', 'arm_chimera_b', 'leg_chimera_b'),
+        'mech_a': ('head_mech_a', 'body_mech_a', 'arm_mech_a', 'leg_mech_a'),
+        'mech_b': ('head_mech_b', 'body_mech_b', 'arm_mech_b', 'leg_mech_b'),
+        'mech_laser': ('head_mech', 'body_mech', 'arm_mech_laser', 'leg_mech_wheel'),
+    }
+    for name, build in Q7.items():
+        g.battle(build, wait_ms=1500)
+        clear(g)
+        g.js("b.spawnMinion('guard', { x: b.frontX() + 60 }).hp = 1e7;")
+        st = g.js("""const r = m.rigBattle; const played = []; const orig = r.playOnce.bind(r);
+            r.playOnce = n => { played.push(n); return orig(n); };
+            for (const s of ['arm', 'body', 'head']) { b.skillCd[s] = 0; b.ultGauge = 1; m.flushCast(); r.onceClip = null; b.useSkill(s);
+                await new Promise(res => setTimeout(res, 120)); }
+            r.playOnce = orig; m.flushCast();
+            const own = Object.keys(r.character.clips);
+            return { played, bad: played.filter(n => /^attack|^victory$/.test(n) || !own.includes(n)) };""")
+        ctx.check(st['played'] and not st['bad'], f"Q7 {name}: 스킬마다 전용 동작 {st['played']}", str(st))
     g.js("b.stopBattle();")

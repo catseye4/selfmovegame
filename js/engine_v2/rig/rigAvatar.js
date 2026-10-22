@@ -201,7 +201,8 @@ export function rigConfigFor(partsObj, fallback = null) {
     }
     if (character !== 'mech') return { character, filters, variants, upgrades };
     const type = partsObj.arm && partsObj.arm.attackType;
-    return { character, arm: CANNON_ATTACKS.has(type) ? 'cannon' : 'fist', filters, variants, upgrades };
+    const arm = partsObj.arm?.rigArm || (CANNON_ATTACKS.has(type) ? 'cannon' : 'fist');   // 2차 세트 팔은 rigArm으로 정함 (D-071)
+    return { character, arm, filters, variants, upgrades };
 }
 
 // 거대로봇: 원거리 공격 팔은 캐논 팔 그림 (레일건 = A 세트 포격 사령부)
@@ -211,7 +212,8 @@ const CANNON_ATTACKS = new Set(['laser', 'missile', 'rail']);
 // 세트 그림은 tools/rig/cut_<캐릭터>_sets.py로 자름. 그림이 없는 부위·캐릭터는 세트 색(SET_TINT)으로 구분
 // 거대로봇 무기 팔은 A(레일건)가 캐논 팔 armR_cannon_a, B(파일벙커)가 주먹 팔 armR_fist_b만 있음
 // 합성괴인 'dragon' = 세트 밖 추가 머리 화룡 머리 (head_dragon, tools/rig/cut_chimera_dragon.py, D-054)
-export const RIG_SET_ART = { kaiju: ['a', 'b'], mech: ['a', 'b'], hero: ['a', 'b'], chimera: ['a', 'b', 'dragon'] };
+// 2차 세트 (D-071): 거대괴수·합성괴인·거대로봇·타락 히어로 u·c·d·v·w·l·m (tools/rig/cut_<캐릭터>_sets.py u c d v w l m — 로봇 무기 팔은 세트 rigArm 쪽만 있음)
+export const RIG_SET_ART = { kaiju: ['a', 'b', 'u', 'c', 'd', 'v', 'w', 'l', 'm'], mech: ['a', 'b', 'u', 'c', 'd', 'v', 'w', 'l', 'm'], hero: ['a', 'b', 'u', 'c', 'd', 'v', 'w', 'l', 'm'], chimera: ['a', 'b', 'dragon', 'u', 'c', 'd', 'v', 'w', 'l', 'm'] };
 export const SET_TINT = {
     mech: { a: 'sepia(0.35) hue-rotate(-50deg) saturate(1.5) brightness(1.05)', b: 'hue-rotate(-95deg) saturate(1.35) brightness(1.1)' },
     kaiju: { a: 'sepia(0.3) saturate(0.8) brightness(1.15)', b: 'hue-rotate(25deg) saturate(1.6)' },
@@ -457,11 +459,11 @@ export class RigAvatar {
         this.windK = (this.windK || 0) + (target - (this.windK || 0)) * Math.min(1, dt * WIND.ease);
     }
 
-    /** 반응 시간 진행 (실제 시간 — 기절로 동작이 멈춰도 움직임) */
-    _tickReacts(dt) {
+    /** 반응 시간 진행 (기절로 동작이 멈춰도 움직임). dt = 히트스톱·느린 화면 반영, raw = 실제 시간 (realtime 반응) */
+    _tickReacts(dt, raw = dt) {
         if (!this.reacts || !this.reacts.length) return;
-        for (const r of this.reacts) r.t += dt;
-        this.reacts = this.reacts.filter(r => r.clip.loop || r.t < r.clip.duration);
+        for (const r of this.reacts) r.t += r.clip.realtime ? raw : dt;
+        this.reacts = this.reacts.filter(r => r.clip.loop || r.clip.hold || r.t < r.clip.duration);
     }
 
     /** 스프링 + 반응 동작 = 동작 위에 더할 값 { 뼈: { x, y, rot } } */
@@ -471,7 +473,7 @@ export class RigAvatar {
         for (const s of this.springs) add(s.bone, s.channel, s.value);
         if (this.windK) for (const w of this.character.wind || []) if (this.skeleton.byName[w.bone]) add(w.bone, 'rot', w.rot * this.windK);
         for (const r of this.reacts || []) {
-            const t = r.clip.loop ? r.t % r.clip.duration : r.t;
+            const t = r.clip.loop ? r.t % r.clip.duration : Math.min(r.t, r.clip.duration);
             const pose = samplePose(r.clip, t);
             for (const bone in pose) {
                 if (!this.skeleton.byName[bone]) continue;
@@ -530,8 +532,9 @@ export class RigAvatar {
         this.effects.shieldBreak();
     }
 
-    /** 전투 시작 시 스킬 상태 초기화 (거대화/실드/한 번 재생 동작) */
+    /** 전투 시작 시 스킬 상태 초기화 (거대화/실드/한 번 재생 동작/반응 동작 — 패배 자세 등) */
     resetSkills() {
+        this.reacts = [];
         this.effects.shield = null;
         this.setGiant(1, true);
         if (this.onceClip && this.animator) {
@@ -646,12 +649,13 @@ export class RigAvatar {
         if (!this.running) return;
         // 히트스톱/일시정지 0, 배속 적용 × 이 캐릭터만의 동작 속도(감속 0.55, 기절 0)
         const walk = this.mode === 'walk' ? this.walkScale ?? 1 : 1;   // 걷기 동작은 실제 진격 속도에 맞춤 (Q2)
-        const real = Math.min(0.1, (now - this.last) / 1000) * gameTime.scale(now);   // 히트스톱·일시정지만 (반응 동작용)
+        const raw = Math.min(0.1, (now - this.last) / 1000);
+        const real = raw * gameTime.scale(now);   // 히트스톱·일시정지만 (반응 동작용)
         const dt = real * (this.timeScale ?? 1) * walk;
         this.last = now;
         if (this.animator) {
             const reacting = this.reacts && this.reacts.length;
-            this._tickReacts(real);
+            this._tickReacts(real, raw);
             this._tickWind(dt);
             this.acc += dt;
             let ticked = false;
@@ -694,6 +698,7 @@ export class RigAvatar {
 
     _handleEvent(name, data) {
         if (!this._built) return;   // 교체 대기 중인 이전 캐릭터의 이벤트는 무시
+        if (name === 'stomp' || name === 'land') this.react(name);   // 쿵·착지 눌림 (reactions.js, Q6)
         applyRigEvent(name, data, {
             effects: this.effects, skeleton: this.skeleton, character: this.character, arm: this.arm,
             toScreen: p => this._toCanvas(p), groundY: this.opts.rootY,

@@ -24,6 +24,28 @@ import { aimAt } from './bases_v2.js';
 import { ENEMY_ART } from './enemyArt_v2.js';
 import { hastedType } from './difficulty_v2.js';
 
+// ---- 적 그림 미리 풀기 (성능 측정 2026-10-21: 새 적이 처음 나올 때 그림 압축 풀기로 50~100ms 멈춤) ----
+const decoded = new Map();   // 그림 주소 → Image (붙잡아 두어 풀린 그림이 남게)
+function decodeOnce(src) {
+    if (decoded.has(src) || typeof Image === 'undefined') return;
+    const img = new Image();
+    img.src = src;
+    decoded.set(src, img);
+    if (img.decode) img.decode().catch(() => {});
+}
+/** 전투 시작 때 (battle_v2.js startBattle): 이 스테이지 적 섞기·보스의 그림(빌린 그림 포함)을 미리 풂 */
+export function predecodeStageArt(stage) {
+    const types = new Set(Object.keys((stage.enemy && stage.enemy.mix) || {}));
+    if (stage.boss && stage.boss.unit) types.add(stage.boss.unit);
+    for (const id of types) {
+        const t = ENEMY_TYPES[id];
+        const key = ENEMY_ART[id] ? id : t && t.artAs;
+        const art = key && ENEMY_ART[key];
+        if (!art) continue;
+        for (const v of Object.values(art)) if (v && v.src) decodeOnce(v.src);
+    }
+}
+
 export const ENEMY_TYPES = {
     guard: { name: '경비병', hp: 350, dps: 35, speed: [75, 100], reward: 1 },
     shield: {
@@ -526,6 +548,7 @@ export function updateEnemy(b, e, dt, frontX) {
 
 function moveBy(b, e, px) {
     if (e.rootT > 0) return;   // 속박 (저주의 사슬): 제자리에서 공격만
+    px *= b.kitEnemyMove ? b.kitEnemyMove(e) : 1;   // 2차 패시브 마왕의 위압: 보통 적 이동 감소 (battle/kit.js)
     if (e.purifyUntil > b.stats.time && e.affixes?.includes('swift')) px /= ELITE_AFFIXES.swift.speedMul;   // 정화 파동: 가속 해제
     e.x -= px;
     if (e.dom) e.dom.style.left = `${e.x}px`;

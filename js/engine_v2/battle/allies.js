@@ -74,6 +74,7 @@ export const AllyMethods = {
 
     // 아군 미니언이 피해를 받음 (0 이하면 사라짐)
     damageAlly(ally, amount) {
+        amount *= Math.max(0.1, 1 - (this.kitMod?.('allyDef') || 0));   // 2차 세트: 아군 받는 피해 감소 (방패 진형·군주의 가호·성운 장막)
         ally.hp -= amount;
         if (ally.hpBar) ally.hpBar.style.width = `${Math.max(0, (ally.hp / ally.maxHp) * 100)}%`;
         if (ally.hp <= 0) this.removeAlly(ally);
@@ -86,6 +87,7 @@ export const AllyMethods = {
         this.allies = this.allies.filter(a => a.id !== ally.id);
         this.onAllyDown(ally);
         this.onSetAllyDown(ally);   // 조직 사령관 4부위: 졸개 폭발 (sets.js)
+        this.kitOnAllyDown(ally);   // 2차 소환물 폭발·군단 보급 (kit.js)
     },
 
     /** 아군 이동·공격: 가장 가까운 적(뒤로 35px까지)과 붙으면 싸우고, 아니면 앞으로 (주인공보다 너무 멀리 가지 않음) */

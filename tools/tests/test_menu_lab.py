@@ -27,9 +27,9 @@ def run(ctx):
         g.page.click(f'.v2-slottab[data-slot="{slot}"]')
         g.wait(100)
         names += g.js("return [...document.querySelectorAll('#parts-grid-v2 .v2-partcard__name')].map(e => e.firstChild.textContent);")  # 이름만 (뒤의 Lv·등급 표시 빼고)
-    ctx.check(len(names) == 17 and '[파츠제거]' not in names and '흑마법 룬 갑옷' not in names and '산성 발톱 팔' not in names
-              and '레일건' in names and '파일 벙커' in names,
-              '연구소: 거대로봇 파츠만 17개 (기본 9 + A·B 세트 8, [파츠제거]·다른 캐릭터 없음)', str(names))
+    ctx.check(len(names) == 45 and '[파츠제거]' not in names and '흑마법 룬 갑옷' not in names and '산성 발톱 팔' not in names
+              and '레일건' in names and '파일 벙커' in names and '뇌운 관제 헬름' in names,
+              '연구소: 거대로봇 파츠만 45개 (기본 9 + A·B 세트 8 + 2차 7세트 28, [파츠제거]·다른 캐릭터 없음)', str(names))
 
     # 머리 구매: 타겟팅 레이저 바이저 (500 DM)
     g.page.click('.v2-slottab[data-slot="head"]')
@@ -114,7 +114,8 @@ def run(ctx):
     g.wait(800)
     g.page.click('.v2-slottab[data-slot="body"]')
     names = g.js("return [...document.querySelectorAll('#parts-grid-v2 .v2-partcard__name')].map(e => e.firstChild.textContent);")  # 이름만 (뒤의 Lv·등급 표시 빼고)
-    ctx.check(names == ['흑마법 룬 갑옷', '찢어진 망토 갑옷', '저주 룬 로브'], '연구소: 타락 히어로 몸통만 표시 (기본 + A·B 세트)', str(names))
+    ctx.check(names[:3] == ['흑마법 룬 갑옷', '찢어진 망토 갑옷', '저주 룬 로브'] and len(names) == 10 and '검은 날개 갑주' in names,
+              '연구소: 타락 히어로 몸통만 표시 (기본 + A·B 세트 + 2차 7세트)', str(names))
     g.page.locator('.v2-partcard', has_text='흑마법 룬 갑옷').click()
     g.page.click('#btn-equip-confirm-v2')
     g.wait(300)

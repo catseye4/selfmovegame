@@ -193,6 +193,40 @@ export const FROST_CLIPS = {
         ]
     },
 
+    // ---- 2차 세트 전용 동작 (D-071, MD/파츠확장_2차_기획안.md 5-7). 손목은 안전한 쪽(앞손 +, 뒷손 -)이 아니면 10° 안 ----
+    // 돌진 베기 (백야의 검무·빙창 찌르기·덮치기): 웅크렸다(0.12) 앞으로 미끄러지며 두 부채를 엇갈려 그음(0.3 — 스킬 타격 0.2~0.4)
+    dashSlash: {
+        duration: 0.8,
+        loop: false,
+        tracks: {
+            armF: { rot: [[0, 0], [0.12, 30, 'in'], [0.3, -45, 'out'], [0.5, -35], [0.8, 0]] },
+            armB: { rot: [[0, 0], [0.12, -25, 'in'], [0.3, 35, 'out'], [0.5, 25], [0.8, 0]] },
+            torso: { x: [[0, 0], [0.12, -10, 'in'], [0.3, 30, 'out'], [0.5, 24], [0.8, 0]], rot: [[0, 0], [0.12, -4], [0.3, 5, 'out'], [0.8, 0]] },
+            head: { rot: [[0, 0], [0.12, -3], [0.3, 4], [0.8, 0]] },
+            hair: { rot: [[0, 0], [0.3, -9, 'out'], [0.8, 0]] },
+            legF: { y: [[0, 0], [0.2, -10], [0.35, 0], [0.8, 0]] },
+            handF: { rot: [[0, 0], [0.12, 10], [0.3, -8, 'out'], [0.8, 0]] },
+            handB: { rot: [[0, 0], [0.12, -10], [0.3, 8, 'out'], [0.8, 0]] }
+        },
+        events: [[0.3, 'fire', { color: ICE, size: 1.6 }]]
+    },
+
+    // 부채 치켜들기 (극야·늑대 무리 사냥·영겁의 겨울): 두 부채를 머리 위로 높이 들어 하늘을 부름 (0.4 해방)
+    raise: {
+        duration: 1.1,
+        loop: false,
+        tracks: {
+            armF: { rot: [[0, 0], [0.3, -60, 'out'], [0.8, -56], [1.1, 0]] },
+            armB: { rot: [[0, 0], [0.3, 55, 'out'], [0.8, 50], [1.1, 0]] },
+            torso: { y: [[0, 0], [0.3, -10, 'out'], [0.8, -8], [1.1, 0]], rot: [[0, 0], [0.3, -2], [0.8, -2], [1.1, 0]] },
+            head: { rot: [[0, 0], [0.3, -7], [0.8, -6], [1.1, 0]] },
+            hair: { rot: [[0, 0], [0.3, -6], [0.8, -4], [1.1, 0]] },
+            handF: { rot: [[0, 0], [0.3, -8, 'out'], [1.1, 0]] },
+            handB: { rot: [[0, 0], [0.3, 8, 'out'], [1.1, 0]] }
+        },
+        events: [[0.05, 'charge', { socket: 'crown', bone: 'head', color: DUST }], [0.4, 'chargeEnd'], [0.4, 'roar', { socket: 'crown', bone: 'head', color: DUST }]]
+    },
+
     // 승리: 두 부채를 높이 들고 고개를 살짝 젖힌 채 우아하게 흔들림
     victory: {
         duration: 1.4,
@@ -222,7 +256,8 @@ export const FROST = {
     attack: 'attack_fan',
     hitSocket: ['fanF', 'handF'],
     upgrade: FROST_UPGRADE,
-    skillClips: [['초승달 참격', 'crescent'], ['눈보라 춤', 'spin'], ['영원한 안식', 'cast']],   // rig_test.html 동작 버튼
+    skillClips: [['초승달 참격', 'crescent'], ['눈보라 춤', 'spin'], ['영원한 안식', 'cast'],
+        ['돌진 베기', 'dashSlash'], ['부채 치켜들기', 'raise']],   // rig_test.html 동작 버튼 (뒤 둘은 2차 세트, D-071)
     // 부채에서 흩날리는 서리 가루, 발밑에 깔리는 찬 안개
     ambient: [
         { kind: 'ember', socket: 'fanF', bone: 'handF', layer: 'front', rate: 3,

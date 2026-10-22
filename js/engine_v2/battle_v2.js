@@ -40,11 +40,13 @@ import { AttackMethods, SKILL_AUTO_KEY } from './battle/attacks.js';
 import { EnemyMethods } from './battle/enemyField.js';
 import { AllyMethods } from './battle/allies.js';
 import { SetMethods } from './battle/sets.js';
+import { KitMethods } from './battle/kit.js';
 import { DiverMethods } from './battle/diver.js';
 import { SaintMethods } from './battle/saint.js';
 import { FrostMethods } from './battle/frost.js';
 import { DollMethods } from './battle/doll.js';
 import { GrowthBattleMethods } from './battle/growth.js';
+import { predecodeStageArt } from './enemies_v2.js';
 
 export class BattleEngine {
     constructor() {
@@ -127,6 +129,9 @@ export class BattleEngine {
         this.buffs = {};
         this.zones = [];
         this.setFx = {};
+        this.kitBuffs = {};       // 스킬 부품 (battle/kit.js, 파츠 확장 2차)
+        this.kitZones = [];
+        this.kitWaves = [];
         // 리그 애니메이션 이벤트 → 전장 이펙트 (거대로봇 출격 점프 착지)
         monsterControllerV2.onRigEvent = name => {
             if (!this.isActive) return;
@@ -134,7 +139,7 @@ export class BattleEngine {
             // 동작 효과음: 발걸음(거대 캐릭터 걷기 = stomp, 사람 크기 히어로 = step 가볍게), 점프 분사, 기 모으기
             if (name === 'stomp') sound.play('giant_step');
             else if (name === 'step') sound.play('giant_step', { vol: 0.45, rate: 1.5 });
-            if (name === 'stomp' || name === 'step') this.onFootstep();   // 다리 패시브 '짓밟기' (battle/sets.js)
+            if (name === 'stomp' || name === 'step') { this.onFootstep(); this.kitOnStep(); }   // 다리 패시브 '짓밟기' (battle/sets.js) · 2차 걸음 패시브 (battle/kit.js)
             else if (name === 'thrust') sound.play('mech_thrust');
             else if (name === 'charge') sound.play('charge_up');
         };
@@ -148,6 +153,7 @@ export class BattleEngine {
         // 난이도(D-063): 고른 난이도의 배율을 곱한 스테이지 복사본 — 전투 코드는 b.stage만 읽음
         this.difficulty = difficultyUnlocked(progress.difficulty, progress) ? progress.difficulty : DEFAULT_DIFFICULTY;
         this.stage = this.growthStage(stageFor(stageById(progress.selectedStage || defaultStage(progress).id), this.difficulty));   // + 계정 연구 DM (growth.js)
+        predecodeStageArt(this.stage);   // 이 스테이지 적 그림을 미리 풂 (enemies_v2.js — 처음 나올 때 멈칫하지 않게)
         // 구역 배경 (ui_v2.css .v2-zone-2 ~ 4), 보스전은 경보 조명·불길 판 (.v2-stage-boss)
         // .v2-boss-rage(구역 4 보스 2페이즈)·.v2-crimson(구역 3 악마기사 소환 점멸)은 전투 중에 붙음
         const screen = document.getElementById('screen-battle-v2');
@@ -226,6 +232,7 @@ export class BattleEngine {
         this.attackType = equippedObjs.arm ? (equippedObjs.arm.attackType || 'melee') : 'melee';
         this.skills = skillsForParts(equippedObjs);
         this.setupGrowth(equippedObjs);   // 옵션·스킬 레벨·전술 모듈·전장 변이 (battle/growth.js, Q-006)
+        this.setupKit(equippedObjs);      // 2차 세트 패시브·세트 효과·새 기본 공격 (battle/kit.js, D-071)
 
         if (this.equippedBodyId === 'body_chimera') {
             setTimeout(() => {
@@ -441,6 +448,7 @@ export class BattleEngine {
         this.checkOverload(dt);          // player.js
         this.tickAcid(dt);               // enemyField.js
         this.tickSets(dt);               // sets.js (버프·지속 피해 구역·출혈·블랙홀·포탑·분신)
+        this.tickKit(dt);                // kit.js (2차 버프·적 상태·장판·움직이는 판정·소환·변신)
         this.tickDiver(dt);              // diver.js (끌려오는 적, 심연의 손 지속 피해)
         this.tickSaint(dt);              // saint.js (봉합 표식, 생명 봉인 장판, 시체, 자가 봉합)
         this.tickFrost(dt);              // frost.js (냉기·빙결 시간, 눈보라)
@@ -516,6 +524,7 @@ export class BattleEngine {
             if (this.moveMul() > 0) {
                 this.scrollHazards(dt);
                 this.scrollZones(dt);    // sets.js: 독안개·화염·웅덩이도 바닥과 함께
+                this.scrollKit(dt);      // kit.js: 2차 장판·움직이는 판정
                 if (this.corpses.length) this.scrollCorpses(dt);   // saint.js
             }
 
@@ -553,6 +562,7 @@ attachMethods(BattleEngine.prototype, {
     'battle/enemyField.js': EnemyMethods,
     'battle/allies.js': AllyMethods,
     'battle/sets.js': SetMethods,
+    'battle/kit.js': KitMethods,
     'battle/diver.js': DiverMethods,
     'battle/saint.js': SaintMethods,
     'battle/frost.js': FrostMethods,

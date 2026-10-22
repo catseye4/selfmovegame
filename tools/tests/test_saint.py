@@ -27,7 +27,7 @@ def run(ctx):
     st = g.js("""const { PARTS_DB } = await import('/js/data/parts.js');
         const { skillsForParts, legPassiveOf } = await import('/js/engine_v2/skills_v2.js');
         const get = (s, id) => PARTS_DB[s].find(p => p.id === id);
-        const ids = ['head', 'body', 'arm', 'leg'].flatMap(s => PARTS_DB[s].filter(p => String(p.faction).includes('봉합 성녀')).map(p => p.id));
+        const ids = ['head', 'body', 'arm', 'leg'].flatMap(s => PARTS_DB[s].filter(p => String(p.faction).includes('봉합 성녀') && !p.rigVariant).map(p => p.id));
         const sk = skillsForParts({ head: get('head', 'head_saint_up'), body: get('body', 'body_saint'), arm: get('arm', 'arm_saint') });
         return { ids, sk: [sk.arm && sk.arm.name, sk.body && sk.body.name, sk.head && sk.head.name],
                  leg: legPassiveOf(get('leg', 'leg_saint')).name, needle: get('arm', 'arm_saint_up').attackType };""")

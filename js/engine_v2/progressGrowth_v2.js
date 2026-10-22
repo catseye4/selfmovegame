@@ -160,9 +160,9 @@ export const GrowthMethods = {
         const grade = pickWeighted(DROP.grades[diff] || DROP.grades.normal, rnd);
         return { ...this.grantPart(part.id, grade, rnd), sure };
     },
-    /** 캐릭터 파츠를 묶음(기본·강화 / 레어 세트 / 유니크 세트)으로 나눔 */
+    /** 캐릭터 파츠를 묶음(기본·강화 / 레어 세트 / 유니크 세트 / 레전더리 세트)으로 나눔 */
     dropGroups(character) {
-        const groups = { base: [], rare: [], unique: [] };
+        const groups = { base: [], rare: [], unique: [], legendary: [] };
         for (const p of SLOTS.flatMap(s => partsOfCharacter(character, s))) {
             if (p.id !== 'none') groups[dropGroupOf(p)].push(p);
         }
@@ -178,7 +178,7 @@ export const GrowthMethods = {
         let key = prefer ? prefer.find(usable) : null;
         if (!key) {
             const w = Object.fromEntries(Object.entries(DROP.poolWeights[diff] || DROP.poolWeights.normal).filter(([k, v]) => v > 0 && usable(k)));
-            key = Object.keys(w).length ? pickWeighted(w, rnd) : ['base', 'rare', 'unique'].find(usable);
+            key = Object.keys(w).length ? pickWeighted(w, rnd) : ['base', 'rare', 'unique', 'legendary'].find(usable);
         }
         if (!key) return null;
         const list = groups[key];
@@ -367,7 +367,7 @@ export const GrowthMethods = {
         if (rnd() < r.partChance) {
             // 파츠는 레어 이하: 유니크 세트는 빼고, 노말만 깼으면 기본·강화만 (묶음 가중은 열린 가장 높은 난이도)
             const top = highestDifficulty(this).id;
-            const pick = this.pickDropPart(d.character, top, { exclude: ['unique'] }, rnd);
+            const pick = this.pickDropPart(d.character, top, { exclude: ['unique', 'legendary'] }, rnd);
             if (pick) part = this.grantPart(pick.id, top === 'normal' ? 'common' : 'rare', rnd);
         }
         gameState.notify();

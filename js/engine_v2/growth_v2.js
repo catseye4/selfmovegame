@@ -47,22 +47,22 @@ export const DROP = {
     // 조각으로 등급 한 칸 올리기 (천장) — 그 등급으로 올리는 비용
     shardCost: { rare: 15, unique: 35, legendary: 80 },
     // 드랍 묶음 가중 (Q-008 · 새캐릭터 기획안 3장): 어느 묶음에서 뽑을지 → 그 안에서 같은 확률. 그 캐릭터에 없는 묶음은 빼고 다시 나눔
-    //   base = 기본·강화, rare = 레어 세트 ①·②, unique = 유니크 세트 (sets_v2.js)
+    //   base = 기본·강화, rare = 레어 세트 ①~④, unique = 유니크 세트 ①~③, legendary = 레전더리 세트 ①·② (sets_v2.js, D-071)
     poolWeights: {
         normal: { base: 1 },
         hard: { base: 0.4, rare: 0.6 },
         hell: { base: 0.2, rare: 0.4, unique: 0.4 },
-        nightmare: { base: 0.1, rare: 0.4, unique: 0.5 }
+        nightmare: { base: 0.1, rare: 0.3, unique: 0.4, legendary: 0.2 }
     },
     // 보스전 첫 클리어 확정 드랍은 이 묶음에서 (없으면 다음 묶음): 새 장비를 바로 보게
     firstClearGroups: {
         normal: ['base'],
         hard: ['rare', 'base'],
         hell: ['unique', 'rare', 'base'],
-        nightmare: ['unique', 'rare', 'base']
+        nightmare: ['legendary', 'unique', 'rare', 'base']
     },
     // 조각으로 세트 파츠 만들기 (안 가진 부위, 등급 바닥으로 나옴) — 드랍 운이 나빠도 끝이 보이게
-    craftCost: { rare: 30, unique: 80 }
+    craftCost: { rare: 30, unique: 80, legendary: 200 }
 };
 // 구역 상성 캐릭터 (추천안 — 구역 이야기와 맞춘 짝)
 export const AFFINITY = { 1: ['mech', 'frost'], 2: ['kaiju', 'doll'], 3: ['hero', 'saint'], 4: ['chimera', 'diver'] };

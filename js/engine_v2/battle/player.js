@@ -106,7 +106,7 @@ export const PlayerMethods = {
 
     // ---- 주인공 상태 이상 (적 공격) ----
     applyPlayerSlow(sec, quiet = false) {
-        if (this.equippedLegId === 'leg_hero_hover') {   // 다리 패시브: 감속 무시
+        if (this.equippedLegId === 'leg_hero_hover' || this.kitFlag('slowImmune')) {   // 다리 패시브: 감속 무시 (2차 패시브 포함)
             if (!quiet) this.createDamagePopup(this.monsterX + 40, 190, '감속 무효', false);
             return;
         }
@@ -170,7 +170,7 @@ export const PlayerMethods = {
     },
 
     knockPlayerBack(px, label) {
-        if (this.equippedLegId === 'leg_kaiju_a' || this.knockImmuneBySet()) {   // '단단한 껍질' 다리 · 광폭 실험체 4부위(아드레날린 중): 밀려나지 않음
+        if (this.equippedLegId === 'leg_kaiju_a' || this.knockImmuneBySet() || this.kitFlag('knockImmune')) {   // 2차 패시브·버프도 (kit.js)   // '단단한 껍질' 다리 · 광폭 실험체 4부위(아드레날린 중): 밀려나지 않음
             this.createDamagePopup(this.monsterX + 30, 210, '버팀!', false);
             return;
         }

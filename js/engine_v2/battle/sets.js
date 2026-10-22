@@ -70,7 +70,7 @@ export const SetMethods = {
 
     /** 주인공이 주는 피해 배율 (기본 공격·스킬 모두: attacks.js unit()·fireAttack) */
     dmgMul() {
-        let m = 1;
+        let m = this.kitDmgMul();   // 2차 버프·패시브·세트 (battle/kit.js)
         if (this.buffs.adrenaline) m *= 1 + SET.adrenaline.dmg;
         if (this.equippedLegId === 'leg_mech_a' && this.isAttacking) m *= 1 + SET.anchor.dmg;
         if (this.equippedLegId === 'leg_chimera_b') m *= 1 + SET.commander.perAlly * Math.min(SET.commander.max, this.allies.length);
@@ -79,7 +79,7 @@ export const SetMethods = {
 
     /** 주인공이 받는 피해 배율 (player.js damagePlayer) */
     incomingMul() {
-        let m = 1;
+        let m = this.kitIncomingMul();   // 2차 버프·패시브·세트 (battle/kit.js)
         if (this.buffs.thornArmor) m *= 1 - SET.thorn.reduce;
         if (this.buffs.overdrive) m *= 1 - SET.overdrive.reduce;
         if (this.equippedLegId === 'leg_kaiju_a') m *= 1 - SET.shell.reduce;
@@ -93,6 +93,8 @@ export const SetMethods = {
      */
     setIncoming(amount, dt, src) {
         if (amount <= 0) return amount;
+        amount = this.kitIncoming(amount, dt, src);   // 2차: 무적·막기·회피·약화된 적 (battle/kit.js)
+        if (amount <= 0) return 0;
         if (this.equippedLegId === 'leg_hero_b') {
             // 그림자 회피: 한 방은 확률로 통째로 무시, 계속 맞는 근접 피해는 같은 기댓값으로 깎음 (프레임마다 굴리면 들쭉날쭉)
             if (dt > 0) amount *= 1 - SET.dodge.chance;
@@ -114,6 +116,12 @@ export const SetMethods = {
 
     /** 원거리 공격(마취탄·그물·오물·자석) 피해·효과 배율: 자기장 방벽 다리면 절반 (enemies_v2.js) */
     rangedMul() {
+        if (this.kitFlag('projBlock')) {   // 2차 세트: 강철 방벽·방주 방벽·전자기 펄스 — 투사체를 막음 (battle/kit.js)
+            if (this.setFxReady('projBlock', 0.3)) this.fx.play(SET_VFX.magField, this.monsterX + 60, 110);
+            return 0;
+        }
+        const cut = this.kitMod('rangedCut');   // 2차 세트 성운 장막: 원거리 피해·효과 감소
+        if (cut > 0) return Math.max(0, 1 - cut) * (this.equippedLegId === 'leg_mech_b' ? 1 - SET.magField.reduce : 1);
         if (this.equippedLegId !== 'leg_mech_b') return 1;
         if (this.setFxReady('magField', 0.3)) this.fx.play(SET_VFX.magField, this.monsterX + 60, 110);
         return 1 - SET.magField.reduce;
@@ -121,7 +129,7 @@ export const SetMethods = {
 
     /** 진격 속도 배율 (player.js moveMul): 오버드라이브, 질주 본능(앞에 적이 없을 때) */
     moveBuffMul() {
-        let m = 1;
+        let m = this.kitMoveMul();   // 2차 버프·패시브 (battle/kit.js)
         if (this.buffs.overdrive) m *= 1 + SET.overdrive.move;
         if (this.buffs.thornArmor && this.setOn('kaiju_a')) m *= 1 + SET.setBonus.thornMove;   // 가시 갑각 4부위
         if (this.equippedLegId === 'leg_kaiju_b' && !this.enemiesInRange(this.playerRange + SET.sprint.clear).length) {
@@ -133,7 +141,7 @@ export const SetMethods = {
 
     /** 아군 졸개 피해 배율 (allies.js): 총동원령 ×2, 강화 주사 ×1.5 */
     allyDmgMul() {
-        let m = 1;
+        let m = this.kitAllyMul();   // 2차 버프 (battle/kit.js)
         if (this.buffs.mobilize) m *= SET.mobilize.allyMul;
         if (this.buffs.boost) m *= SET.boost.allyMul;
         return m;

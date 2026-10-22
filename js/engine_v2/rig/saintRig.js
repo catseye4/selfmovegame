@@ -159,6 +159,34 @@ export const SAINT_CLIPS = {
         ]
     },
 
+    // ---- 2차 세트 전용 동작 (D-071, MD/파츠확장_2차_기획안.md 5-6). 뒷팔(armB) rot -는 앞으로 휘두름 ----
+    // 내려치기 (종 추 강타·돌 손바닥): 뒷팔을 뒤로 크게 젖혔다(0.25) 앞으로 내려침(0.42)
+    slam: {
+        duration: 0.9,
+        loop: false,
+        tracks: {
+            armB: { rot: [[0, 0], [0.25, 40, 'in'], [0.42, -70, 'out'], [0.6, -55], [0.9, 0]] },
+            armF: { rot: [[0, 0], [0.25, -6], [0.42, 4], [0.9, 0]] },
+            torso: { y: [[0, 0], [0.25, -6], [0.42, 10, 'out'], [0.6, 6], [0.9, 0]], rot: [[0, 0], [0.25, -3], [0.42, 4, 'out'], [0.9, 0]] },
+            head: { rot: [[0, 0], [0.25, -3], [0.42, 3], [0.9, 0]] },
+            legF: { rot: [[0, 0], [0.42, -4], [0.9, 0]] }
+        },
+        events: [[0.42, 'impact', { color: HOLY }]]
+    },
+
+    // 던지기 (약병·나비 실 화살·천 갈래 실): 뒷팔을 뒤로 젖혔다(0.2) 앞으로 뿌림(0.35 'cast')
+    throw: {
+        duration: 0.8,
+        loop: false,
+        tracks: {
+            armB: { rot: [[0, 0], [0.2, 50, 'in'], [0.35, -60, 'out'], [0.55, -40], [0.8, 0]] },
+            armF: { rot: [[0, 0], [0.2, 4], [0.35, -4], [0.8, 0]] },
+            torso: { x: [[0, 0], [0.2, -8, 'in'], [0.35, 10, 'out'], [0.8, 0]], rot: [[0, 0], [0.2, -4], [0.35, 4, 'out'], [0.8, 0]] },
+            head: { rot: [[0, 0], [0.2, -3], [0.35, 3], [0.8, 0]] }
+        },
+        events: [[0.35, 'cast'], [0.35, 'fire', { color: BLOOD, size: 1.2 }]]
+    },
+
     // 승리: 큰 주사기를 하늘로 치켜들고 작은 주사기를 흔들며 통통 뜀, 후광이 빛남
     victory: {
         duration: 1.0,
@@ -187,7 +215,7 @@ export const SAINT = {
     attack: 'attack_needle',
     hitSocket: ['muzzle', 'handF'],
     upgrade: SAINT_UPGRADE,
-    skillClips: [['봉합 주사 3연발', 'triple'], ['시전 동작', 'cast']],   // rig_test.html 동작 버튼
+    skillClips: [['봉합 주사 3연발', 'triple'], ['시전 동작', 'cast'], ['내려치기', 'slam'], ['던지기', 'throw']],   // rig_test.html 동작 버튼 (뒤 둘은 2차 세트, D-071)
     // 후광 둘레에 떠오르는 금빛 가루, 주사기 바늘 끝에서 떨어지는 붉은 약물
     ambient: [
         { kind: 'ember', socket: 'halo', bone: 'head', layer: 'front', rate: 3,

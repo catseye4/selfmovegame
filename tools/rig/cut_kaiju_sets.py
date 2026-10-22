@@ -1,7 +1,8 @@
 """
 거대괴수 A·B 세트 부위 그림 자르기 (D-050 파츠 확장) → assets/sprites/rig/kaiju/<부위>_a.png · <부위>_b.png + rig.json에 추가
 
-실행: 프로젝트 루트에서  python tools/rig/cut_kaiju_sets.py   (기본 그림은 cut_kaiju_parts.py가 만든 것을 그대로 둠)
+실행: 프로젝트 루트에서  python tools/rig/cut_kaiju_sets.py [글자…]   (기본 a b — 2차 세트는 u c d v w l m, D-071)
+      (기본 그림은 cut_kaiju_parts.py가 만든 것을 그대로 둠)
 
 입력 (Gemini 원본 크기 다운로드, assets/sprites/parts/kaiju/src/)
  - kaiju_<a|b>_step2_gemini.png : 세트 전신 — 기본 리그 그림(kaiju_step2의 위쪽 큰 괴수)을 첨부해 "같은 자세·자리로 장비만" 바꾼 것
@@ -159,7 +160,8 @@ def cut_set(v):
 def main():
     path = f'{OUT_DIR}/rig.json'
     layout = json.load(open(path, encoding='utf-8'))
-    for v in ('a', 'b'):
+    letters = sys.argv[1:] or ['a', 'b']   # 2차 세트 (D-071): python tools/rig/cut_kaiju_sets.py u c d v w l m
+    for v in letters:
         layout['parts'].update(cut_set(v))
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(layout, f, ensure_ascii=False, indent=2)

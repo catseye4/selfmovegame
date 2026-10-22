@@ -4,6 +4,8 @@
    모든 캐릭터에 있는 뼈(root·head)만 써서 8캐릭터 공통. 값은 원본 그림 px·도(°) — rigAvatar.react(name)로 재생.
    캐릭터는 오른쪽을 봄: x -는 뒤로, rot -는 윗몸이 뒤로 젖혀짐 (root 피벗 = 발밑).
    loop가 있으면 stopReact(name)까지 계속 (기절). 기절 중에는 원래 동작이 멈춰도(timeScale 0) 이 동작은 움직임.
+   hold가 있으면 끝 자세를 그대로 유지 (패배·시간 초과 — 전투가 다시 시작될 때 resetSkills가 지움).
+   realtime이면 느린 화면(slowMo)·히트스톱과 상관없이 실제 시간으로 (패배 연출이 0.3배 느린 화면 중 그림이 멈추기 전에 끝나게).
    ========================================================================== */
 
 export const REACTIONS = {
@@ -33,6 +35,36 @@ export const REACTIONS = {
             root: { rot: [[0, 0, 'out'], [0.1, 2.2, 'inOut'], [0.4, 0]] },
             head: { rot: [[0, 0, 'out'], [0.12, 3.5, 'inOut'], [0.4, 0]] }
         }
+    },
+    // 패배 (Q4): 뒤로 젖혀지며 주저앉고 고개를 떨굼 — 끝 자세 유지 (battleDirector_v2.js playerDown)
+    down: {
+        duration: 0.7,
+        hold: true,
+        realtime: true,
+        tracks: {
+            root: { rot: [[0, 0, 'out'], [0.25, -9, 'inOut'], [0.7, -6]], y: [[0, 0, 'in'], [0.7, 34]] },
+            head: { rot: [[0, 0], [0.3, -6, 'inOut'], [0.7, 14]] }
+        }
+    },
+    // 시간 초과 (Q4): 지쳐 앞으로 숙이며 내려앉음 — 끝 자세 유지 (battleDirector_v2.js timeOver)
+    slump: {
+        duration: 0.9,
+        hold: true,
+        realtime: true,
+        tracks: {
+            root: { rot: [[0, 0, 'inOut'], [0.9, 4]], y: [[0, 0, 'inOut'], [0.9, 22]] },
+            head: { rot: [[0, 0, 'inOut'], [0.9, 12]] }
+        }
+    },
+    // 쿵 (Q6): 무거운 캐릭터가 발을 내려찍을 때 발밑을 축으로 살짝 눌렸다 폄 ('stomp' 이벤트 — 거대로봇·괴수·합성괴인 걸음)
+    stomp: {
+        duration: 0.22,
+        tracks: { root: { sy: [[0, 0, 'out'], [0.05, -0.025, 'inOut'], [0.22, 0]], sx: [[0, 0, 'out'], [0.05, 0.015, 'inOut'], [0.22, 0]] } }
+    },
+    // 착지 (Q6): 점프 뒤 내려앉을 때 크게 눌렸다 튀어 오름 ('land' 이벤트 — 거대로봇 출격 점프)
+    land: {
+        duration: 0.35,
+        tracks: { root: { sy: [[0, 0, 'out'], [0.06, -0.08, 'inOut'], [0.18, 0.02, 'inOut'], [0.35, 0]], sx: [[0, 0, 'out'], [0.06, 0.05, 'inOut'], [0.18, -0.01], [0.35, 0]] } }
     },
     // 기절: 좌우로 비틀거림 (계속)
     stun: {

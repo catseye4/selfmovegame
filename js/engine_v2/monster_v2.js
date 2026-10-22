@@ -353,6 +353,7 @@ export class MonsterController {
 
     // ---- 팩션 스킬 연출 (리그 캐릭터만. 페이퍼돌이면 전투 효과만 적용되고 외형 변화 없음) ----
     resetSkills() {
+        this._castCb = null;   // 지난 전투에서 기다리던 시전 효과는 버림 (새 전투의 'cast'에 엉뚱하게 터지지 않게)
         if (this.useRig) this.rigBattle.resetSkills();
     }
 
@@ -441,16 +442,27 @@ export class MonsterController {
     }
 
     enterPhase2() {
+        this.flushCast();
         if (this.useRig) this.rigBattle.enterPhase2();
     }
 
-    /** 스킬 시전 동작(clip, 기본 cast)을 재생하고 클립의 'cast' 이벤트 순간 onRelease 호출. 그 동작이 없거나 시전 중이면 즉시 호출 */
+    /** 스킬 시전 동작(clip, 기본 cast)을 재생하고 클립의 'cast' 이벤트 순간 onRelease 호출. 그 동작이 없으면 즉시 호출.
+     *  앞 시전이 아직 'cast'를 기다리는 중이면 그 효과를 먼저 내보내고 새 시전을 시작 (동작이 끊겨 효과가 사라지지 않게) */
     playCast(onRelease, clip = 'cast') {
-        if (this.useRig && !this._castCb && this.rigBattle.playOnce(clip)) {
+        this.flushCast();
+        if (this.useRig && this.rigBattle.playOnce(clip)) {
             this._castCb = onRelease;
         } else {
             onRelease();
         }
+    }
+
+    /** 기다리던 시전 효과를 바로 내보냄 (다른 스킬 동작이 시전 동작을 끊을 때) */
+    flushCast() {
+        if (!this._castCb) return;
+        const cb = this._castCb;
+        this._castCb = null;
+        cb();
     }
 
     getCharacterId() {
@@ -473,8 +485,9 @@ export class MonsterController {
         if (this.useRig) this.rigBattle.shieldOff();
     }
 
-    /** 스킬 사용 모션 (리그가 없으면 생략) */
+    /** 스킬 사용 모션 (리그가 없으면 생략) — 시전 동작을 끊으면 기다리던 효과를 먼저 내보냄 */
     playSkillAnim(kind) {
+        this.flushCast();
         if (this.useRig) this.rigBattle.playSkillAnim(kind);
     }
 

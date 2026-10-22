@@ -136,7 +136,7 @@ class Progress {
             if (id === 'none' || characterOfPart(partOf(slot, id)) === this.character) continue;
             const list = partsOfCharacter(this.character, slot);
             const pick = list.find(p => this.owned.has(p.id))
-                || (grant ? [...list].sort((a, b) => (a.cost || 0) - (b.cost || 0))[0] : null);
+                || (grant ? list.filter(p => !p.dropOnly && p.cost != null).sort((a, b) => a.cost - b.cost)[0] : null);   // 드랍 전용(값 없음) 세트 파츠는 빼고
             if (pick) this.owned.add(pick.id);
             gameState.equippedParts[slot] = pick ? pick.id : 'none';
         }
@@ -248,8 +248,8 @@ class Progress {
         const lv = this.levelOf(id);
         if (lv >= this.maxLevel() || id === 'none') return null;
         const p = partOf(slotOf(id), id);
-        // 강화 기준값 = 가격 (가격 없는 유니크 세트는 1200 — 레어 세트 부위 값보다 조금 위)
-        const base = Math.max(p ? p.cost || (dropGroupOf(p) === 'unique' ? 1200 : 0) : 0, 200);
+        // 강화 기준값 = 가격 (가격 없는 유니크 세트는 1200 — 레어 세트 부위 값보다 조금 위, 레전더리 세트는 1600)
+        const base = Math.max(p ? p.cost || ({ unique: 1200, legendary: 1600 }[dropGroupOf(p)] || 0) : 0, 200);
         return Math.round((base * 0.6 * lv) / 10) * 10;
     }
 

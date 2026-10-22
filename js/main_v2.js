@@ -10,6 +10,7 @@ import { SelectController } from './ui_v2/select_v2.js';
 import { sound } from './engine_v2/audio/sound_v2.js';
 import { progress } from './engine_v2/progress_v2.js';
 import { registerV2Parts } from './engine_v2/partsExtra_v2.js';
+import { registerAllSets2 } from './engine_v2/sets2/index.js';
 import { runLoading } from './ui_v2/loading_v2.js';
 import { applyVfxChoices, readVfxChoices, readVfxStyle } from './engine_v2/vfx/vfxVariants.js';
 import { preloadVfxSheets } from './engine_v2/vfx/vfxPlayer.js';
@@ -19,6 +20,7 @@ class GameRouterV2 {
     constructor() {
         this.currentScreen = 'menu';
         // v2 전용 추가 파츠(괴수 팔 등)를 등록한 뒤, 저장된 진행(DM, 장착, 보유 파츠, 강화, 스테이지)을 적용
+        registerAllSets2();   // 2차 세트 (파츠 확장 2차, D-071) — 파츠 표에 먼저 더함
         registerV2Parts();
         progress.init();
         
