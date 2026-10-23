@@ -506,7 +506,7 @@ export function dispatchAct(name, d) {
 }
 
 function loop(now) {
-    const dt = Math.min(0.1, (now - lastT) / 1000);
+    const dt = Math.max(0, Math.min(0.1, (now - lastT) / 1000));   // 음수 막기 (Android WebView 첫 프레임)
     lastT = now;
     if (!host || !host.isConnected) { rafId = null; return; }
     for (const s of scenes.values()) s.frame(dt);

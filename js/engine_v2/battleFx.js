@@ -194,7 +194,7 @@ export class BattleFx {
 
     _loop(now) {
         if (!this.running) return;
-        const dt = Math.min(0.05, (now - this.last) / 1000) * gameTime.scale(now);   // 히트스톱/일시정지 0, 배속 적용
+        const dt = Math.max(0, Math.min(0.05, (now - this.last) / 1000)) * gameTime.scale(now);   // 히트스톱/일시정지 0, 배속 적용 · 음수 막기(Android WebView는 첫 프레임 시각이 시작 시각보다 이를 때가 있음)
         this.last = now;
         this._resize();
         this._update(dt);

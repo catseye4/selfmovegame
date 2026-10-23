@@ -1,0 +1,7 @@
+# Android 앱 (D-073) — 만들어지는 것은 올리지 않음
+node_modules/
+www/
+gradle_build.log
+gradle_build.err
+_drive_upload/
+dist/

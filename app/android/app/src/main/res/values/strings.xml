@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">매드 오버로드</string>
+    <string name="title_activity_main">매드 오버로드</string>
+    <string name="package_name">com.madoverlord.game</string>
+    <string name="custom_url_scheme">com.madoverlord.game</string>
+</resources>

@@ -12,6 +12,7 @@ import { progress } from './engine_v2/progress_v2.js';
 import { registerV2Parts } from './engine_v2/partsExtra_v2.js';
 import { registerAllSets2 } from './engine_v2/sets2/index.js';
 import { runLoading } from './ui_v2/loading_v2.js';
+import { isApp, checkForUpdate } from './ui_v2/appUpdate_v2.js';
 import { applyVfxChoices, readVfxChoices, readVfxStyle } from './engine_v2/vfx/vfxVariants.js';
 import { preloadVfxSheets } from './engine_v2/vfx/vfxPlayer.js';
 import { setFitScale } from './engine_v2/displayRes.js';
@@ -133,7 +134,7 @@ class GameRouterV2 {
 }
 
 // 화면 크기 맞춤: 1280x720 화면(테두리 포함 1288x728)을 창 크기에 맞게 비율 유지 확대·축소, 가운데 정렬 (ui_v2.css 'v2-fit')
-const FRAME = { w: 1288, h: 728, min: 0.5, max: 2 };
+const FRAME = { w: 1288, h: 728, min: 0.35, max: 2 };   // min 0.35: 휴대폰 가로 화면(높이 약 360px)에도 다 들어가게 (Android 앱, D-073)
 function fitScreens() {
     const app = document.getElementById('app');
     if (!app) return;
@@ -153,6 +154,6 @@ export function initGameRouterV2() {
     document.body.classList.add('v2-fit');
     fitScreens();
     window.addEventListener('resize', fitScreens);
-    runLoading();   // 캐릭터·사운드 미리 받기 (메인 화면은 뒤에서 바로 준비)
+    runLoading().then(() => { if (isApp()) checkForUpdate({ silent: true }); });   // 캐릭터·사운드 미리 받기 (메인 화면은 뒤에서 바로 준비) → 앱이면 새 버전 확인 (D-074)
     window.madOverlordGameV2 = new GameRouterV2();
 }

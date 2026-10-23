@@ -62,7 +62,7 @@ export class TacticalRadar {
         this.last = performance.now();
         const loop = now => {
             if (!this.running) return;
-            this.t += Math.min(0.05, (now - this.last) / 1000);
+            this.t += Math.max(0, Math.min(0.05, (now - this.last) / 1000));   // 음수면 맥박 반지름이 음수 → arc 오류 (Android WebView 첫 프레임)
             this.last = now;
             this.draw();
             this.raf = requestAnimationFrame(loop);

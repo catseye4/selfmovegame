@@ -1120,6 +1120,26 @@
     animation: v2-fade-in 0.18s ease both;
 }
 .v2-settings.is-out { opacity: 0; transition: opacity 0.18s ease; }
+/* 앱 업데이트 창 (D-074, appUpdate_v2.js) — 설정 창과 같은 틀 */
+.v2-update { position: fixed; inset: 0; z-index: 2600; display: flex; align-items: center; justify-content: center;
+    background: rgba(4, 5, 8, 0.74); backdrop-filter: blur(3px); animation: v2-fade-in 0.18s ease both; }
+.v2-update__panel { --v2-cut: 18px; width: 460px; padding: 0 28px 22px; display: flex; flex-direction: column; gap: 12px;
+    animation: v2-result-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.v2-update__stripe { height: 10px; margin: 0 -28px 4px; }
+.v2-update h2 { display: flex; align-items: baseline; gap: 10px; margin: 0; font-family: var(--v2-font-num); font-size: 22px; letter-spacing: 3px; color: var(--v2-amber); }
+.v2-update h2 small { font-family: var(--v2-font); font-size: 13px; letter-spacing: 0; color: var(--v2-dim); }
+.v2-update__ver { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 14px; color: var(--v2-dim); }
+.v2-update__ver b { font-family: var(--v2-font-num); color: #fff; }
+.v2-update__ver b.is-new { color: var(--v2-amber); }
+.v2-update__ver i { font-style: normal; color: var(--v2-amber); }
+.v2-update__notes { margin: 0; max-height: 170px; overflow: auto; padding: 10px 12px; white-space: pre-wrap; font: 13px/1.55 var(--v2-font);
+    color: var(--v2-text); background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); }
+.v2-update__bar { height: 12px; padding: 2px; border: 1px solid rgba(255, 176, 32, 0.5); background: #07080b; }
+.v2-update__bar i { display: block; width: 0; height: 100%; background: repeating-linear-gradient(-45deg, var(--v2-amber) 0 8px, #d98a00 8px 16px); transition: width 0.25s ease; }
+.v2-update__status { margin: 0; min-height: 18px; font-size: 13px; color: var(--v2-dim); }
+.v2-update__actions { display: flex; gap: 10px; }
+.v2-update__actions .v2-btn { flex: 1; min-width: 0; font-size: 15px; padding: 10px; }
+.v2-update__actions .v2-btn:disabled { filter: grayscale(1) brightness(0.7); cursor: default; }
 /* 작전 지원 창 (Q-006, growthUi_v2.js): 전술 모듈 · 파견 · 계정 연구 */
 .v2-growth { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center;
     background: rgba(4, 5, 8, 0.72); backdrop-filter: blur(3px); animation: v2-fade-in 0.18s ease both; }
@@ -2006,6 +2026,14 @@ body.v2-fit .screen-v2.landscape {
     transform: scale(var(--v2-scale, 1));
     transform-origin: 0 0;
 }
+
+/* 화면 전체 위에 뜨는 창(설정·작전 지원·로딩)은 body에 붙어 위 scale을 못 받음 → 같은 배율로 줄이고 늘림.
+   크기도 게임 판(1288×728) 기준으로 — 휴대폰 앱(가로 높이 약 410px)에서 설정 창이 위아래로 잘리던 것 (D-073) */
+body.v2-fit .v2-settings__panel,
+body.v2-fit .v2-update__panel,
+body.v2-fit .v2-growth__box,
+body.v2-fit .v2-loading__box { zoom: var(--v2-scale, 1); }
+body.v2-fit .v2-growth__box { width: 940px; max-height: 655px; }
 
 /* 로딩 화면 (js/ui_v2/loading_v2.js) */
 .v2-loading {
