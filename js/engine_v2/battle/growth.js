@@ -7,7 +7,6 @@
 
 import { gameState } from '../../engine/state.js';
 import { progress } from '../progress_v2.js';
-import { monsterControllerV2 } from '../monster_v2.js';
 import { sound } from '../audio/sound_v2.js';
 import { aimAt as aimOf } from '../bases_v2.js';
 import { characterOfPart } from '../roster_v2.js';
@@ -75,8 +74,7 @@ function moduleSkill(id, level, b) {
         case 'repair': return { ...base, target: 'self',
             use(bb) {
                 const amount = bb.maxPlayerHp * m.heal;
-                bb.playerHp = Math.min(bb.maxPlayerHp, bb.playerHp + amount);
-                monsterControllerV2.updateHpBar(bb.playerHp, bb.maxPlayerHp);
+                bb.healPlayer(amount);
                 bb.fx.play(MODULE_VFX.repair, bb.monsterX + 35, FOOT_B);
                 bb.createDamagePopup(bb.monsterX + 40, 200, `🔧 +${Math.round(amount)} 수리`, false);
                 sound.play('shield_on', { rate: 1.2 });

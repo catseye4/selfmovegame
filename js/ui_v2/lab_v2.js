@@ -38,7 +38,9 @@ const THUMB = {
     diver: NEW_THUMB,
     saint: NEW_THUMB,
     frost: NEW_THUMB,
-    doll: NEW_THUMB
+    doll: NEW_THUMB,
+    architect: NEW_THUMB,
+    broadcaster: NEW_THUMB
 };
 const LAB_RIG = { width: 350, height: 400, rootX: 175, rootY: 384, scale: 0.36, fit: { x: 22, y: 16 }, shadow: true };
 

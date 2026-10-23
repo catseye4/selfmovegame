@@ -580,6 +580,7 @@
 .v2-status__icon.is-curse { color: #c86eff; }
 .v2-status__icon.is-slow { color: #7aa8ff; }
 .v2-status__icon.is-stun { color: #ffd84a; }
+.v2-status__icon.is-bless { color: #ffd76e; }   /* 구역 6 축복 (성수대·헌금 기사) */
 @keyframes v2-status-in {
     from { transform: scale(1.8); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
@@ -936,6 +937,58 @@
 /* 구역 3·4 거점·장벽 임시 색조 (빌린 그림: 통제탑·관문 / 벙커·소각탑 / 바리케이드) */
 #screen-battle-v2.v2-zone-3 .building-entity.v2-base, #screen-battle-v2.v2-zone-3 .v2-barricade { filter: sepia(0.6) saturate(1.4) hue-rotate(-12deg) brightness(1.05); }
 #screen-battle-v2.v2-zone-4 .building-entity.v2-base, #screen-battle-v2.v2-zone-4 .v2-barricade { filter: hue-rotate(235deg) saturate(1.4) brightness(0.85); }
+/* 구역 6 · 성왕국 변두리 (D-078, MD/구역6_설계안.md) — 임시: 구역 1 그림을 밤의 잿빛·차가운 흰색으로 (Gemini 그림 전까지).
+   거점 = 잿빛 석조 약창고 · 흰 병동 정문, 보스전(대성당 의료원)은 조금 밝은 흰빛 */
+#screen-battle-v2.v2-zone-6 #bg-sky-v2 { filter: brightness(0.38) grayscale(0.75) sepia(0.15) hue-rotate(190deg); }
+#screen-battle-v2.v2-zone-6.v2-stage-boss #bg-sky-v2 { background-image: url('assets/sprites/stage/bg/hall.png'); filter: brightness(0.62) grayscale(0.8) sepia(0.25); }
+#screen-battle-v2.v2-zone-6 #bg-city-v2 { filter: brightness(0.42) grayscale(0.85) sepia(0.1); }
+#screen-battle-v2.v2-zone-6 #bg-ground-v2 { filter: brightness(0.62) grayscale(0.7) sepia(0.15) hue-rotate(190deg); }
+#screen-battle-v2.v2-zone-6 .building-entity.v2-base { filter: grayscale(0.75) brightness(1.18) sepia(0.12); }
+#screen-battle-v2.v2-zone-6 .v2-barricade { filter: grayscale(0.6) brightness(1.05); }
+/* 축복 성수대 (구역 6, enemyField.js spawnFont): 임시 = 바리케이드 그림을 금빛으로 + 발밑 금빛 축복 띠(범위 = FONT.range) */
+#screen-battle-v2 .v2-barricade.v2-font { filter: sepia(1) saturate(2.6) brightness(1.25) drop-shadow(0 0 8px rgba(255, 215, 110, 0.9)) !important; }
+#screen-battle-v2 .v2-font__aura {
+    position: absolute; bottom: -6px; height: 14px; pointer-events: none; z-index: -1;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(255, 220, 120, 0.42), rgba(255, 210, 90, 0.12) 60%, transparent 72%);
+    animation: v2-font-pulse 1.6s ease-in-out infinite;
+}
+@keyframes v2-font-pulse { 50% { opacity: 0.55; } }
+/* 그림 있는 장판 (battle/kit.js kitZone art, D-079): 장판 자리에 세우는 모양 — Gemini 그림 전까지 CSS로 그림 */
+#screen-battle-v2 .v2-kit-art {
+    position: absolute; bottom: 58px; height: 170px; pointer-events: none; z-index: 8;
+    transform-origin: 50% 100%; animation: v2-kit-art-in 0.35s ease-out;
+}
+#screen-battle-v2 .v2-kit-art.is-gone { animation: v2-kit-art-out 0.45s ease-in forwards; }
+@keyframes v2-kit-art-in { from { transform: scaleY(0.05); opacity: 0.3; } to { transform: none; opacity: 1; } }
+@keyframes v2-kit-art-out { to { transform: translateY(18px) scaleY(0.3) rotate(4deg); opacity: 0; } }
+/* 철골 바리케이드 (철거의 설계자 강제 재건): Gemini 시트 steel_scaffold 5번째 칸을 세워 둔 그림 (assets/sprites/vfx/art, 알파 = 밝기 → 빛나는 철골) */
+#screen-battle-v2 .v2-kit-art.is-scaffold {
+    background: url('assets/sprites/vfx/art/scaffold_wall.png') center bottom / contain no-repeat;
+    filter: drop-shadow(0 0 6px rgba(255, 154, 46, 0.55));
+}
+/* 정적의 장막 (침묵의 방송자): Gemini 시트 silence_dome 6번째 칸 + 천천히 깜빡임 */
+#screen-battle-v2 .v2-kit-art.is-dome {
+    background: url('assets/sprites/vfx/art/silence_dome_wall.png') center bottom / 100% 100% no-repeat;
+    filter: drop-shadow(0 0 10px rgba(255, 80, 170, 0.6));
+    animation: v2-kit-art-in 0.35s ease-out, v2-dome-pulse 1.4s ease-in-out 0.35s infinite;
+}
+@keyframes v2-dome-pulse { 50% { opacity: 0.78; } }
+/* 같은 그림의 색 바꿈: 황금 비계(건축왕, 시트 scaffold_rise) · 낮은 안전 펜스(현장 반장) · 피켓 벽(시위대) · 은빛 장막(정적의 여제) */
+#screen-battle-v2 .v2-kit-art.is-scaffold.is-gold { background-image: url('assets/sprites/vfx/art/scaffold_wall_gold.png'); filter: drop-shadow(0 0 9px rgba(255, 205, 90, 0.8)); }
+#screen-battle-v2 .v2-kit-art.is-scaffold.is-fence { filter: hue-rotate(15deg) saturate(1.3) drop-shadow(0 0 5px rgba(255, 200, 80, 0.6)); }
+#screen-battle-v2 .v2-kit-art.is-scaffold.is-picket {
+    background: linear-gradient(180deg, #f5e3c8 0 46%, #ff50aa 46% 54%, #f5e3c8 54% 70%, transparent 70%),
+        repeating-linear-gradient(90deg, #6b4a32 0 6px, transparent 6px 30px);
+    border-left: 6px solid #6b4a32; border-right: 6px solid #6b4a32; filter: drop-shadow(0 0 5px rgba(255, 80, 170, 0.6));
+}
+#screen-battle-v2 .v2-kit-art.is-dome.is-silver { filter: grayscale(0.85) brightness(1.2) drop-shadow(0 0 10px rgba(225, 215, 245, 0.7)); }
+.v2-status__icon.is-silence { color: #ff50aa; }   /* 침묵 (D-079) */
+
+/* 그림자 집행자 은신 (enemies_v2.js tickStealth): 반쯤 투명 — 체력바는 흐리게만 */
+#screen-battle-v2 .v2-enemy.is-stealth .v2-enemy__sprite { opacity: 0.4; }
+#screen-battle-v2 .v2-enemy.is-stealth .enemy-hp-track { opacity: 0.45; }
+#screen-battle-v2 .v2-enemy .v2-enemy__sprite { transition: opacity 0.25s; }
 
 /* 구역 2 장애물: 바리케이드 (방벽병이 세움, battle/enemyField.js spawnBarricade) */
 #screen-battle-v2 .enemy-entity.v2-barricade {

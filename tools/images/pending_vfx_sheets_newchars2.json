@@ -1,0 +1,146 @@
+[
+ [
+  "drill_burst",
+  "fire_burst_raw.png",
+  40,
+  "a powerful orange drill impact bursting out of the ground; the ground point is at the bottom center of every cell (about 85 percent down). Frame 1: a small bright orange spark at the ground point. Frames 2-3: a spinning cone of orange sparks drills upward with cracked rock chunks. Frames 4-5: the biggest burst - orange-white sparks, flying grey rock debris and a ring of dust. Frames 6-7: the rocks fall and the sparks scatter. Frames 8-9: only a few embers and thin dust remain."
+ ],
+ [
+  "steel_scaffold",
+  "pillar_gold_raw.png",
+  30,
+  "orange steel scaffolding rising out of the ground; the ground point is at the bottom center of every cell (about 92 percent down). Frame 1: orange sparks at the ground point. Frames 2-3: shiny orange metal pipes shoot straight up. Frames 4-5: a full lattice of bright orange steel scaffolding with glowing bolts and white welding flashes. Frames 6-7: welding sparks scatter. Frames 8-9: the glow fades leaving a few faint sparks."
+ ],
+ [
+  "crane_ball",
+  "wrecking_ball_raw.png",
+  40,
+  "a huge shiny steel wrecking ball painted with bright yellow-and-black hazard stripes, strong white highlights on the metal, hanging on a chain, swinging down from the top and smashing into the ground at the bottom center of every cell (about 92 percent down). Frame 1: the chain and the ball appear at the top. Frames 2-3: the ball swings down with a bright orange motion trail. Frames 4-5: it smashes the ground - a huge orange-white impact flash, flying rocks and a shockwave ring. Frames 6-7: a dust cloud spreads. Frames 8-9: the dust fades."
+ ],
+ [
+  "sonic_pink",
+  "sonic_ring_raw.png",
+  18,
+  "hot-pink sound wave rings bursting from the center of each cell. Frame 1: a small bright pink dot. Frames 2-3: two concentric hot-pink rings expand. Frames 4-5: three bright pink rings with glowing white edges and small wavy sound squiggles. Frames 6-7: the rings widen and get thinner. Frames 8-9: faint pink ripples fade away."
+ ],
+ [
+  "silence_dome",
+  "dome_gold_raw.png",
+  30,
+  "a translucent hot-pink energy dome made of hexagon tiles forming on the ground; the ground line is at the bottom center of every cell (about 92 percent down). Frame 1: a thin glowing pink line on the ground. Frames 2-4: the half-sphere dome rises from the ground tile by tile. Frames 5-6: the full dome glows bright pink with white edges and sparkles. Frames 7-9: the dome stays at the same size while its glow dims softly."
+ ],
+ [
+  "emergency_broadcast",
+  "explosion_big_raw.png",
+  40,
+  "a hot-pink loudspeaker blast in the center of each cell. Frame 1: a small pink spark. Frames 2-3: a glowing pink loudspeaker horn shape appears and pulses. Frames 4-5: a huge burst of pink sound rings and white static lightning lines. Frames 6-7: the static and the rings scatter. Frames 8-9: fading pink sparkles."
+ ],
+ [
+  "safety_siren",
+  "power_aura_raw.png",
+  40,
+  "a rotating orange warning siren light in the center of each cell. Frame 1: a small orange glow. Frames 2-3: beams of orange light start rotating like a beacon. Frames 4-5: bright orange-yellow rays sweep around with a white flash in the middle. Frames 6-9: the beams slow down and fade."
+ ],
+ [
+  "dynamite_blast",
+  "fire_burst_raw.png",
+  50,
+  "a red dynamite explosion on the ground; the ground point is at the bottom center of every cell (about 85 percent down). Frame 1: a bundle of red dynamite sticks with a sparking fuse at the ground point. Frames 2-3: the fuse burns down with sparks. Frames 4-5: a big orange-red explosion with a white flash. Frames 6-7: a smoke cloud and flying debris. Frames 8-9: the smoke fades."
+ ],
+ [
+  "steel_beam",
+  "pillar_gold_raw.png",
+  40,
+  "a bright orange steel I-beam with strong white highlights falling from the top and slamming into the ground at the bottom center of every cell (about 92 percent down). Frame 1: a small glint at the top. Frames 2-3: the steel beam falls straight down with motion lines. Frames 4-5: it slams into the ground with orange sparks and a dust ring. Frames 6-7: the beam tilts while sparks fly. Frames 8-9: it fades leaving dust."
+ ],
+ [
+  "blueprint_grid",
+  "power_aura_raw.png",
+  40,
+  "a glowing sky-blue blueprint grid aura rising from the ground; the ground point is at the bottom center of every cell (about 90 percent down). Frame 1: a thin blue line on the ground. Frames 2-3: a square grid of glowing blue lines unfolds upward. Frames 4-6: measuring lines, circles and angles shine bright cyan-white. Frames 7-9: the grid fades into blue sparkles. Only simple lines, no letters or numbers."
+ ],
+ [
+  "bulldozer_dust",
+  "ground_impact_raw.png",
+  80,
+  "a thick brown-orange dust cloud kicked up along the ground; the ground point is at the bottom center of every cell (about 85 percent down). Frame 1: a small dust puff. Frames 2-3: the dust billows forward to the right. Frames 4-5: a big dust cloud with dirt clods and bright orange highlights. Frames 6-9: the dust thins and fades. Everything stays well inside each cell with a clear black margin."
+ ],
+ [
+  "counterweight",
+  "ground_impact_raw.png",
+  60,
+  "a huge square concrete counterweight block painted with bright yellow-and-black hazard stripes and strong white highlights, dropping from the top and crashing into the ground at the bottom center of every cell (about 95 percent down). Frame 1: a small shadow on the ground. Frames 2-3: the block falls fast. Frames 4-5: the crash - a big shockwave ring, ground cracks, flying rocks and a white flash. Frames 6-9: the dust settles and fades."
+ ],
+ [
+  "crusher_claw",
+  "claw_fire_raw.png",
+  30,
+  "a giant teal-and-white hydraulic mechanical claw snapping shut in the center of each cell. Frame 1: a small teal glint. Frames 2-3: three curved metal claw fingers open wide. Frames 4-5: they clamp shut with a bright white-teal crush flash and metal sparks. Frames 6-7: puffs of hydraulic steam. Frames 8-9: fading."
+ ],
+ [
+  "scaffold_rise",
+  "pillar_gold_raw.png",
+  30,
+  "a towering wall of radiant golden scaffolding rising from the ground; the ground point is at the bottom center of every cell (about 95 percent down). Frame 1: golden sparks at the ground. Frames 2-3: golden steel pipes shoot upward. Frames 4-5: a tall lattice wall of shining golden scaffolding with thin sky-blue blueprint light lines. Frames 6-7: golden sparkles float. Frames 8-9: the glow fades."
+ ],
+ [
+  "mega_drill",
+  "explosion_big_raw.png",
+  50,
+  "a gigantic red-and-steel excavator drill bit with strong white highlights plunging down from the top into the ground at the bottom center of every cell (about 95 percent down). Frame 1: a red glint at the top. Frames 2-3: the huge spinning drill bit descends. Frames 4-5: it bores into the ground - a big orange-red explosion, flying rocks and a shockwave ring. Frames 6-7: smoke and debris. Frames 8-9: fading embers."
+ ],
+ [
+  "encore_notes",
+  "butterfly_red_raw.png",
+  30,
+  "a swirl of warm orange and pink glowing music notes and stage sparkles in the center of each cell. Frame 1: one small glowing note. Frames 2-3: several music notes swirl outward. Frames 4-5: a burst of bright notes, little stars and confetti. Frames 6-9: the notes float away and fade. Simple music note shapes only, no letters."
+ ],
+ [
+  "bass_drop",
+  "sonic_ring_raw.png",
+  30,
+  "a deep purple bass drop shockwave in the center of each cell. Frame 1: a small purple orb. Frames 2-3: a big purple pulse shaped like a speaker cone. Frames 4-5: a heavy purple-magenta shockwave with thick rings and a white flash. Frames 6-7: the rings fade. Frames 8-9: faint purple ripples."
+ ],
+ [
+  "radio_jam",
+  "lightning_burst_raw.png",
+  30,
+  "a green-and-white radio static interference burst in the center of each cell. Frame 1: a small green glitch spark. Frames 2-3: jagged green static lines and pixel noise spread out. Frames 4-5: a burst of bright green-white static with broken radio wave lines. Frames 6-9: the static flickers and fades."
+ ],
+ [
+  "megaphone_shout",
+  "roar_green_raw.png",
+  30,
+  "a yellow-and-hot-pink megaphone shout blast starting from the LEFT edge of each cell and flowing to the RIGHT. Frame 1: a small cone of sound at the left. Frames 2-3: thick sound wave arcs blast to the right. Frames 4-5: huge yellow and pink sound wave arcs with speed lines. Frames 6-9: the waves spread and fade."
+ ],
+ [
+  "ghost_radio",
+  "dark_burst_raw.png",
+  40,
+  "a translucent pale violet ghostly radio wave apparition in the center of each cell. Frame 1: a faint violet wisp. Frames 2-3: ghostly violet sound waves around the glow of an old radio dial. Frames 4-5: a burst of pale violet ghost wisps and wavy lines. Frames 6-9: the wisps drift up and fade. No faces."
+ ],
+ [
+  "subwoofer_blast",
+  "ground_impact_raw.png",
+  50,
+  "a massive hot-pink subwoofer shockwave on the ground; the ground point is at the bottom center of every cell (about 90 percent down). Frame 1: a pink glow at the ground. Frames 2-3: a round speaker cone shape pulses. Frames 4-5: a huge pink ground shockwave ring with dust and a white flash. Frames 6-9: the rings spread and fade."
+ ],
+ [
+  "glitch_hack",
+  "lightning_burst_raw.png",
+  30,
+  "a cyan-and-magenta digital glitch hack burst in the center of each cell. Frame 1: a small cyan pixel spark. Frames 2-3: blocky glitch squares and broken scan lines spread out. Frames 4-5: a bright burst of cyan and magenta pixel blocks. Frames 6-9: the pixels scatter and fade."
+ ],
+ [
+  "live_broadcast",
+  "golden_burst_raw.png",
+  30,
+  "a golden stage spotlight burst with pink sparkles in the center of each cell. Frame 1: a small gold glow. Frames 2-3: a cone of golden spotlight light shines down. Frames 4-5: bright gold-white light with pink star sparkles. Frames 6-9: the spotlight fades."
+ ],
+ [
+  "absolute_silence",
+  "dark_burst_raw.png",
+  40,
+  "a silent silver-white void ring in the center of each cell. Frame 1: a tiny silver dot. Frames 2-3: a pale silver ring expands while dark violet swallows the light inside it. Frames 4-5: a bright silver-white circle edge with a dark hollow center and floating silver dust. Frames 6-9: it shrinks and fades."
+ ]
+]

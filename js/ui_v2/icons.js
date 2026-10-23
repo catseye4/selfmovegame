@@ -38,6 +38,12 @@ const P = {
     syringe: '<path d="M14.5 2.5l7 7-1.7 1.7-1.3-1.3-7.6 7.6-3 .6.6-3 7.6-7.6-1.3-1.3z"/><path d="M5.6 15.4l3 3L3 24l-1-1-1-1z"/><path d="M10.5 9.5l1.4 1.4M12.6 7.4L14 8.8" stroke="rgba(0,0,0,.45)" stroke-width="1.3"/>',
     sealring: '<circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12" cy="12" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 1.5v6M12 16.5v6M1.5 12h6M16.5 12h6" stroke="currentColor" stroke-width="2.2"/>',
     redcross: '<path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z"/><path d="M12 4.5v15M4.5 12h15" stroke="rgba(255,255,255,.55)" stroke-width="1.3" stroke-dasharray="2 2"/>',
+    // 철거의 설계자 · 침묵의 방송자 (D-079): 드릴 · 비계 · 스피커 · 소리굽쇠 · 침묵
+    drill: '<path d="M2 9h8l2-2h3v10h-3l-2-2H2z"/><path d="M15 9.5h3l4 2.5-4 2.5h-3z"/><path d="M16 10l1.5 4M18.5 10.8l.8 2.4" stroke="rgba(0,0,0,.45)" stroke-width="1.2"/><path d="M4 15v4h3v-4" />',
+    scaffold: '<path d="M3 21V3M21 21V3M12 21V5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/><path d="M3 8h18M3 14h18M3 20h18M3 8l9 6M12 8l9 6" stroke="currentColor" stroke-width="1.6" fill="none"/>',
+    speaker: '<rect x="3" y="2.5" width="18" height="19" rx="2.5"/><circle cx="12" cy="14.5" r="4.6" fill="rgba(0,0,0,.45)"/><circle cx="12" cy="14.5" r="1.8"/><circle cx="12" cy="6.5" r="1.8" fill="rgba(0,0,0,.45)"/>',
+    fork: '<path d="M7 2v9a5 5 0 0 0 10 0V2" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M12 16v6" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/><path d="M3 5.5a8 8 0 0 0 0 6M21 5.5a8 8 0 0 1 0 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>',
+    mute: '<path d="M3 9h4l5-5v16l-5-5H3z"/><path d="M15.5 8.5l6 7M21.5 8.5l-6 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
     stitch: '<path d="M2 12h20" stroke="currentColor" stroke-width="2.4"/><path d="M5.5 6.5l2.5 11M11 6.5l2.5 11M16.5 6.5l2.5 11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
     // 서리의 무희: 부채 · 초승달 · 얼음 속 사람 · 눈꽃(냉기·빙결 상태)
     fan: '<path d="M12 21L2.5 8.5A13 13 0 0 1 21.5 8.5z"/><path d="M12 21l-6.5-12M12 21L9.5 6M12 21l2.5-15M12 21l6.5-12" stroke="rgba(0,0,0,.35)" stroke-width="1.2"/><circle cx="12" cy="20.5" r="1.6"/>',

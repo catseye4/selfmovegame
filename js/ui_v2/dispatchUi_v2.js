@@ -65,19 +65,29 @@ export const DISPATCH_ZONES = {
         enemies: ['cultist', 'tentacle', 'carapace', 'sporer', 'slime'],
         places: ['꿈틀대는 요람', '포자 숲', '유기질 기둥 사이', '심연의 틈', '빛나는 웅덩이'],
         finds: ['빛나는 변이 결정', '굳은 고치', '심연 광맥', '버려진 연구 장비']
+    },
+    // 구역 6 · 성왕국 변두리 (D-078): 파견 그림은 Gemini 전 (trek·back = null) — 그동안 전투 배경 3층을 잿빛으로
+    6: {
+        trek: null, back: null,
+        far: [`${BG}bg/hall.png`, 'brightness(0.38) grayscale(0.75) sepia(0.15) hue-rotate(190deg)', 1280 / 715],
+        mid: [`${BG}bg/machinery.png`, 'brightness(0.42) grayscale(0.85) sepia(0.1)'],
+        ground: [`${BG}bg/floor.png`, 'brightness(0.62) grayscale(0.7) sepia(0.15) hue-rotate(190deg)'],
+        enemies: ['soldier', 'warden', 'shade', 'priest', 'tithe'],
+        places: ['잿빛 빈민가', '잠긴 약창고', '헌금 광장', '사라진 사람들의 골목', '백색 병동 회랑'],
+        finds: ['풀려난 약 상자', '헌금함 더미', '버려진 병상 담요', '금빛 성수 단지']
     }
 };
 const TREK_ASPECT = 32 / 9;   // 파견 일러스트 띠 (16:9 그림 + 거울 반전 = 끊김 없이 이어짐)
 
 // 캐릭터마다 맞붙을 때 터지는 그림 이펙트 (vfxPlayer VFX_SHEETS — 기본 공격 시트)
 const HIT_SHEET = { mech: 'punch_cyan', kaiju: 'bite_green', hero: 'slash_violet', chimera: 'claw_fire',
-    diver: 'water_burst', saint: 'needle_crimson', frost: 'ice_burst', doll: 'xcut_cyan' };
+    diver: 'water_burst', saint: 'needle_crimson', frost: 'ice_burst', doll: 'xcut_cyan', architect: 'drill_burst', broadcaster: 'sonic_pink' };
 
 // 진행 단계 (진행률 기준) — 막대 위 눈금
 const STEPS = [[0, '출발'], [0.2, '진입'], [0.45, '탐색'], [0.7, '회수'], [0.92, '귀환']];
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const zoneName = z => CHAPTERS[z - 1]?.name.split('·')[1]?.trim() || '';
+const zoneName = z => CHAPTERS.find(ch => ch.zone === z)?.name.split('·')[1]?.trim() || '';   // 구역 번호 ≠ 챕터 순서 (구역 5 전 구역 6)
 const shortZone = z => zoneName(z).split(':')[0].trim();
 const clock = ms => {
     const s = Math.max(0, Math.ceil(ms / 1000));
@@ -210,7 +220,7 @@ class Scene {
             far.el.style.backgroundSize = `${far.w}px ${SCENE_H}px`;
             for (const l of [mid, ground]) { l.w = 0; l.el.style.display = 'none'; }
         };
-        img.src = z.trek;
+        if (z.trek) img.src = z.trek;
         far.el.style.backgroundImage = `url('${z.far[0]}')`;
         far.el.style.filter = z.far[1];
         far.w = SCENE_H * z.far[2];
@@ -395,7 +405,7 @@ function newHtml() {
         const z = DISPATCH_ZONES[ch.zone], open = zones.includes(ch.zone);
         // 썸네일: 전투 먼 배경(색조) 위에 파견 일러스트 (일러스트가 없으면 아래 것이 보임)
         return `<button class="v2-dsp-zone${open ? '' : ' is-lock'}${ch.zone === pickedZone ? ' is-pick' : ''}" data-act="dspZone" data-zone="${ch.zone}" ${open ? '' : 'disabled'}>
-            <i style="background-image:url('${z.far[0]}');filter:${z.far[1]}"></i><i style="background-image:url('${z.trek}')"></i><b>구역 ${ch.zone}</b><small>${open ? esc(shortZone(ch.zone)) : '보스전(노말)을 깨면 열림'}</small></button>`;
+            <i style="background-image:url('${z.far[0]}');filter:${z.far[1]}"></i>${z.trek ? `<i style="background-image:url('${z.trek}')"></i>` : ''}<b>구역 ${ch.zone}</b><small>${open ? esc(shortZone(ch.zone)) : '보스전(노말)을 깨면 열림'}</small></button>`;
     }).join('');
     const chars = !cands.length ? '<p class="v2-growth__hint">보낼 캐릭터가 없어요 — 출전 중이 아닌 열린 캐릭터만 보낼 수 있어요.</p>'
         : cands.map(c => `<button class="v2-dsp-char${c.id === pickedChar ? ' is-pick' : ''}" data-act="dspChar" data-char="${c.id}" style="--sk:${c.color}">
@@ -432,7 +442,7 @@ export function showReturn(r) {
     const g = r.part ? gradeOf(r.part.grade) : null;
     const rows = [[`+${r.dm.toLocaleString()}`, 'DM', 'is-dm'], [`+${r.shards}`, '파츠 조각', 'is-shard'], [`+${r.cores}`, '스킬 코어', 'is-core']];
     if (r.part) rows.push([esc(r.part.name), `${g.name} 파츠 ${r.part.type === 'refund' ? '(이미 있어 조각으로 환급)' : '획득'}`, 'is-part']);
-    el.innerHTML = `<div class="v2-dsp-back__art" style="background-image:url('${z.back}'), url('${z.far[0]}')"></div>
+    el.innerHTML = `<div class="v2-dsp-back__art" style="background-image:${z.back ? `url('${z.back}'), ` : ''}url('${z.far[0]}')"></div>
         <canvas class="v2-dsp-back__rig"></canvas>
         <div class="v2-dsp-back__card">
             <h3>귀환 완료</h3><p><b>${esc(ro ? ro.faction : r.character)}</b> · 구역 ${r.zone} ${esc(shortZone(r.zone))}</p>

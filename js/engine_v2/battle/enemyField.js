@@ -4,6 +4,8 @@
    거점(요새·최종 기지) 출현·파손·잔해(그림은 bases_v2.js), 보스전 EMP 포격·유독 가스,
    구역 2 장애물: 바리케이드(방벽병이 세움, 부숴야 진격), 늪 장판(오물 투척병, 위에 있으면 감속).
    구역 3·4 (D-056): 거점 사격(stage.defense), 정문 → 보스전(boss.afterBase)·심연의 문 개방(boss.knights), 슬라임 분열(split).
+   구역 6 (D-078): 축복 성수대(stage.fonts)·헌금 기사 오라 = 근처 적 받는 피해 감소(축복), 그림자 집행자 은신 피해 감소,
+                   봉인된 약창고(요새)를 부수면 주인공 회복(stage.midHeal).
    battle_v2.js의 BattleEngine에 메서드로 붙는다 (this = 전투 엔진).
    ========================================================================== */
 
@@ -18,6 +20,9 @@ import { KIT_STATUS_ICON, KIT_STATUS_TINT } from './kit.js';
 import { BASE_STATE, baseArt, baseArtName, baseSize, aimAt as aimOf, dressBase, setBaseState } from '../bases_v2.js';
 import { HERO, HIT_REACT, ACID, POPUP, FOOT_B, BASE_X, ENEMY_REACT } from './tuning.js';
 
+// 축복 성수대 (구역 6): 체력 hp × 스테이지 적 체력 배율, 성수대에서 range px 안 적은 받는 피해 cut 감소 (헌금 기사 오라와 겹치면 곱함)
+export const FONT = { hp: 1000, range: 400, cut: 0.25, x: 900, xNarrow: 640, every: 0.2 };
+
 // 적 상태 외형 (우선순위: 기절 > 감속 > 저주) + 체력바 옆 상태 아이콘
 const ENEMY_TINT = {
     puppet: 'saturate(0.6) brightness(1.1) drop-shadow(0 0 6px #5ae6f0)',   // 뒤틀린 인형사 꼭두각시
@@ -25,10 +30,11 @@ const ENEMY_TINT = {
     stun: 'grayscale(0.7) brightness(1.15) drop-shadow(0 0 6px #ffe066)',
     slow: 'drop-shadow(0 0 6px #b050ff) saturate(0.55) brightness(0.9)',
     curse: 'brightness(0.72) saturate(0.7) drop-shadow(0 0 4px rgba(170, 80, 255, 0.9))',
+    bless: 'drop-shadow(0 0 6px rgba(255, 215, 110, 0.95))',   // 구역 6 축복 (성수대·헌금 기사)
     ...KIT_STATUS_TINT   // 2차 상태 (공포·잠·화상·취약 — battle/kit.js)
 };
 const STATUS_ICON = { curse: 'curse', slow: 'slow', stun: 'stun', acid: 'acid', root: 'net', bleed: 'thorns', abyss: 'hand', stitch: 'stitch',
-    frozen: 'snow', chill: 'snow', puppet: 'puppet', ...KIT_STATUS_ICON };
+    frozen: 'snow', chill: 'snow', puppet: 'puppet', bless: 'shield', ...KIT_STATUS_ICON };
 const PUDDLE_STICK = 1.5;   // 늪을 밟은 뒤 감속이 남는 시간(초)
 
 export const EnemyMethods = {
@@ -73,6 +79,65 @@ export const EnemyMethods = {
             this.kitWallHold(enemy);   // 강철 방벽 앞에서 멈춤 (battle/kit.js)
         });
         this.tickBaseDefense(dt, frontX);
+        this.tickBlessings(dt);
+    },
+
+    // ---- 구역 6 축복: 축복 성수대·헌금 기사 근처 적은 받는 피해 감소 (FONT.every초마다 다시 셈 → e.blessMul) ----
+    tickBlessings(dt) {
+        this.blessTimer = (this.blessTimer || 0) + dt;
+        if (this.blessTimer < FONT.every) return;
+        this.blessTimer = 0;
+        const fonts = this.enemies.filter(e => e.isFont && e.hp > 0);
+        const auras = this.enemies.filter(e => e.t && e.t.aura && e.hp > 0);
+        if (!fonts.length && !auras.length && !this.blessedAny) return;
+        this.blessedAny = false;
+        this.enemies.forEach(e => {
+            if (e.isBuilding || e.isBarricade) return;
+            let mul = 1;
+            if (fonts.some(f => Math.abs(aimOf(f).x - aimOf(e).x) <= FONT.range)) mul *= 1 - FONT.cut;
+            const k = auras.find(a => a !== e && Math.abs(a.x - e.x) <= a.t.aura.range);
+            if (k) mul *= 1 - k.t.aura.cut;
+            e.blessMul = mul;
+            const on = mul < 1;
+            if (on) this.blessedAny = true;
+            if (on !== !!e.blessed) {
+                e.blessed = on;
+                this.updateEnemyFilter(e);
+            }
+        });
+    },
+
+    /** 축복 성수대 (stage.fonts = 나오는 거리 m): 그 거리를 지나면 오른쪽에 하나 — 바리케이드처럼 부숴야 지나감, 걸을 때는 바닥과 함께 다가옴 */
+    checkFonts() {
+        const list = this.stage.fonts;
+        if (!list || this.fontsSpawned >= list.length || this.distanceTraveled < list[this.fontsSpawned]) return;
+        this.fontsSpawned += 1;
+        this.spawnFont(window.innerWidth > 1000 ? FONT.x : FONT.xNarrow);
+    },
+
+    spawnFont(x) {
+        const f = this.spawnBarricade(x, Math.round(FONT.hp * this.stage.enemy.hp), '✨ 축복 성수대 — 근처 적 피해 감소!');
+        if (!f) return null;
+        f.isFont = true;
+        f.type = 'font';
+        f.t = { name: '축복 성수대' };
+        f.dom.classList.add('v2-font');
+        const aura = document.createElement('div');
+        aura.className = 'v2-font__aura';
+        aura.style.width = `${FONT.range * 2}px`;
+        aura.style.left = `${f.size.w / 2 - FONT.range}px`;
+        f.dom.prepend(aura);
+        this.blessTimer = FONT.every;   // 바로 축복을 셈
+        return f;
+    },
+
+    /** 걷는 동안 성수대도 바닥과 함께 다가옴 (battle_v2.js tickAdvance) */
+    scrollFonts(dt) {
+        this.enemies.forEach(e => {
+            if (!e.isFont) return;
+            e.x -= this.groundSpeed() * dt;
+            if (e.dom) e.dom.style.left = `${e.x}px`;
+        });
     },
 
     /**
@@ -123,6 +188,8 @@ export const EnemyMethods = {
         }
         if (enemy.armor && damage > 0) damage *= 1 - enemy.armor * (1 - (react?.pierce || 0));   // 방패병·보스: 받는 피해 감소 (인형사 가위는 일부 무시)
         if (enemy.barrierT > 0 && damage > 0) damage *= 1 - enemy.t.barrier.cut;
+        if (enemy.blessMul < 1 && damage > 0) damage *= enemy.blessMul;              // 구역 6 축복 (성수대·헌금 기사)
+        if (enemy.hidden && damage > 0) damage *= 1 - enemy.t.stealth.cut;          // 그림자 집행자 은신
         if (enemy.frozenT > 0 && damage > 0) damage *= 1 + this.shatterBonus();   // 서리의 무희 다리 '빙판 걸음' (frost.js)
         if (enemy.affixes?.includes('iron') && !purified && damage > 0) {
             damage *= 1 - ELITE_AFFIXES.iron.cut;
@@ -217,6 +284,11 @@ export const EnemyMethods = {
             this.starFlags[0] = true;
             this.ruinHoldT = BASE_STATE.ruinHold;
             gameState.addDarkMatter(this.stage.reward.mid);
+            if (this.stage.midHeal) {   // 구역 6 봉인된 약창고: 잠긴 약이 풀려 회복
+                const got = this.healPlayer(this.maxPlayerHp * this.stage.midHeal);
+                this.fx.play(ZONE_VFX.holyHeal, this.monsterX + 35, FOOT_B);
+                this.createDamagePopup(this.monsterX + 30, 230, `💊 잠긴 약이 풀림 +${Math.round(got)} 회복`, false);
+            }
             if (this.domTargetLabel) this.domTargetLabel.textContent = '적 수비대 거점 HP (진격 중)';
             this.director.baseDestroyed(enemy, false);
             this.updateHud();
@@ -294,6 +366,11 @@ export const EnemyMethods = {
     onEnemyKilled(enemy) {
         if (enemy.isBarricade) {   // 바리케이드: 터지며 사라짐 (처치 수·징집 없음)
             const a = aimOf(enemy);
+            if (enemy.isFont) {   // 축복 성수대: 축복이 꺼짐 (금빛 물보라)
+                this.fx.play(ZONE_VFX.fontBreak, a.x, FOOT_B + 20);
+                this.createDamagePopup(enemy.x, 200, '축복이 꺼졌다', false);
+                this.blessTimer = FONT.every;
+            }
             this.fx.play(BATTLE_VFX.baseBlast, a.x, a.b, { scale: 0.8 });
             sound.play('base_blast', { rate: 1.3, vol: 0.7 });
             gameState.addDarkMatter(Math.round(this.stage.reward.kill * 0.5));
@@ -427,7 +504,7 @@ export const EnemyMethods = {
         if (!e.dom) return;
         const states = [e.puppetT > 0 && 'puppet', e.frozenT > 0 && 'frozen', e.stunT > 0 && !(e.frozenT > 0) && !(e.puppetT > 0) && 'stun',
             e.rootT > 0 && 'root', e.slowT > 0 && 'slow', e.cursed && 'curse', e.acidT > 0 && 'acid', e.bleedT > 0 && 'bleed',
-            e.abyssT > 0 && 'abyss', e.stitchT > 0 && 'stitch', e.chill > 0 && 'chill', ...this.kitStates(e)].filter(Boolean);
+            e.abyssT > 0 && 'abyss', e.stitchT > 0 && 'stitch', e.chill > 0 && 'chill', ...this.kitStates(e), e.blessed && 'bless'].filter(Boolean);
         this.updateStatusIcons(e, states);
         // 멈춘 적의 몸 (Q-008 Q5): 기절 = 비틀거림, 빙결 = 굳음, 속박 = 버둥거림 — 걷기·공격 그림이 제자리에서 돌지 않게 (ui_v2.css)
         const held = e.frozenT > 0 ? 'frozen' : e.stunT > 0 && !(e.puppetT > 0) ? 'stunned' : e.rootT > 0 ? 'rooted' : '';

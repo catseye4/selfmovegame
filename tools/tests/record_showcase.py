@@ -5,6 +5,7 @@
   python tools/tests/record_showcase.py                    # 전부 (파견 + 8캐릭터)
   python tools/tests/record_showcase.py dispatch           # 파견만
   python tools/tests/record_showcase.py kaiju frost        # 고른 캐릭터만
+  python tools/tests/record_showcase.py --base architect   # 세트 앞에 기본·강화 파츠 장면(걷기 → 스킬)도 (D-079 새 캐릭터 소개)
 
 출력: tools/tests/_out/showcase/dispatch.mp4      파견 화면 (진행 중 장면 → 새 파견 보내기 → 귀환 완료 → 귀환 장면)
       tools/tests/_out/showcase/sets_<캐릭터>.mp4  세트마다 4부위를 끼우고 팔 → 몸통 → 필살기 스킬 (세트 이름·스킬 이름 자막)
@@ -32,13 +33,14 @@ OUT = os.path.join(HERE, '_out', 'showcase')
 W, H = 1280, 720
 OUT_W, OUT_H = 960, 540
 SET_SEC = 7.0                                        # 세트 한 장면 길이
+BASE_SEC, BASE_WALK = 10.0, 2.5                      # 기본·강화 장면 길이, 그중 적 없이 걷는 시간
 SKILLS = [(0.6, 'arm'), (2.3, 'body'), (4.0, 'head')]   # 팔 → 몸통 → 필살기
 FONT = "C\\:/Windows/Fonts/malgunbd.ttf"
 ALL = ("['1-1','1-2','1-3','1-4','1-5','1-B','2-1','2-2','2-3','2-4','2-5','2-B',"
        "'3-1','3-2','3-3','3-4','3-5','3-6','3-B','4-1','4-2','4-3','4-4','4-5','4-6','4-B']")
 CLEAR = "{ stars: [true,true,true], cleared: true, bestTime: 60 }"
 
-SET_JS = """async ([parts, sec, sched]) => {
+SET_JS = """async ([parts, sec, sched, walk]) => {
     %(imports)s
     const sleep = ms => new Promise(r => setTimeout(r, ms));
     progress.selectStage('2-2');
@@ -49,10 +51,11 @@ SET_JS = """async ([parts, sec, sched]) => {
     b.enemies.filter(e => !e.isBuilding).forEach(e => e.dom && e.dom.remove());
     b.enemies = b.enemies.filter(e => e.isBuilding);
     window.__sceneStart = performance.now();
+    if (walk) await sleep(walk * 1000);   // 적 없이 걷는 모습 먼저
     // 앞 2명은 금방 쓰러지고(처치 연출), 뒤 3명은 버팀(스킬이 끝까지 보이게)
     for (let i = 0; i < 5; i++) { const e = b.spawnMinion('guard', { x: b.frontX() + 150 + i * 50 }); e.hp = e.maxHp = i < 2 ? 300 : 6000; }
     for (const [t, slot] of sched) setTimeout(() => { b.skillCd[slot] = 0; if (slot === 'head') b.ultGauge = 1; b.useSkill(slot); }, t * 1000);
-    await sleep(sec * 1000);
+    await sleep((sec - (walk || 0)) * 1000);
     return (performance.now() - window.__sceneStart) / 1000;
 }""" % {'imports': IMPORTS}
 
@@ -70,6 +73,16 @@ INFO_JS = """async () => {
         (out[c] ||= { name: rosterOf(c).faction, sets: [] }).sets.push({ id: sid, label: setLabelOf(setOf(id('head'))),
             parts: ['head', 'body', 'arm', 'leg'].map(id), arm: sk('arm'), body: sk('body'), ult: sk('head'),
             leg: (LEG_PASSIVES[id('leg')] || {}).name || '' });
+    }
+    // 기본·강화 파츠 (<부위>_<캐릭터>, <부위>_<캐릭터>_up) — --base 때 세트 앞에 찍음
+    for (const c of Object.keys(out)) {
+        out[c].base = [['', '기본 파츠'], ['_up', '강화 파츠']].map(([suf, label]) => {
+            const id = s => `${s}_${c}${suf}`;
+            if (!PART_SKILL[id('head')]) return null;
+            const sk = s => (SKILLS[PART_SKILL[id(s)]] || {}).name || '';
+            return { id: `${c}${suf || '_base'}`, label, parts: ['head', 'body', 'arm', 'leg'].map(id),
+                arm: sk('arm'), body: sk('body'), ult: sk('head'), leg: (LEG_PASSIVES[id('leg')] || {}).name || '' };
+        }).filter(Boolean);
     }
     return out;
 }""" % {'imports': IMPORTS}
@@ -113,22 +126,23 @@ def concat(files, dst):
     os.remove(lst)
 
 
-def record_sets(browser, base, char, info, tmp):
+def record_sets(browser, base, char, info, tmp, with_base=False):
     ctx, page, t0 = open_game(browser, base, tmp)
     page.evaluate(f"async () => {{ {IMPORTS} {ALL}.forEach(id => progress.stages[id] = {CLEAR}); progress.save(); }}")
+    todo = [(s, BASE_SEC, BASE_WALK) for s in (info.get('base', []) if with_base else [])] + [(s, SET_SEC, 0) for s in info['sets']]
     scenes = []
-    for s in info['sets']:
-        rel = page.evaluate(SET_JS, [s['parts'], SET_SEC, [[t, k] for t, k in SKILLS]])
+    for s, sec, walk in todo:
+        rel = page.evaluate(SET_JS, [s['parts'], sec, [[t + walk, k] for t, k in SKILLS], walk])
         scenes.append((time.time() - t0) - rel)
         print(' ', s['id'], s['label'], flush=True)
     video = page.video.path()
     ctx.close()
     clips = []
-    for i, (s, start) in enumerate(zip(info['sets'], scenes)):
+    for i, ((s, sec, _), start) in enumerate(zip(todo, scenes)):
         top = write_text(tmp, f'top{i}.txt', f"{info['name']} · {s['label']}")
         sub = write_text(tmp, f'sub{i}.txt', f"팔 {s['arm']}  →  몸통 {s['body']}  →  필살기 {s['ult']}   |   다리 패시브 {s['leg']}")
         clip = os.path.join(tmp, f'clip{i}.mp4')
-        cut(video, start - 0.2, SET_SEC, clip, [(top, 24, 62), (sub, 15, 100)])
+        cut(video, start - 0.2, sec, clip, [(top, 24, 62), (sub, 15, 100)])
         clips.append(clip)
     dst = os.path.join(OUT, f'sets_{char}.mp4')
     concat(clips, dst)
@@ -182,7 +196,8 @@ def record_dispatch(browser, base, tmp):
 
 
 def main():
-    want = sys.argv[1:]
+    with_base = '--base' in sys.argv
+    want = [a for a in sys.argv[1:] if a != '--base']
     os.makedirs(OUT, exist_ok=True)
     httpd, base = start_server()
     manifest_path = os.path.join(OUT, 'manifest.json')
@@ -206,7 +221,7 @@ def main():
                 continue
             tmp = tempfile.mkdtemp(prefix='mo_show_')
             print(char, ci['name'], len(ci['sets']), 'sets', flush=True)
-            print(' →', record_sets(browser, base, char, ci, tmp), flush=True)
+            print(' →', record_sets(browser, base, char, ci, tmp, with_base), flush=True)
             shutil.rmtree(tmp, ignore_errors=True)
             manifest[char] = {'file': f'sets_{char}.mp4', **ci}
         browser.close()

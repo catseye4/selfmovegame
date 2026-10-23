@@ -17,7 +17,7 @@ import { sound } from '../engine_v2/audio/sound_v2.js';
 import { openSettings } from './settingsPanel_v2.js';
 import { difficultyOf, difficultyOfStage } from '../engine_v2/difficulty_v2.js';
 
-const FACTION_COLOR = { mech: '#3ee6ff', kaiju: '#a0ff32', hero: '#c86eff', chimera: '#ff9628', diver: '#3fe0c8', saint: '#ff4d6d', frost: '#7fd4ff', doll: '#5ae6f0' };
+const FACTION_COLOR = { mech: '#3ee6ff', kaiju: '#a0ff32', hero: '#c86eff', chimera: '#ff9628', diver: '#3fe0c8', saint: '#ff4d6d', frost: '#7fd4ff', doll: '#5ae6f0', architect: '#ff9a2e', broadcaster: '#ff50aa' };
 // 진행도 표시: 스테이지 거리와 요새·최종 기지 위치 (stages_v2.js)
 const $ = id => document.getElementById(id);
 
@@ -255,7 +255,7 @@ export class BattleHud {
             } else {
                 const remain = b.skillCd[slot];
                 this.set(`cd_${slot}`, Math.ceil(remain * 10), v => {
-                    btn.style.setProperty('--cd', sk.cd ? remain / sk.cd : 0);
+                    btn.style.setProperty('--cd', sk.cd ? Math.min(1, remain / sk.cd) : 0);   // 파문의 종(구역 6)으로 쿨다운보다 길어질 수 있음
                     num.textContent = v > 0 ? String(Math.ceil(v / 10)) : '';
                 });
             }

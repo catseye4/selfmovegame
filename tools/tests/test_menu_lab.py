@@ -64,7 +64,7 @@ def run(ctx):
     ctx.check(st['hp'] > hp1, '강화: 능력치 상승 (HP)', f"{hp1} → {st['hp']}")
     g.shot('lab_upgrade', '#screen-lab-v2')
 
-    # 캐릭터 선택창 (D-051): 카드 8장(기존 4 + 새 캐릭터 4, 한 화면 4장 + 가로로 넘김), 지금 캐릭터 표시
+    # 캐릭터 선택창 (D-051): 카드 10장(기존 4 + 새 캐릭터 6, 한 화면 4장 + 가로로 넘김), 지금 캐릭터 표시
     g.page.click('#btn-lab-back-v2')
     g.wait(400)
     g.page.click('#btn-to-select-v2')
@@ -73,8 +73,8 @@ def run(ctx):
         const vis = [...document.querySelectorAll('.v2-charcard')].filter(c => c.offsetLeft + c.offsetWidth <= grid.scrollLeft + grid.clientWidth + 1);
         return { cards: document.querySelectorAll('.v2-charcard').length, visible: vis.length, scroll: grid.scrollWidth > grid.clientWidth,
             sel: document.querySelector('.v2-charcard.is-selected')?.dataset.char };""")
-    ctx.check(st['cards'] == 8 and st['visible'] == 4 and st['scroll'] and st['sel'] == 'mech',
-              '선택창: 카드 8장 (한 화면 4장 + 가로로 넘김), 지금 캐릭터 = 거대로봇', str(st))
+    ctx.check(st['cards'] == 10 and st['visible'] == 4 and st['scroll'] and st['sel'] == 'mech',
+              '선택창: 카드 10장 (한 화면 4장 + 가로로 넘김), 지금 캐릭터 = 거대로봇', str(st))
 
     # 별로 여는 캐릭터 (Q-006): 별이 없으면 잠김 안내, 별을 모으면 눌러서 해금
     st = g.js("""return { lock: document.querySelector('.v2-charcard[data-char="chimera"]').classList.contains('is-locked'),

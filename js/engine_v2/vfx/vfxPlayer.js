@@ -989,7 +989,32 @@ export const VFX_SHEETS = {
     shadow_play: { src: 'assets/sprites/vfx/shadow_play.webp', frames: 9 },         // 그림자 연극 (가운데 기준)
     teacup_burst: { src: 'assets/sprites/vfx/teacup_burst.webp', frames: 9 },       // 티 파티 찻잔 (바닥 기준)
     throne_thread: { src: 'assets/sprites/vfx/throne_thread.webp', frames: 9 },     // 실의 왕좌 (바닥 기준, 9칸 모두 왕좌 — 이어 틀어도 끊기지 않게)
-    clock_gear: { src: 'assets/sprites/vfx/clock_gear.webp', frames: 9 }            // 자정의 종 시계 (가운데 기준)
+    clock_gear: { src: 'assets/sprites/vfx/clock_gear.webp', frames: 9 },           // 자정의 종 시계 (가운데 기준)
+    // 새 캐릭터 5·6 (D-079) — 철거의 설계자 · 침묵의 방송자 대표 시트 24장 (Gemini, 프롬프트 tools/images/pending_vfx_sheets_newchars2.json)
+    drill_burst: { src: 'assets/sprites/vfx/drill_burst.webp', frames: 9 },   // 설계자 드릴 불티·기초 파쇄 (바닥 기준)
+    steel_scaffold: { src: 'assets/sprites/vfx/steel_scaffold.webp', frames: 9 },   // 설계자 강제 재건 — 철골이 솟음 (바닥 기준)
+    crane_ball: { src: 'assets/sprites/vfx/crane_ball.webp', frames: 9 },   // 설계자 철거 명령 — 크레인 철구 (바닥 기준)
+    sonic_pink: { src: 'assets/sprites/vfx/sonic_pink.webp', frames: 9 },   // 방송자 공명 음파·공명 파열 고리 (가운데 기준)
+    silence_dome: { src: 'assets/sprites/vfx/silence_dome.webp', frames: 9 },   // 방송자 정적의 장막 펼쳐짐 (바닥 기준)
+    emergency_broadcast: { src: 'assets/sprites/vfx/emergency_broadcast.webp', frames: 9 },   // 방송자 긴급 방송 — 스피커 폭발 (가운데 기준)
+    safety_siren: { src: 'assets/sprites/vfx/safety_siren.webp', frames: 9 },   // 설계자 레어① 현장 반장 안전 점검 경광등
+    dynamite_blast: { src: 'assets/sprites/vfx/dynamite_blast.webp', frames: 9 },   // 설계자 레어② 폭파 기술자 다이너마이트
+    steel_beam: { src: 'assets/sprites/vfx/steel_beam.webp', frames: 9 },   // 설계자 레어③·유니크② 철골 낙하 (바닥 기준)
+    blueprint_grid: { src: 'assets/sprites/vfx/blueprint_grid.webp', frames: 9 },   // 설계자 레어④ 측량 설계사 설계도 격자
+    bulldozer_dust: { src: 'assets/sprites/vfx/bulldozer_dust.webp', frames: 9 },   // 설계자 유니크① 불도저 흙먼지 (바닥 기준)
+    counterweight: { src: 'assets/sprites/vfx/counterweight.webp', frames: 9 },   // 설계자 유니크② 평형추 낙하 (바닥 기준)
+    crusher_claw: { src: 'assets/sprites/vfx/crusher_claw.webp', frames: 9 },   // 설계자 유니크③ 유압 집게 쥐기
+    scaffold_rise: { src: 'assets/sprites/vfx/scaffold_rise.webp', frames: 9 },   // 설계자 레전더리① 황금 비계 성벽 (바닥 기준)
+    mega_drill: { src: 'assets/sprites/vfx/mega_drill.webp', frames: 9 },   // 설계자 레전더리② 거대 굴착 드릴 (바닥 기준)
+    encore_notes: { src: 'assets/sprites/vfx/encore_notes.webp', frames: 9 },   // 방송자 레어① 버스커 음표
+    bass_drop: { src: 'assets/sprites/vfx/bass_drop.webp', frames: 9 },   // 방송자 레어② DJ 베이스 폭발
+    radio_jam: { src: 'assets/sprites/vfx/radio_jam.webp', frames: 9 },   // 방송자 레어③ 전파 교란 잡음
+    megaphone_shout: { src: 'assets/sprites/vfx/megaphone_shout.webp', frames: 9 },   // 방송자 레어④ 확성기 함성 (왼쪽 기준)
+    ghost_radio: { src: 'assets/sprites/vfx/ghost_radio.webp', frames: 9 },   // 방송자 유니크① 유령 주파수
+    subwoofer_blast: { src: 'assets/sprites/vfx/subwoofer_blast.webp', frames: 9 },   // 방송자 유니크② 초저음 충격파 (바닥 기준)
+    glitch_hack: { src: 'assets/sprites/vfx/glitch_hack.webp', frames: 9 },   // 방송자 유니크③ 글리치 해킹
+    live_broadcast: { src: 'assets/sprites/vfx/live_broadcast.webp', frames: 9 },   // 방송자 레전더리① 진실의 방송 조명
+    absolute_silence: { src: 'assets/sprites/vfx/absolute_silence.webp', frames: 9 }   // 방송자 레전더리② 절대 정적
 };
 const sheetImages = new Map();
 /** 그림 시트 (처음 부르면 받기 + 압축 풀기 시작). 압축이 다 풀린 뒤에만 돌려줌 — 캔버스에 그리는 순간 억지로 풀면

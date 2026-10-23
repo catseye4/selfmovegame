@@ -5,6 +5,7 @@
      장판(kitZone), 움직이는 판정(kitWave), 소환(spawnKitAlly), 변신(kitTransform), 새 기본 공격(fireKitAttack),
      다리 패시브(KIT_PASSIVES — 늘 붙는 값·조건 값·N번째 공격·처치·걸음·막기·버티기·보행 충전), 세트 효과(고침 patch · 값 mods · 깃발 flags · 계기 on),
      강철 벽(장판 wall — 적 진격을 막음)·투사체 막기(깃발 projBlock — sets.js rangedMul)·막은 피해 모으기(버프 store).
+     새 캐릭터 2종 (D-079): 적 상태 침묵(silence — enemies_v2.js가 기술·원거리·치유를 멈춤), 그림 있는 장판(art — 철골 바리케이드·음파 장막).
    battle_v2.js의 BattleEngine에 메서드로 붙는다 (this = 전투 엔진). 설계: MD/파츠확장_2차_기획안.md 3장.
    ========================================================================== */
 
@@ -31,13 +32,14 @@ const KIT_FX = {
 };
 
 // 적 상태 이름 → 화면 표시 (enemyField.js updateEnemyFilter가 아이콘·색으로 씀)
-export const KIT_STATUS_ICON = { burn: 'fire', poison: 'acid', vuln: 'spikes', weak: 'retreat', fear: 'horn', sleep: 'pause', thread: 'stitch' };
+export const KIT_STATUS_ICON = { burn: 'fire', poison: 'acid', vuln: 'spikes', weak: 'retreat', fear: 'horn', sleep: 'pause', thread: 'stitch', silence: 'mute' };
 export const KIT_STATUS_TINT = {
     fear: 'saturate(0.6) brightness(0.85) drop-shadow(0 0 6px #ff4466)',
     sleep: 'saturate(0.5) brightness(0.95) drop-shadow(0 0 6px #b9a8ff)',
     burn: 'sepia(0.4) saturate(1.6) drop-shadow(0 0 5px #ff8a30)',
     vuln: 'drop-shadow(0 0 6px #ff5ad1)',
-    thread: 'drop-shadow(0 0 5px #ff3c50)'
+    thread: 'drop-shadow(0 0 5px #ff3c50)',
+    silence: 'saturate(0.55) drop-shadow(0 0 6px #ff50aa)'
 };
 
 const sum = (list, key) => list.reduce((a, m) => a + (m[key] || 0), 0);
@@ -189,7 +191,8 @@ export const KitMethods = {
         return list.some(s => ({
             slow: e.slowT > 0, root: e.rootT > 0, stun: e.stunT > 0, frozen: e.frozenT > 0, chill: e.chill > 0,
             burn: e.kitDots?.burn?.t > 0, poison: e.kitDots?.poison?.t > 0 || e.acidT > 0, sleep: e.kitSleepT > 0,
-            puppet: e.puppetT > 0, held: e.stunT > 0 || e.rootT > 0 || e.frozenT > 0, vuln: e.kitVulnT > 0, weak: e.kitWeakT > 0
+            puppet: e.puppetT > 0, held: e.stunT > 0 || e.rootT > 0 || e.frozenT > 0, vuln: e.kitVulnT > 0, weak: e.kitWeakT > 0,
+            silence: e.kitSilenceT > 0
         })[s]);
     },
 
@@ -275,8 +278,7 @@ export const KitMethods = {
     kitHeal(amount) {
         if (amount <= 0 || this.playerHp <= 0) return;
         amount *= 1 + this.kitMod('healAmp');
-        this.playerHp = Math.min(this.maxPlayerHp, this.playerHp + amount);
-        monsterControllerV2.updateHpBar(this.playerHp, this.maxPlayerHp);
+        this.healPlayer(amount);
     },
 
     // ---- 적 상태 ----
@@ -328,6 +330,11 @@ export const KitMethods = {
             e.kitThreadT = Math.max(e.kitThreadT || 0, st.thread);
             if (fresh) this.updateEnemyFilter(e);
         }
+        if (st.silence && unit) {   // 침묵 (침묵의 방송자): 기술·원거리·치유를 못 씀 (enemies_v2.js updateEnemy). 보스는 시간 절반
+            const fresh = !(e.kitSilenceT > 0);
+            e.kitSilenceT = Math.max(e.kitSilenceT || 0, st.silence * (e.boss ? 0.5 : 1));
+            if (fresh) this.updateEnemyFilter(e);
+        }
         if (st.sleep && unit && !e.boss) {
             e.kitSleepT = Math.max(e.kitSleepT || 0, st.sleep);
             this.stunEnemy(e, st.sleep);
@@ -361,22 +368,45 @@ export const KitMethods = {
     /** 상태 아이콘 이름 (updateEnemyFilter) */
     kitStates(e) {
         return [e.kitFearT > 0 && 'fear', e.kitSleepT > 0 && 'sleep', e.kitDots?.burn?.t > 0 && 'burn', e.kitDots?.poison?.t > 0 && 'poison',
-            e.kitVulnT > 0 && 'vuln', e.kitWeakT > 0 && 'weak', e.kitThreadT > 0 && 'thread'].filter(Boolean);
+            e.kitVulnT > 0 && 'vuln', e.kitWeakT > 0 && 'weak', e.kitThreadT > 0 && 'thread', e.kitSilenceT > 0 && 'silence'].filter(Boolean);
     },
 
     // ---- 장판 ----
     /** o: { x(frontX 기준), w, sec, dps(×playerDps), slow?, vuln?[초,비율], status?(every초마다), every?, heal?(안에 있으면 나 초당 비율), allyHeal?,
-     *       puff(이펙트), puffEvery?, baseMul?, follow?(나를 따라옴), end?{ dmg, radius, vfx }, wall?(보스가 아닌 적은 넘어오지 못함) } */
+     *       puff(이펙트), puffEvery?, baseMul?, follow?(나를 따라옴), end?{ dmg, radius, vfx }, wall?(보스가 아닌 적은 넘어오지 못함),
+     *       art?{ cls(ui_v2.css 모양 — 철골 바리케이드·음파 장막), w?, h?, dx? } (장판 자리에 세우는 그림, 끝나면 무너지며 사라짐) } */
     kitZone(o) {
         const x = (o.follow ? this.monsterX + 60 : this.frontX()) + (o.x ?? 0);
-        this.kitZones.push({ puffT: 0, tickT: 0, ...o, x, t: o.sec, ox: o.x ?? 0 });
+        const z = { puffT: 0, tickT: 0, ...o, x, t: o.sec, ox: o.x ?? 0 };
+        if (o.art && this.domEnemies) {
+            const el = document.createElement('div');
+            el.className = `v2-kit-art ${o.art.cls || ''}`;
+            el.style.width = `${o.art.w ?? o.w}px`;
+            if (o.art.h) el.style.height = `${o.art.h}px`;
+            this.domEnemies.appendChild(el);
+            z.artEl = el;
+            z.artDx = o.art.dx ?? 0;
+            el.style.left = `${x + z.artDx}px`;
+        }
+        this.kitZones.push(z);
+    },
+    /** 그림 있는 장판: 자리 맞추기 / 끝나면 무너지며 사라짐 */
+    kitZoneArt(z, gone = false) {
+        if (!z.artEl) return;
+        if (!gone) { z.artEl.style.left = `${z.x + z.artDx}px`; return; }
+        const el = z.artEl;
+        z.artEl = null;
+        el.classList.add('is-gone');
+        setTimeout(() => el.remove(), 450);
     },
     tickKitZones(dt) {
         if (!this.kitZones.length) return;
         this.kitZones = this.kitZones.filter(z => {
             z.t -= dt;
             if (z.follow) z.x = this.monsterX + 60 + z.ox;
+            this.kitZoneArt(z);
             if (z.t <= 0) {
+                this.kitZoneArt(z, true);
                 if (z.end) {
                     const cx = z.x + z.w / 2;
                     if (z.end.vfx) this.fx.play(z.end.vfx, cx, FOOT_B);
@@ -862,6 +892,7 @@ export const KitMethods = {
             if (e.kitWeakT > 0) { e.kitWeakT -= dt; if (e.kitWeakT <= 0) this.updateEnemyFilter(e); }
             if (e.kitSleepT > 0) { e.kitSleepT -= dt; if (e.kitSleepT <= 0) this.updateEnemyFilter(e); }
             if (e.kitThreadT > 0) { e.kitThreadT -= dt; if (e.kitThreadT <= 0) this.updateEnemyFilter(e); }
+            if (e.kitSilenceT > 0) { e.kitSilenceT -= dt; if (e.kitSilenceT <= 0) this.updateEnemyFilter(e); }
             if (!e.kitDots) return;
             for (const [kind, d] of Object.entries(e.kitDots)) {
                 if (!(d.t > 0)) continue;

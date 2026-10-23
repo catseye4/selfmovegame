@@ -1,7 +1,7 @@
 /* ==========================================================================
    PROJECT: MAD OVERLORD // RIG AVATAR (v2)
    캔버스 하나에 리그 캐릭터를 그리는 게임용 래퍼. monster_v2.js가 메뉴/전투 캔버스마다 하나씩 생성한다.
-   - setCharacter('mech' | 'kaiju' | 'hero' | 'chimera' | 'diver' | 'saint' | 'frost' | 'doll', scale?), setMode('idle' | 'walk' | 'attack' | 'victory'),
+   - setCharacter('mech' | 'kaiju' | 'hero' | 'chimera' | 'diver' | 'saint' | 'frost' | 'doll' | 'architect' | 'broadcaster', scale?), setMode('idle' | 'walk' | 'attack' | 'victory'),
      setArm('cannon' | 'fist'), setVariants({ head: 'a', ... }) (A·B 세트 부위 그림, D-050),
      setUpgrades({ head, body, arm, leg }) (새 캐릭터 강화 부위 그림, D-044)
    - consumeHit(): 공격 클립의 fire/impact 이벤트가 쌓은 타격량을 전투 엔진이 가져감
@@ -253,6 +253,11 @@ const SLOT_PARTS = {
         arm: ['armF', 'armB', 'armF_up', 'armB_up', 'handF', 'handB', 'handF_up', 'handB_up'],   // 손목 관절 (D-067)
         leg: ['legF', 'legB', 'legF_up', 'legB_up'] },
     doll: { head: ['head', 'head_up'], body: ['torso', 'torso_up'], arm: ['armF', 'armB', 'armF_up', 'armB_up', 'handF', 'handF_up'],
+        leg: ['legF', 'legB', 'legF_up', 'legB_up'] },
+    // 새 캐릭터 5·6 (D-079): 설계자는 드릴 손(handF), 방송자는 손목 관절 없음
+    architect: { head: ['head', 'head_up'], body: ['torso', 'torso_up'], arm: ['armF', 'armB', 'armF_up', 'armB_up', 'handF', 'handF_up'],
+        leg: ['legF', 'legB', 'legF_up', 'legB_up'] },
+    broadcaster: { head: ['head', 'head_up'], body: ['torso', 'torso_up'], arm: ['armF', 'armB', 'armF_up', 'armB_up'],
         leg: ['legF', 'legB', 'legF_up', 'legB_up'] }
 };
 // 같은 팩션 안의 변형 파츠 색 (기본 파츠는 원래 색)

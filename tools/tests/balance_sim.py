@@ -44,13 +44,19 @@ BUILDS = {
     # 뒤틀린 인형사 (D-049)
     'doll': ('head_doll', 'body_doll', 'arm_doll', 'leg_doll'),
     'doll_up': ('head_doll_up', 'body_doll_up', 'arm_doll_up', 'leg_doll_up'),
+    # 철거의 설계자 · 침묵의 방송자 (D-079)
+    'architect': ('head_architect', 'body_architect', 'arm_architect', 'leg_architect'),
+    'architect_up': ('head_architect_up', 'body_architect_up', 'arm_architect_up', 'leg_architect_up'),
+    'broadcaster': ('head_broadcaster', 'body_broadcaster', 'arm_broadcaster', 'leg_broadcaster'),
+    'broadcaster_up': ('head_broadcaster_up', 'body_broadcaster_up', 'arm_broadcaster_up', 'leg_broadcaster_up'),
 }
 # 기존 4종 A·B 세트 (D-050): mech_a 포격 사령부, mech_b 돌격 강습대, kaiju_a 가시 갑각, kaiju_b 독안개,
 # hero_a 타락 기사, hero_b 그림자 마도사, chimera_a 광폭 실험체, chimera_b 조직 사령관
 BUILDS.update({f'{c}_{v}': tuple(f'{s}_{c}_{v}' for s in ('head', 'body', 'arm', 'leg'))
                for c in ('mech', 'kaiju', 'hero', 'chimera') for v in ('a', 'b')})
 ZONES = {1: ['1-1', '1-2', '1-3', '1-4', '1-5', '1-B'], 2: ['2-1', '2-2', '2-3', '2-4', '2-5', '2-B'],
-         3: ['3-1', '3-2', '3-3', '3-4', '3-5', '3-6', '3-B'], 4: ['4-1', '4-2', '4-3', '4-4', '4-5', '4-6', '4-B']}   # 구역 3·4 (D-056)
+         3: ['3-1', '3-2', '3-3', '3-4', '3-5', '3-6', '3-B'], 4: ['4-1', '4-2', '4-3', '4-4', '4-5', '4-6', '4-B'],   # 구역 3·4 (D-056)
+         6: ['6-1', '6-2', '6-3', '6-4', '6-5', '6-6', '6-B']}   # 구역 6 (D-078, 구역 5 전)
 STAGE_IDS = ZONES[1]   # 스테이지를 안 고르면 구역 1
 MARK = '<!-- 아래는 손으로 쓰는 부분: report가 지우지 않음 -->'
 LIMIT = 400   # 안전장치(게임 시간, 초). 실제 패배는 스테이지 제한 시간(TIME OVER) — 나이트메어 제한 시간이 300초를 넘어 400으로
@@ -171,7 +177,8 @@ def batch(specs, parallel=2, limit_sec=1200, stages=None, diff='normal'):
 LIMITS = {1: '1-1 150/100, 1-2 180/110, 1-3 180/110, 1-4 200/120, 1-5 230/140, 1-B 225/150',
           2: '2-1 200/130, 2-2 210/135, 2-3 220/140, 2-4 230/145, 2-5 240/150, 2-B 240/160',
           3: '3-1 210/135, 3-2 220/140, 3-3 230/145, 3-4 235/150, 3-5 240/155, 3-6 250/160, 3-B 270/185',
-          4: '4-1 220/140, 4-2 225/145, 4-3 230/150, 4-4 240/155, 4-5 245/160, 4-6 255/165, 4-B 260/175'}
+          4: '4-1 220/140, 4-2 225/145, 4-3 230/150, 4-4 240/155, 4-5 245/160, 4-6 255/165, 4-B 260/175',
+          6: '6-1 225/145, 6-2 230/150, 6-3 240/155, 6-4 245/160, 6-5 250/165, 6-6 260/170, 6-B 275/190'}
 
 
 def report():

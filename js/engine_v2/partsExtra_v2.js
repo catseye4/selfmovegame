@@ -37,6 +37,9 @@
      - 스킬: 팔 가위 참격 X자 · 몸통 인형 가족(토끼 인형) · 머리 인형 실(꼭두각시) · 다리 실 걸음 (skills_v2.js)
      - 수치: 밸런스 11차(2026-10-10) — 기본 Lv1 1-3까지·1-4 아슬아슬, 강화 Lv1 1-4·보스. 해금(별)은 아직 없음
 
+   철거의 설계자 · 침묵의 방송자 파츠 8개씩 (새 캐릭터 5·6, D-079 — MD/새캐릭터2종_설계안.md): 팩션 이름만 여기에,
+     기본·강화 파츠와 스킬은 부품 스킬 데이터로 sets2/architectSets2.js · sets2/broadcasterSets2.js (ARCHITECT_BASE · BROADCASTER_BASE)
+
    V2_NAME_OVERRIDES: 기존 파츠 이름을 v2에서만 바꿈 (parts.js 원본은 그대로)
    V2_STAT_OVERRIDES: 기존 파츠 능력치를 v2에서만 바꿈 (parts.js 원본은 그대로)
      - 기본 로봇 (2026-10-03, D-043): 풀강화(Lv5)해도 1-4를 못 깸 → 기본 다리 속도 20 → 70, 기본 팔 공격력 300 → 520
@@ -51,6 +54,8 @@ export const DIVER_FACTION = '심연의 길잡이 (심해)';
 export const SAINT_FACTION = '봉합 성녀 (뒤틀린 구원)';
 export const FROST_FACTION = '서리의 무희 (얼어붙은 안식)';
 export const DOLL_FACTION = '뒤틀린 인형사 (버려진 가족)';
+export const ARCHITECT_FACTION = '철거의 설계자 (무너진 보금자리)';
+export const BROADCASTER_FACTION = '침묵의 방송자 (빼앗긴 목소리)';
 /** 새 캐릭터 파츠: 그림은 그 캐릭터 리그의 부위 그림 (연구소 카드는 lab_v2.js THUMB) */
 const newPart = (faction, dir) => (id, name, cost, src, stats, extra = {}) => ({
     id, name, faction, cost, src: `assets/sprites/rig/${dir}/${src}`, animType: 'pivot', stats, ...extra

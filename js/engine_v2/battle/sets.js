@@ -151,8 +151,7 @@ export const SetMethods = {
     lifesteal(damage) {
         if (!this.buffs.bloodOath || damage <= 0 || this.overloadT > 0) return;
         const heal = damage * SET.blood.ratio;
-        this.playerHp = Math.min(this.maxPlayerHp, this.playerHp + heal);
-        monsterControllerV2.updateHpBar(this.playerHp, this.maxPlayerHp);
+        this.healPlayer(heal);
         this.drainAcc += heal;
         if (this.setFxReady('drain', 0.5)) {
             this.fx.play(SET_VFX.bloodDrain, this.monsterX + 40, 120);

@@ -6,14 +6,15 @@
    능력치는 캐릭터 기준(레어 = A·B 세트 평균) × 등급 배수 × 성격으로 정함 — 단계 J 측정에서 맞춤.
    ========================================================================== */
 
-import { DIVER_FACTION, SAINT_FACTION, FROST_FACTION, DOLL_FACTION } from '../partsExtra_v2.js';
+import { DIVER_FACTION, SAINT_FACTION, FROST_FACTION, DOLL_FACTION, ARCHITECT_FACTION, BROADCASTER_FACTION } from '../partsExtra_v2.js';
 import { spr, fxOf } from '../skillKit_v2.js';
 
 export { spr, fxOf };
 
 export const FACTION = {
     mech: '거대로봇 (메카닉)', kaiju: '거대괴수 (돌연변이)', hero: '타락 히어로 (세뇌)', chimera: '합성괴인 (키메라)',
-    diver: DIVER_FACTION, saint: SAINT_FACTION, frost: FROST_FACTION, doll: DOLL_FACTION
+    diver: DIVER_FACTION, saint: SAINT_FACTION, frost: FROST_FACTION, doll: DOLL_FACTION,
+    architect: ARCHITECT_FACTION, broadcaster: BROADCASTER_FACTION
 };
 
 // 캐릭터 기준 능력치 (레어 세트 부위 — 기존 4종은 A·B 평균, 새 캐릭터는 1차 기획 레어 세트 평균)
@@ -25,7 +26,10 @@ const BASE = {
     diver: { head: [900, 95, 30, 0], body: [2300, 70, 0, 0], arm: [500, 465, 290, 0], leg: [1000, 55, 0, 95] },
     saint: { head: [750, 100, 30, 10], body: [1800, 80, 0, 10], arm: [475, 500, 230, 0], leg: [800, 55, 0, 110] },
     frost: { head: [725, 110, 35, 10], body: [1700, 85, 0, 10], arm: [450, 520, 245, 0], leg: [750, 60, 0, 115] },
-    doll: { head: [825, 95, 25, 10], body: [1950, 75, 0, 10], arm: [450, 480, 255, 0], leg: [825, 60, 0, 108] }
+    doll: { head: [825, 95, 25, 10], body: [1950, 75, 0, 10], arm: [450, 480, 255, 0], leg: [825, 60, 0, 108] },
+    // 새 캐릭터 5·6 (D-079): 강화 파츠보다 조금 위 (기존 새 캐릭터의 레어 세트 ÷ 강화 파츠 비율)
+    architect: { head: [900, 95, 20, 5], body: [2150, 75, 0, 5], arm: [500, 500, 180, 0], leg: [875, 60, 0, 100] },
+    broadcaster: { head: [725, 110, 35, 10], body: [1700, 85, 0, 10], arm: [450, 520, 290, 0], leg: [750, 60, 0, 115] }
 };
 const TIER_MUL = { rare: 1, unique: 1.15, legendary: 1.3 };
 // 성격: 탱커 · 공격 · 사거리 · 속도 · 균형 · 지원
@@ -42,8 +46,10 @@ const COST = {
     old: { head: 750, body: 800, arm: 900, leg: 750 },
     new: { head: 1000, body: 1050, arm: 1150, leg: 1000 }
 };
-const NEW_CHARS = new Set(['diver', 'saint', 'frost', 'doll']);
+const NEW_CHARS = new Set(['diver', 'saint', 'frost', 'doll', 'architect', 'broadcaster']);
 const TIER_NAME = { rare: '레어', unique: '유니크', legendary: '레전더리' };
+// 새 캐릭터 세트 팔이 새 기본 공격(kitAttack)을 갖지 않으면 캐릭터 기본 공격을 그대로 (D-079 — 전에는 맨주먹 'melee'로 떨어졌음)
+const BASE_ATTACK = { diver: 'water', saint: 'needle', frost: 'frost', doll: 'scissors' };
 const r10 = v => Math.round(v / 10) * 10;
 
 export function statsOf(character, tier, style, slot) {
@@ -78,11 +84,32 @@ export function packOf(character, list) {
             if (NEW_CHARS.has(character)) part.rigUpgrade = true;   // 새 캐릭터 세트는 강화 그림 + 세트 색
             if (d.attackType) part.attackType = d.attackType;
             if (d.kitAttack) { part.attackType = 'kit'; part.kitAttack = d.kitAttack; }
+            if (slot === 'arm' && !part.attackType && BASE_ATTACK[character]) part.attackType = BASE_ATTACK[character];
             if (d.rigArm) part.rigArm = d.rigArm;
             if (d.stats) Object.assign(part.stats, d.stats);
             pack.parts[slot].push(part);
             if (d.skill) pack.partSkill[id] = d.skill;
             if (d.passive) pack.passives[id] = d.passive;
+        }
+    }
+    return pack;
+}
+
+/**
+ * 새 캐릭터 기본·강화 파츠 8개를 부품 스킬 묶음으로 (D-079 — 새 battle/<캐릭터>.js 없이 데이터만)
+ * slots = { head: [기본, 강화], body, arm, leg } — 각 { id, name, cost, src(리그 부위 그림), stats, desc, up?, skill?, kitAttack?, passive? }
+ */
+export function basePackOf(character, slots, skills = {}) {
+    const pack = { character, sets: {}, parts: { head: [], body: [], arm: [], leg: [] }, skills, partSkill: {}, passives: {}, tints: {} };
+    for (const slot of ['head', 'body', 'arm', 'leg']) {
+        for (const d of slots[slot]) {
+            const part = { id: d.id, name: d.name, faction: FACTION[character], cost: d.cost, src: `assets/sprites/rig/${character}/${d.src}`,
+                animType: 'pivot', stats: d.stats, skillDesc: d.desc };
+            if (d.up) part.rigUpgrade = true;
+            if (d.kitAttack) { part.attackType = 'kit'; part.kitAttack = d.kitAttack; }
+            pack.parts[slot].push(part);
+            if (d.skill) pack.partSkill[d.id] = d.skill;
+            if (d.passive) pack.passives[d.id] = d.passive;
         }
     }
     return pack;

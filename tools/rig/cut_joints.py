@@ -61,6 +61,17 @@ CHARS = {
         },
         'hands': {'armF': 'handF'},
     },
+    # 철거의 설계자 (D-079): 앞손 + 공압 드릴(강화: 큰 드릴·사슬) — 드릴 뒤에 가려졌던 아래팔이 손 지운 그림에서 드러남(reveal)
+    'architect': {
+        'key': 'green',
+        'variants': {
+            '': ('architect_1_gemini.png', 'architect_1_nohands_gemini.png', 'architect_2_gemini.png'),
+            '_up': ('architect_3_gemini.png', 'architect_3_nohands_gemini.png', 'architect_4_gemini.png'),
+        },
+        'hands': {'armF': 'handF'},
+        'reveal': True,
+    },
+    # (침묵의 방송자는 손 지운 그림에서 소매가 통째로 다시 그려져 손목이 어깨 쪽에 잡힘 → 손목 관절 없이 팔 한 장, D-079)
     # 심연의 길잡이: 뒷손에 매달린 앵커 (앞팔은 팔 전체가 물대포라 그대로) — 앵커가 손목처럼 손 아래에서 흔들림
     'diver': {
         'key': 'magenta',

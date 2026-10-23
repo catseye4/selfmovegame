@@ -65,7 +65,7 @@ export const DROP = {
     craftCost: { rare: 30, unique: 80, legendary: 200 }
 };
 // 구역 상성 캐릭터 (추천안 — 구역 이야기와 맞춘 짝)
-export const AFFINITY = { 1: ['mech', 'frost'], 2: ['kaiju', 'doll'], 3: ['hero', 'saint'], 4: ['chimera', 'diver'] };
+export const AFFINITY = { 1: ['mech', 'frost'], 2: ['kaiju', 'doll'], 3: ['hero', 'saint'], 4: ['chimera', 'diver'], 6: ['saint'] };   // 구역 6 = 성녀의 구역 (D-078)
 
 // ---- 2-2 스킬 강화 ----
 export const SKILL_LEVEL = {
@@ -106,7 +106,7 @@ export const DISPATCH = {
 
 // ---- 2-7 별 사용처 ----
 // 캐릭터 해금 (브레인스토밍 1, D-044): 기본 캐릭터(거대로봇) 외 7종. 예전에 몸통을 산 캐릭터는 이미 열린 것으로 봄
-export const CHARACTER_STARS = { kaiju: 6, hero: 6, chimera: 9, diver: 12, saint: 12, frost: 15, doll: 15 };
+export const CHARACTER_STARS = { kaiju: 6, hero: 6, chimera: 9, diver: 12, saint: 12, frost: 15, doll: 15, architect: 18, broadcaster: 18 };   // 새 캐릭터 5·6 (D-079)
 // 계정 연구: 레벨마다 별 비용 (작은 영구 보너스)
 export const RESEARCH = {
     dropRate: { name: '드랍 감지기', desc: '파츠 드랍 확률 +1%p', per: 0.01, max: 3, stars: [5, 8, 12] },

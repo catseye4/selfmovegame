@@ -25,8 +25,8 @@ def run(ctx):
         return { n: a.length, same: JSON.stringify(a) === JSON.stringify(b2), diff: JSON.stringify(a) !== JSON.stringify(other),
             sorted: a.every((e, i) => i === 0 || e.at >= a[i - 1].at), first: a[0].text, last: a[a.length - 1].kind,
             zones: Object.keys(D.DISPATCH_ZONES).length };""")
-    ctx.check(st['n'] == 10 and st['same'] and st['diff'] and st['sorted'] and st['last'] == 'done' and st['zones'] == 4,
-              '파견 기록: 출발·진입·6개·귀환 10줄, 같은 파견은 늘 같은 기록, 구역 4개 설정', str(st))
+    ctx.check(st['n'] == 10 and st['same'] and st['diff'] and st['sorted'] and st['last'] == 'done' and st['zones'] == 5,
+              '파견 기록: 출발·진입·6개·귀환 10줄, 같은 파견은 늘 같은 기록, 구역 5개 설정 (1~4 + 6)', str(st))
 
     g.page.click('#btn-menu-support-v2')
     g.wait(300)
@@ -44,8 +44,8 @@ def run(ctx):
     ctx.check(st['time'].startswith('1:') or st['time'].startswith('2:'), '남은 시간 표시 (3시간 중 1시간 지남 → 약 2시간)', str(st))
     ctx.check(30 < st['bar'] < 37 and st['steps'] >= 2 and st['log'] >= 1 and st['reward'] == '3,000' and st['rig'],
               '진행 막대 1/3 · 단계 눈금 · 기록 · 예상 보상(구역 2 DM 3,000) · 캐릭터 그림', str(st))
-    ctx.check(st['zones'] == 4 and st['locked'] == 0 and 'mech' not in st['chars'] and 'frost' not in st['chars'] and 'hero' in st['chars'],
-              '새 파견: 구역 4개, 출전 중·파견 중 캐릭터는 목록에 없음', str(st))
+    ctx.check(st['zones'] == 5 and st['locked'] == 1 and 'mech' not in st['chars'] and 'frost' not in st['chars'] and 'hero' in st['chars'],
+              '새 파견: 구역 5개(구역 6은 6-B 전이라 잠김), 출전 중·파견 중 캐릭터는 목록에 없음', str(st))
 
     # 배경이 흐르고 적이 다가와 맞붙음 (첫 적은 1.5~4.5초 뒤)
     st = g.js("""const s = document.querySelector('.v2-dsp');

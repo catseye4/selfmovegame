@@ -70,6 +70,7 @@ export class BattleEngine {
         this.monsterX = 150; // 캐릭터 초기 좌측 X 좌표
         this.playerHp = 0;
         this.maxPlayerHp = 0;
+        this.healTaken = 0;
         this.playerDps = 0;
         this.playerRange = 150;
         this.playerSpeed = 100;
@@ -154,12 +155,12 @@ export class BattleEngine {
         this.difficulty = difficultyUnlocked(progress.difficulty, progress) ? progress.difficulty : DEFAULT_DIFFICULTY;
         this.stage = this.growthStage(stageFor(stageById(progress.selectedStage || defaultStage(progress).id), this.difficulty));   // + 계정 연구 DM (growth.js)
         predecodeStageArt(this.stage);   // 이 스테이지 적 그림을 미리 풂 (enemies_v2.js — 처음 나올 때 멈칫하지 않게)
-        // 구역 배경 (ui_v2.css .v2-zone-2 ~ 4), 보스전은 경보 조명·불길 판 (.v2-stage-boss)
+        // 구역 배경 (ui_v2.css .v2-zone-2 ~ 4 · 6), 보스전은 경보 조명·불길 판 (.v2-stage-boss)
         // .v2-boss-rage(구역 4 보스 2페이즈)·.v2-crimson(구역 3 악마기사 소환 점멸)은 전투 중에 붙음
         const screen = document.getElementById('screen-battle-v2');
         screen?.classList.toggle('v2-stage-boss', !!this.stage.boss);
         if (screen) screen.dataset.difficulty = this.difficulty;   // HUD 난이도 표시 색 (ui_v2.css [data-difficulty])
-        [2, 3, 4].forEach(z => screen?.classList.toggle(`v2-zone-${z}`, this.stage.zone === z));
+        [2, 3, 4, 6].forEach(z => screen?.classList.toggle(`v2-zone-${z}`, this.stage.zone === z));
         screen?.classList.remove('v2-boss-rage', 'v2-crimson');
         this.maxDistance = this.stage.distance;
         this.spawnInterval = this.stage.enemy.spawn;
@@ -181,6 +182,8 @@ export class BattleEngine {
         this.knightTimer = 0;     // 구역 3: 심연의 문 개방 (악마기사 소환)
         this.knightWarned = false;
         this.ruins = [];          // 요새 잔해 (다시 걸으면 바닥과 함께 흘러 나감)
+        this.fontsSpawned = 0;    // 구역 6: 나온 축복 성수대 수 (stage.fonts, enemyField.js checkFonts)
+        this.blessTimer = 0;
         this.ruinHoldT = 0;       // 요새가 무너지는 동안 주인공이 멈춰 지켜보는 시간
         this.monsterX = 150;
         this.playerBaseHp = 5000;
@@ -226,6 +229,7 @@ export class BattleEngine {
         this.equippedArmId = equippedObjs.arm ? equippedObjs.arm.id : null;
         this.maxPlayerHp = stats.hp;
         this.playerHp = stats.hp;
+        this.healTaken = 0;       // 이번 전투에서 회복한 양 (player.js healPlayer — 구역 6 보스 '생명의 저울')
         this.playerDps = stats.dps;
         this.playerRange = stats.range;
         this.playerSpeed = stats.speed;
@@ -525,6 +529,7 @@ export class BattleEngine {
                 this.scrollHazards(dt);
                 this.scrollZones(dt);    // sets.js: 독안개·화염·웅덩이도 바닥과 함께
                 this.scrollKit(dt);      // kit.js: 2차 장판·움직이는 판정
+                this.scrollFonts(dt);    // enemyField.js: 구역 6 축복 성수대
                 if (this.corpses.length) this.scrollCorpses(dt);   // saint.js
             }
 
@@ -542,6 +547,7 @@ export class BattleEngine {
                 } else if (this.distanceTraveled >= this.stage.finalAt && !this.finalBaseSpawned) {
                     this.spawnFinalBase();
                 }
+                this.checkFonts();       // enemyField.js: 구역 6 축복 성수대 (stage.fonts)
             }
         }
     }

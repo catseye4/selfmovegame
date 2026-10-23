@@ -207,8 +207,7 @@ export const SaintMethods = {
         if (regen && this.overloadT <= 0 && this.playerHp > 0 && this.playerHp < this.maxPlayerHp) {
             const missing = 1 - this.playerHp / this.maxPlayerHp;
             const heal = this.maxPlayerHp * (regen.base + regen.k * missing) * dt;
-            this.playerHp = Math.min(this.maxPlayerHp, this.playerHp + heal);
-            monsterControllerV2.updateHpBar(this.playerHp, this.maxPlayerHp);
+            this.healPlayer(heal);
             this.stitchHealAcc = (this.stitchHealAcc || 0) + heal;
             this.stitchHealT = (this.stitchHealT || 0) + dt;
             if (this.stitchHealT >= 1) {

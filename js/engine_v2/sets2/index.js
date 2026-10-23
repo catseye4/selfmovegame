@@ -18,8 +18,12 @@ import { FROST_SETS2 } from './frostSets2.js';
 import { DIVER_SETS2 } from './diverSets2.js';
 import { SAINT_SETS2 } from './saintSets2.js';
 import { DOLL_SETS2 } from './dollSets2.js';
+import { ARCHITECT_BASE, ARCHITECT_SETS2 } from './architectSets2.js';
+import { BROADCASTER_BASE, BROADCASTER_SETS2 } from './broadcasterSets2.js';
 
-export const PACKS = [KAIJU_SETS2, CHIMERA_SETS2, MECH_SETS2, HERO_SETS2, FROST_SETS2, DIVER_SETS2, SAINT_SETS2, DOLL_SETS2];
+// 새 캐릭터 5·6 (D-079)은 기본·강화 파츠도 묶음(…_BASE)으로 — 세트보다 먼저 (연구소 카드 순서)
+export const PACKS = [KAIJU_SETS2, CHIMERA_SETS2, MECH_SETS2, HERO_SETS2, FROST_SETS2, DIVER_SETS2, SAINT_SETS2, DOLL_SETS2,
+    ARCHITECT_BASE, ARCHITECT_SETS2, BROADCASTER_BASE, BROADCASTER_SETS2];
 
 let done = false;
 export function registerAllSets2() {

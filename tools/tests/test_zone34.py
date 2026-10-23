@@ -26,11 +26,11 @@ def run(ctx):
     g = ctx.game(fresh=True)
     g.enter_v2()
 
-    # 구역 탭 4개, 구역 3은 2-B 전까지 잠김 → 구역 1·2를 깨면 열리고 누르면 3-1
+    # 구역 탭 5개(1~4 + 6, D-078), 구역 3은 2-B 전까지 잠김 → 구역 1·2를 깨면 열리고 누르면 3-1
     st = g.js("""const tabs = [...document.querySelectorAll('#menu-zones-v2 .v2-zonetab')];
         const z3 = tabs.find(t => t.dataset.zone === 'ch3'); z3.click();
         return { n: tabs.length, locked: z3.classList.contains('is-locked'), foot: document.getElementById('menu-map-foot-v2').textContent };""")
-    ctx.check(st['n'] == 4 and st['locked'] and '2-B' in st['foot'], '구역 탭 4개: 구역 3은 2-B 전까지 잠김', str(st))
+    ctx.check(st['n'] == 5 and st['locked'] and '2-B' in st['foot'], '구역 탭 5개: 구역 3은 2-B 전까지 잠김', str(st))
     g.js(CLEAR.replace('IDS', '[1, 2]') + "window.madOverlordGameV2.menuController.renderStages();")
     st = g.js("""document.querySelector('#menu-zones-v2 .v2-zonetab[data-zone="ch3"]').click();
         const S = await import('/js/engine_v2/stages_v2.js');
