@@ -1,10 +1,13 @@
 /* ==========================================================================
-   PROJECT: MAD OVERLORD // 앱 업데이트 확인 (D-074)
-   Android 앱(Capacitor)에서만: GitHub 릴리스의 최신 버전(태그 vX.Y.Z)을 읽어 지금 버전(version_v2.js)보다 새것이면
+   PROJECT: MAD OVERLORD // 앱 업데이트 확인 (D-074, NAS D-081)
+   Android 앱(Capacitor)에서만: 업데이트 정보(JSON)를 읽어 지금 버전(version_v2.js)보다 새것이면
    "새 버전" 창 → [업데이트] → 앱 안에서 APK를 받고(진행 막대) Android 설치 화면을 연다 (네이티브 플러그인 AppUpdate).
-   - 릴리스 이름이나 설명에 [필수]가 있으면 [나중에] 없이 업데이트만.
-   - 인터넷이 없거나 릴리스가 없으면 조용히 넘어감 (설정 창의 "업데이트 확인"은 결과를 알려 줌).
-   - 시험용: window.madOverlordUpdateFeed에 다른 주소를 넣으면 그 JSON(GitHub API와 같은 모양)을 읽는다.
+   - 어디서 읽나: window.madOverlordUpdateFeed (app/update.local.json의 feed를 build_www.py가 넣음 — NAS의 latest.json),
+     없으면 GitHub 최신 릴리스. 앱 안에서는 네이티브(AppUpdate.fetchText)로 읽어 CORS에 걸리지 않음.
+   - NAS 모양 (app/release.py가 씀): { version, build, name, notes, required, file(latest.json 기준 상대 주소)|url, size, sha256 }
+     GitHub 모양: 태그 vX.Y.Z + APK 첨부, 이름·설명에 [필수].
+   - 새것 = 버전이 높거나, 버전이 같고 빌드가 높음. required면 [나중에] 없이 업데이트만.
+   - 인터넷이 없거나 정보가 없으면 조용히 넘어감 (설정 창의 "업데이트 확인"은 결과를 알려 줌).
    ========================================================================== */
 
 import { VERSION, BUILD, RELEASE_REPO } from '../version_v2.js';
@@ -28,19 +31,21 @@ export function compareVersions(a, b) {
     return 0;
 }
 
-/** 최신 릴리스 { version, name, notes, url, size, required } 또는 null (릴리스 없음·인터넷 없음) */
-export async function fetchLatest() {
-    const feed = window.madOverlordUpdateFeed || `https://api.github.com/repos/${RELEASE_REPO}/releases/latest`;
-    const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
-    try {
-        const res = await fetch(feed, { signal: ctl.signal, headers: { Accept: 'application/vnd.github+json' }, cache: 'no-store' });
-        if (!res.ok) return null;
-        const r = await res.json();
+/** latest가 지금 앱보다 새것인가 — 버전이 높거나, 버전이 같고 빌드가 높음 */
+export function isNewer(latest, version = VERSION, build = BUILD) {
+    const d = compareVersions(latest.version, version);
+    return d > 0 || (d === 0 && (latest.build || 0) > build);
+}
+
+/** 업데이트 정보 JSON → { version, build, name, notes, url, fileName, size, required } 또는 null. feed = 그 JSON의 주소 */
+export function parseFeed(r, feed) {
+    if (!r || typeof r !== 'object') return null;
+    if (r.tag_name) {   // GitHub 최신 릴리스
         const apk = (r.assets || []).find(a => /\.apk$/i.test(a.name));
-        if (!r.tag_name || !apk) return null;
+        if (!apk) return null;
         return {
             version: String(r.tag_name).replace(/^v/i, ''),
+            build: 0,
             name: r.name || r.tag_name,
             notes: String(r.body || '').trim(),
             url: apk.browser_download_url,
@@ -48,10 +53,55 @@ export async function fetchLatest() {
             size: apk.size || 0,
             required: /\[필수\]/.test(`${r.name || ''} ${r.body || ''}`)
         };
+    }
+    if (!r.version || !(r.file || r.url)) return null;   // NAS latest.json
+    let url;
+    try { url = new URL(r.url || r.file, feed).href; } catch { return null; }
+    return {
+        version: String(r.version).replace(/^v/i, ''),
+        build: parseInt(r.build, 10) || 0,
+        name: r.name || `매드 오버로드 ${r.version}`,
+        notes: String(r.notes || '').trim(),
+        url,
+        fileName: url.split('/').pop().split('?')[0],
+        size: r.size || 0,
+        required: !!r.required
+    };
+}
+
+/** 주소의 글을 읽음 — 앱이면 네이티브(CORS 없음), 아니면 fetch. 실패하면 null */
+async function readText(url, headers) {
+    const plugin = window.Capacitor?.Plugins?.AppUpdate;
+    if (isApp() && plugin?.fetchText) {
+        try {
+            const r = await plugin.fetchText({ url, timeout: TIMEOUT_MS, headers });
+            return r.status >= 200 && r.status < 300 ? r.text : null;
+        } catch {
+            return null;   // 옛 앱(fetchText 없음)이면 아래 fetch로
+        }
+    }
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
+    try {
+        const res = await fetch(url, { signal: ctl.signal, headers, cache: 'no-store' });
+        return res.ok ? await res.text() : null;
     } catch {
         return null;
     } finally {
         clearTimeout(timer);
+    }
+}
+
+/** 최신 릴리스 { version, build, name, notes, url, size, required } 또는 null (정보 없음·인터넷 없음) */
+export async function fetchLatest() {
+    const feed = window.madOverlordUpdateFeed || `https://api.github.com/repos/${RELEASE_REPO}/releases/latest`;
+    const headers = /api\.github\.com/.test(feed) ? { Accept: 'application/vnd.github+json' } : {};
+    const text = await readText(`${feed}${feed.includes('?') ? '&' : '?'}t=${Date.now()}`, headers);   // 캐시를 거치지 않게
+    if (!text) return null;
+    try {
+        return parseFeed(JSON.parse(text), feed);
+    } catch {
+        return null;
     }
 }
 
@@ -67,8 +117,8 @@ export async function checkForUpdate({ silent = true, onStatus } = {}) {
         onStatus?.('업데이트 정보를 받을 수 없음 (인터넷·릴리스 확인)');
         return 'offline';
     }
-    if (compareVersions(latest.version, VERSION) <= 0) {
-        onStatus?.(`최신 버전입니다 (${VERSION})`);
+    if (!isNewer(latest)) {
+        onStatus?.(`최신 버전입니다 (${VERSION} · 빌드 ${BUILD})`);
         return 'latest';
     }
     onStatus?.(`새 버전 ${latest.version}이 있습니다`);
@@ -98,7 +148,7 @@ function showUpdateDialog(info) {
                 <button class="v2-btn" data-act="go">업데이트 ${mb(info.size)}</button>
             </div>
         </div>`;
-    el.querySelector('.is-new').textContent = info.version;
+    el.querySelector('.is-new').textContent = info.version + (info.build ? ` (빌드 ${info.build})` : '');
     el.querySelector('.v2-update__notes').textContent = notes || info.name;
     document.body.appendChild(el);
     const bar = el.querySelector('.v2-update__bar');

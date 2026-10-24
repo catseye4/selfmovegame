@@ -16,7 +16,13 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
 
 /**
  * 앱 업데이트 (D-074) — js/ui_v2/appUpdate_v2.js 에서 window.Capacitor.Plugins.AppUpdate 로 부름.
@@ -24,11 +30,58 @@ import java.io.File;
  * 0.5초마다 'progress' { done, total } 를 알리고, 다 받으면 Android 설치 화면을 연다 → { status: 'installing' }.
  * 이 앱에 "알 수 없는 앱 설치" 권한이 없으면 그 설정 화면을 열고 { status: 'needPermission' }.
  * url이 file:// 이면 내려받지 않고 그 파일로 바로 설치 화면 (에뮬레이터 시험용).
+ * fetchText({ url, timeout, headers }): 업데이트 정보(NAS latest.json)를 읽어 { status, text } (D-081) —
+ * WebView의 fetch는 다른 주소라 CORS에 막히므로 여기서 읽음. 256KB까지, 넘거나 실패하면 reject.
  */
 @CapacitorPlugin(name = "AppUpdate")
 public class AppUpdatePlugin extends Plugin {
     private static final String APK_MIME = "application/vnd.android.package-archive";
     private final Handler main = new Handler(Looper.getMainLooper());
+
+    private static final int MAX_TEXT = 256 * 1024;
+
+    @PluginMethod
+    public void fetchText(PluginCall call) {
+        String url = call.getString("url");
+        if (url == null || !(url.startsWith("https://") || url.startsWith("http://"))) {
+            call.reject("url이 없음");
+            return;
+        }
+        int timeout = call.getInt("timeout", 8000);
+        JSObject headers = call.getObject("headers", new JSObject());
+        new Thread(() -> {
+            HttpURLConnection con = null;
+            try {
+                con = (HttpURLConnection) new URL(url).openConnection();
+                con.setConnectTimeout(timeout);
+                con.setReadTimeout(timeout);
+                con.setUseCaches(false);
+                for (Iterator<String> it = headers.keys(); it.hasNext(); ) {
+                    String k = it.next();
+                    con.setRequestProperty(k, headers.getString(k));
+                }
+                int status = con.getResponseCode();
+                InputStream in = status < 400 ? con.getInputStream() : con.getErrorStream();
+                ByteArrayOutputStream buf = new ByteArrayOutputStream();
+                if (in != null) {
+                    byte[] b = new byte[8192];
+                    for (int n; (n = in.read(b)) > 0; ) {
+                        buf.write(b, 0, n);
+                        if (buf.size() > MAX_TEXT) throw new Exception("너무 큼");
+                    }
+                    in.close();
+                }
+                JSObject r = new JSObject();
+                r.put("status", status);
+                r.put("text", new String(buf.toByteArray(), StandardCharsets.UTF_8));
+                call.resolve(r);
+            } catch (Exception e) {
+                call.reject("읽지 못함: " + e.getMessage());
+            } finally {
+                if (con != null) con.disconnect();
+            }
+        }).start();
+    }
 
     @PluginMethod
     public void download(PluginCall call) {

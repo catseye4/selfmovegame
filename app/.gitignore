@@ -5,3 +5,5 @@ gradle_build.log
 gradle_build.err
 _drive_upload/
 dist/
+# NAS 업데이트 주소·폴더 (D-081) — 공개 저장소라 올리지 않음, 틀은 update.example.json
+update.local.json

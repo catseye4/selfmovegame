@@ -8,8 +8,10 @@ Android 앱(Capacitor WebView)에 넣을 게임 파일 모으기 → app/www/ (D
 - index.html 에는 앱용 두 줄을 넣는다: 모드 고르는 첫 화면을 숨기고 v2(디커플드 엔진)로 바로 들어감.
 - 게임 코드는 상대 경로만 쓰므로(fetch·import) 고칠 것이 없다.
 - 버전: js/version_v2.js의 VERSION·BUILD로 android/app/build.gradle의 versionName·versionCode를 맞춘다 (D-074).
-- 시험용: python build_www.py --feed https://localhost/test_feed.json → 앱이 그 주소에서 업데이트 정보를 읽음.
+- 업데이트 정보 주소 (D-081): app/update.local.json(저장소에 올리지 않음)의 "feed"(NAS의 latest.json)를 앱에 넣는다.
+  없으면 넣지 않음 → 앱은 GitHub 최신 릴리스를 읽음. --feed <주소> 또는 --config <설정 파일>로 바꿀 수 있음(시험용).
 """
+import json
 import os
 import re
 import shutil
@@ -47,6 +49,16 @@ def sync_gradle(version, build):
         open(path, 'w', encoding='utf-8').write(g2)
 
 
+def update_feed():
+    """앱에 넣을 업데이트 정보 주소 — --feed > 설정 파일(--config, 기본 update.local.json)의 feed > 없음"""
+    if '--feed' in sys.argv:
+        return sys.argv[sys.argv.index('--feed') + 1]
+    cfg = sys.argv[sys.argv.index('--config') + 1] if '--config' in sys.argv else os.path.join(HERE, 'update.local.json')
+    if os.path.exists(cfg):
+        return json.load(open(cfg, encoding='utf-8')).get('feed') or None
+    return None
+
+
 def keep(name):
     return not name.endswith(SKIP_SUFFIX)
 
@@ -75,15 +87,17 @@ def main():
     if '</head>' not in html or '</body>' not in html:
         sys.exit('index.html에 </head> 또는 </body>가 없음')
     head = APP_HEAD
-    if '--feed' in sys.argv:   # 시험용 업데이트 정보 주소 (appUpdate_v2.js가 GitHub 대신 읽음)
-        head += f'<script>window.madOverlordUpdateFeed = {sys.argv[sys.argv.index("--feed") + 1]!r};</script>'
+    feed = update_feed()
+    if feed:   # 업데이트 정보 주소 (appUpdate_v2.js가 GitHub 대신 읽음)
+        head += f'<script>window.madOverlordUpdateFeed = {json.dumps(feed)};</script>'
     html = html.replace('</head>', head + '\n</head>', 1)
     i = html.rindex('</body>')
     html = html[:i] + APP_BOOT + '\n' + html[i:]
     open(index, 'w', encoding='utf-8').write(html)
     version, build = read_version()
     sync_gradle(version, build)
-    print(f'www: 파일 {count}개, {total / 1048576:.1f} MB → {OUT} · 버전 {version} (빌드 {build})')
+    print(f'www: 파일 {count}개, {total / 1048576:.1f} MB → {OUT} · 버전 {version} (빌드 {build})'
+          f' · 업데이트 정보: {"설정한 주소" if feed else "GitHub 릴리스"}')
 
 
 if __name__ == '__main__':
