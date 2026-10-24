@@ -3,12 +3,13 @@
    전투 엔진(battle_v2.js)이 알맞은 순간에 부르는 화면 연출을 모았다. 전투 규칙은 건드리지 않는다.
    - intro()          : 출격 인트로 (레터박스 + 작전명 카드 + SORTIE!) → HUD 등장
    - warning(kind)    : 거점 출현 경고 (붉은 테두리 + 경고 줄무늬 + WARNING / DANGER)
+   - bossCard(t, sub) : 보스 등장 카드 (BOSS + 이름 + 주요 기술, 짧은 느린 화면 + 흔들림, 2026-10-24)
    - ultCutIn(...)    : 필살기 컷인 (화면 어둡게 + 집중선 + 사선 띠 초상화) + 슬로모션
    - baseDestroyed()  : 거점 파괴 (연쇄 폭발 → 대폭발, 흔들림, 섬광, 슬로모션, 별 획득)
    - overload(sec)    : 내구도 0 → 과부하 (붉은 섬광, OVERLOAD 문구, 긴급 수리 중 깜빡임)
    - timeOver()       : 제한 시간 초과 (기체 정지, TIME OVER) → 결과 화면
    - playerDown()     : 캐릭터가 쓰러짐 (지금은 쓰지 않음 — 주인공은 죽지 않음, D-028)
-   - showResult()     : 승리/패배 결과 화면 (별 도장, 전투 기록, 보상 카운트업, 다음 행동 버튼)
+   - showResult()     : 승리/패배 결과 화면 (별 도장, 전투 기록, 보상 카운트업, 다음 행동 버튼, 패배면 원인·할 일 — runReport.js)
    - setLowHp(on)     : 체력 30% 미만 화면 가장자리 붉은 경고
    효과음: sfx(이름) → 사운드 매니저(audio/sound_v2.js). 저체력 심장 박동은 반복 재생.
    화면 흔들림은 설정(settings_v2.js의 shake)을 따른다.
@@ -51,6 +52,29 @@ const diffTag = stage => {
     return d.id === 'normal' ? '' : ` · <span class="v2-diffbadge" style="--diff:${d.color}">${d.name}</span>${mut ? ` · 변이: ${mut.name}` : ''}`;
 };
 const clock = sec => `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
+// 패배 원인 (runReport.js): 구간 막대(가장 오래 걸린 구간 강조) + 원인 한 줄 + 할 일
+const reportHtml = rep => {
+    if (!rep) return '<p class="v2-result__tip">연구소에서 파츠를 사거나 강화해 더 빨리 부순 뒤 다시 도전하세요.</p>';
+    const total = rep.segments.reduce((a, s) => a + s.sec, 0) || 1;
+    const bar = rep.segments.map((s, i) => {
+        const k = s.sec / total;
+        return `<i class="is-${s.key}${i === rep.longest ? ' is-long' : ''}${k < 0.13 ? ' is-thin' : ''}" style="flex:${k.toFixed(3)}">`
+            + `<b>${s.label}</b><span>${clock(s.sec)}</span></i>`;
+    }).join('');
+    return `<div class="v2-result__why">
+        <p class="v2-result__cause">패배 원인 · <b>${rep.cause.text}</b></p>
+        <div class="v2-why-bar">${bar}</div>
+        <ul class="v2-result__tips">${rep.tips.map(t => `<li>${t}</li>`).join('')}</ul>
+    </div>`;
+};
+// 보스 등장 카드의 주요 기술 (enemies_v2.js 보스)
+const BOSS_SKILLS = {
+    guardian: '방패 강타 · 심판의 일격 · 결계',
+    scrapking: '자석 끌어당기기 · 고철 낙하',
+    archbishop: '천상의 심판 · 악마병 소환 · 심연의 문',
+    oculus: '심연의 파동 · 유전자 붕괴 · 극한의 변이',
+    orbian: '단죄의 빛 · 생명의 저울 · 파문의 종'
+};
 const INTRO_MS = { card: 150, sortie: 1750, reveal: 2150, end: 2700 };
 const FB = 58;   // 지면 높이 (bottom px)
 
@@ -85,6 +109,7 @@ export class BattleDirector {
         if (!this.attach()) return;
         this.token += 1;
         this.frame.querySelectorAll('.v2-fx-layer').forEach(n => n.remove());
+        document.querySelectorAll('#screen-battle-v2 .v2-coach').forEach(n => n.remove());   // 첫 출격 안내 말풍선 (coach_v2.js)
         this.frame.classList.remove('v2-intro', 'v2-lowhp', 'v2-alert', 'v2-ending', 'v2-gas');
         this.lowHp = false;
         sound.stopLoop('low_hp', 0.1);
@@ -168,6 +193,29 @@ export class BattleDirector {
         this.frame.classList.remove('v2-alert');
         el.classList.add('is-out');
         await wait(300);
+        el.remove();
+    }
+
+    /** 보스 등장 카드: BOSS + 이름 + 주요 기술 + sub(승리 조건), 0.9초 느린 화면 + 흔들림. unit = 적 종류 이름 */
+    async bossCard(unit, t, sub) {
+        if (!this.attach()) return;
+        const token = this.token;
+        const el = this.layer('v2-bosscard', `
+            <div class="v2-bosscard__band">
+                <small>BOSS</small>
+                <strong>${t.name}</strong>
+                ${BOSS_SKILLS[unit] ? `<em>${BOSS_SKILLS[unit]}</em>` : ''}
+                <span>${sub || ''}</span>
+            </div>`);
+        this.frame.classList.add('v2-alert');
+        this.sfx('warning_danger');
+        this.shake(10, 500);
+        gameTime.slowMo(0.35, 0.9);
+        await wait(2600);
+        if (!this.alive(token)) return;
+        this.frame.classList.remove('v2-alert');
+        el.classList.add('is-out');
+        await wait(350);
         el.remove();
     }
 
@@ -406,6 +454,7 @@ export class BattleDirector {
      */
     showResult(r, onAction) {
         if (!this.attach()) return;
+        document.querySelectorAll('#screen-battle-v2 .v2-coach').forEach(n => n.remove());   // 결과 화면을 가리지 않게
         const token = this.token;
         const mm = String(Math.floor(r.time / 60)).padStart(2, '0');
         const ss = String(Math.floor(r.time % 60)).padStart(2, '0');
@@ -438,7 +487,7 @@ export class BattleDirector {
                 </dl>
                 ${lootHtml(r.loot)}
                 ${r.unlocked ? `<p class="v2-result__unlock" style="--diff:${r.unlocked.color}">${icon('star', 16)} <b>${r.unlocked.name}</b> 난이도가 열렸습니다 · 파츠 강화 한도 Lv${r.unlocked.maxLevel}</p>` : ''}
-                ${r.victory ? '' : '<p class="v2-result__tip">연구소에서 파츠를 사거나 강화해 더 빨리 부순 뒤 다시 도전하세요.</p>'}
+                ${r.victory ? '' : reportHtml(r.report)}
                 <div class="v2-result__actions">
                     ${r.next ? `<button class="v2-btn v2-btn--primary" data-act="next">${icon('play', 16)} 다음 ${r.next.id}</button>` : ''}
                     <button class="v2-btn ${r.next ? 'v2-btn--ghost' : 'v2-btn--primary'}" data-act="retry">${r.next ? '' : icon('play', 16)} ${r.victory ? '다시 출격' : '재도전'}</button>

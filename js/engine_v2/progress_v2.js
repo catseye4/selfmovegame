@@ -49,6 +49,7 @@ class Progress {
         this.selectedStage = null;   // 메인 화면에서 고른 스테이지 (저장)
         this.character = DEFAULT_CHARACTER;   // 선택창에서 고른 캐릭터 (저장)
         this.loadouts = {};                   // 캐릭터별 마지막 장착 (저장)
+        this.tips = new Set();                // 본 첫 출격 안내 id (저장, coach_v2.js)
         Object.assign(this, emptyGrowth());   // 파츠 등급·조각·코어·스킬 레벨·모듈·연구·별 사용·파견 (저장)
         this.loaded = false;
         this.saveTimer = null;
@@ -79,6 +80,7 @@ class Progress {
             this.selectedStage = data.selectedStage || null;
             if (data.difficulty && difficultyUnlocked(data.difficulty, this)) this.difficulty = difficultyOf(data.difficulty).id;
             this.loadouts = { ...(data.loadouts || {}) };
+            (data.tips || []).forEach(t => this.tips.add(t));
             this.loadGrowth(data);
         }
         SLOTS.forEach(slot => this.owned.add(gameState.equippedParts[slot]));   // 장착 중인 파츠는 보유
@@ -90,6 +92,16 @@ class Progress {
         gameState.cartParts = { ...gameState.equippedParts };
         gameState.subscribe(() => this.saveSoon());
         this.save();
+    }
+
+    /** 첫 출격 안내 (coach_v2.js): 본 적 있는가 / 봤다고 저장 */
+    hasTip(id) {
+        return this.tips.has(id);
+    }
+
+    markTip(id) {
+        this.tips.add(id);
+        this.saveSoon();
     }
 
     saveSoon() {
@@ -114,6 +126,7 @@ class Progress {
             selectedStage: this.selectedStage,
             character: this.character,
             loadouts: this.loadouts,
+            tips: [...this.tips],
             ...this.growthData()
         };
         try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* 저장 불가 환경: 이번 실행에서만 유지 */ }

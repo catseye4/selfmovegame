@@ -15,6 +15,7 @@ import { monsterControllerV2 } from '../engine_v2/monster_v2.js';
 import { SLOT_KEYS } from '../engine_v2/skills_v2.js';
 import { sound } from '../engine_v2/audio/sound_v2.js';
 import { openSettings } from './settingsPanel_v2.js';
+import { coach } from './coach_v2.js';
 import { difficultyOf, difficultyOfStage } from '../engine_v2/difficulty_v2.js';
 
 const FACTION_COLOR = { mech: '#3ee6ff', kaiju: '#a0ff32', hero: '#c86eff', chimera: '#ff9628', diver: '#3fe0c8', saint: '#ff4d6d', frost: '#7fd4ff', doll: '#5ae6f0', architect: '#ff9a2e', broadcaster: '#ff50aa' };
@@ -262,7 +263,10 @@ export class BattleHud {
             const cls = `${st.ready}${st.hasTarget}`;
             this.set(`st_${slot}`, cls, () => {
                 // 쿨다운/게이지가 막 찼을 때 알림음 (전투 시작 시점의 상태는 제외)
-                if (this.readyPrev[slot] === false && st.ready) sound.play(sk.ult ? 'ult_ready' : 'skill_ready');
+                if (this.readyPrev[slot] === false && st.ready) {
+                    sound.play(sk.ult ? 'ult_ready' : 'skill_ready');
+                    if (sk.ult) coach('battle_ult', btn);   // 처음 한 번: 필살기 안내
+                }
                 this.readyPrev[slot] = st.ready;
                 btn.classList.toggle('is-ready', st.ready && st.hasTarget);
                 btn.classList.toggle('is-blocked', st.ready && !st.hasTarget);

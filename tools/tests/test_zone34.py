@@ -41,15 +41,18 @@ def run(ctx):
               and st['after3'] == '4-1' and st['z4'], '2-B 클리어 → 구역 3 열림(3-1), 구역마다 7판, 3-B 다음 = 4-1, 구역 4는 잠김', str(st))
     g.shot('zone3_menu', '#screen-menu-v2')
 
-    # 3-1: 구역 3 배경(임시 색조), 왕국보병 = 경비병 그림 + 색조
+    # 3-1: 구역 3 배경(10-24 Gemini 그림), 왕국보병(자기 그림)
     battle_at(g, '3-1')
     place(g, 'soldier', 300)
     st = g.js("""const sc = document.getElementById('screen-battle-v2'); const e = b.enemies.find(e => e.type === 'soldier');
         return { zone: sc.classList.contains('v2-zone-3'), z2: sc.classList.contains('v2-zone-2'),
-                 sky: getComputedStyle(document.getElementById('bg-sky-v2')).filter,
+                 sky: getComputedStyle(document.getElementById('bg-sky-v2')).backgroundImage,
+                 city: getComputedStyle(document.getElementById('bg-city-v2')).backgroundImage,
+                 ground: getComputedStyle(document.getElementById('bg-ground-v2')).backgroundImage,
                  img: getComputedStyle(e.dom.querySelector('.v2-enemy__sprite')).backgroundImage, tint: e.dom.style.filter };""")
-    ctx.check(st['zone'] and not st['z2'] and 'sepia' in st['sky'] and 'soldier_walk' in st['img'] and 'sepia' not in st['tint'],
-              '구역 3 배경 색조 + 왕국보병(자기 그림, 색조 없음 — Gemini 그림 10-19)', str(st))
+    ctx.check(st['zone'] and not st['z2'] and 'bg3/city.webp' in st['sky'] and 'bg3/statues.webp' in st['city'] and 'bg3/cobble.webp' in st['ground']
+              and 'soldier_walk' in st['img'] and 'sepia' not in st['tint'],
+              '구역 3 배경 3층(도시·석상 띠·돌길, 10-24) + 왕국보병(자기 그림, 색조 없음)', str(st))
 
     # 심문소 통제탑: 420px 안이면 화살·마법
     g.js(CLEAN + "b.distanceTraveled = b.stage.midAt - 0.5; b.playerSpeed = 100;")
@@ -57,14 +60,15 @@ def run(ctx):
     g.js(CLEAN + "const t = b.enemies.find(e => e.isBuilding); b.monsterX = t.x - 100 - 380; m.setMonsterPosition(b.monsterX);")
     g.wait(2600)
     st = g.js("const t = b.enemies.find(e => e.isBuilding); return { art: t && t.art, hurt: b._hurt };")
-    ctx.check(st['art'] == 'tower' and st['hurt'] > 0, '심문소 통제탑(임시 통제탑 그림): 다가가면 화살·마법', str(st))
+    ctx.check(st['art'] == 'inqtower' and st['hurt'] > 0, '심문소 통제탑(그림 10-24): 다가가면 화살·마법', str(st))
     g.shot('zone3_tower', '#screen-battle-v2')
 
     # 신성 방패병: 방패 장벽 / 신관: 병사만 치유 (거점은 안 고침) / 마법사: 원소탄
     g.js("const t = b.enemies.find(e => e.isBuilding); if (t) { t.dom.remove(); b.enemies = b.enemies.filter(e => e !== t); } b.monsterX = 150; m.setMonsterPosition(150);")
     place(g, 'holyshield', 260, 'e.cd.build = 99;')
     g.wait(1600)
-    ctx.check(g.js("return b.enemies.some(e => e.isBarricade);"), '신성 방패병: 방패 장벽을 세움')
+    ctx.check(g.js("return b.enemies.some(e => e.isBarricade && e.art === 'shieldwall' && e.dom.style.backgroundImage.includes('shieldwall_1'));"),
+              '신성 방패병: 방패 장벽을 세움 (방패 장벽 그림 10-24)')
     place(g, 'priest', 300, "e.cd.skill = 2.5;"
           "const s = b.spawnMinion('soldier', { x: b.frontX() + 240, elite: false }); s.speed = 0; s.hp = s.maxHp * 0.3;"
           "const br = b.spawnBarricade(b.frontX() + 200, 1000); br.hp = 300;")
@@ -81,7 +85,7 @@ def run(ctx):
     g.js("b.midBaseSpawned = true; b.midBaseDestroyed = true; b.distanceTraveled = b.stage.finalAt - 0.5; b.playerSpeed = 100;")
     g.wait(1500)
     st = g.js("const f = b.enemies.find(e => e.isFinal); return { art: f && f.art, boss: !!b.boss };")
-    ctx.check(st['art'] == 'gate' and not st['boss'], '3-B: 대성당 정문(임시 관문 그림), 보스는 아직 없음', str(st))
+    ctx.check(st['art'] == 'cathedral' and not st['boss'], '3-B: 대성당 정문(그림 10-24), 보스는 아직 없음', str(st))
     g.js(CLEAN + "const f = b.enemies.find(e => e.isFinal); b.dealDamageToEnemy(f, f.hp + 10, false);")
     g.wait(3400)
     st = g.js("""return { phase: b.bossPhase, boss: b.boss && b.boss.type, star: b.starFlags[1], over: b.finalBaseDestroyed, active: b.isActive,
@@ -117,8 +121,11 @@ def run(ctx):
     battle_at(g, '4-1')
     st = g.js("""const sc = document.getElementById('screen-battle-v2');
         return { zone: sc.classList.contains('v2-zone-4'), z3: sc.classList.contains('v2-zone-3'),
-                 sky: getComputedStyle(document.getElementById('bg-sky-v2')).filter };""")
-    ctx.check(st['zone'] and not st['z3'] and 'hue-rotate' in st['sky'], '구역 4 배경 (보랏빛 임시)', str(st))
+                 sky: getComputedStyle(document.getElementById('bg-sky-v2')).backgroundImage,
+                 city: getComputedStyle(document.getElementById('bg-city-v2')).backgroundImage,
+                 ground: getComputedStyle(document.getElementById('bg-ground-v2')).backgroundImage };""")
+    ctx.check(st['zone'] and not st['z3'] and 'bg4/void.webp' in st['sky'] and 'bg4/pillars.webp' in st['city'] and 'bg4/flesh.webp' in st['ground'],
+              '구역 4 배경 3층 (보라 우주·알 띠·유기질 길, 10-24)', str(st))
     place(g, 'slime', 300)
     g.js("const s = b.enemies.find(e => e.type === 'slime'); b.dealDamageToEnemy(s, s.hp + 10, false);")
     g.wait(200)
@@ -132,7 +139,8 @@ def run(ctx):
     ctx.check(g.js("return b._hurt;") > 0, '포자 술사: 곡사 포자 피해')
     place(g, 'carapace', 260, 'e.cd.build = 99;')
     g.wait(1600)
-    ctx.check(g.js("return b.enemies.some(e => e.isBarricade);"), '생체 방패수: 갑각 장벽을 세움')
+    ctx.check(g.js("return b.enemies.some(e => e.isBarricade && e.art === 'chitin' && e.dom.style.backgroundImage.includes('chitin_1'));"),
+              '생체 방패수: 갑각 장벽을 세움 (갑각 장벽 그림 10-24)')
     g.js(CLEAN + "b.distanceTraveled = b.stage.midAt - 0.5; b.playerSpeed = 100;")
     g.wait(1200)
     g.js(CLEAN + "b.enemies.filter(e => e.isBarricade).forEach(e => e.dom.remove()); b.enemies = b.enemies.filter(e => !e.isBarricade);"
@@ -140,7 +148,7 @@ def run(ctx):
          "const t = b.enemies.find(e => e.isBuilding); b.monsterX = t.x - 100 - 260; m.setMonsterPosition(b.monsterX);")
     g.wait(3500)
     st = g.js("const t = b.enemies.find(e => e.isBuilding); return { art: t && t.art, hurt: b._hurt, puddles: b.hazards.length };")
-    ctx.check(st['art'] == 'bunker' and st['hurt'] > 0 and st['puddles'] >= 1, '박동하는 유기질 벽: 다가가면 독액 + 독 웅덩이', str(st))
+    ctx.check(st['art'] == 'fleshwall' and st['hurt'] > 0 and st['puddles'] >= 1, '박동하는 유기질 벽(그림 10-24): 다가가면 독액 + 독 웅덩이', str(st))
     g.shot('zone4_wall', '#screen-battle-v2')
 
     # 4-B: 고치(임시 소각탑) 앞에 오큘러스 → 유전자 붕괴(감속) · 심연의 파동 · 극한의 변이 · 돌진
@@ -148,7 +156,7 @@ def run(ctx):
     g.js("b.midBaseSpawned = true; b.midBaseDestroyed = true; b.distanceTraveled = b.stage.finalAt - 0.5; b.playerSpeed = 100;")
     g.wait(2600)
     st = g.js("const f = b.enemies.find(e => e.isFinal); return { art: f && f.art, boss: b.boss && b.boss.type };")
-    ctx.check(st['art'] == 'furnace' and st['boss'] == 'oculus', '4-B: 우주적 고치(임시 소각탑) · 관장자 오큘러스', str(st))
+    ctx.check(st['art'] == 'cocoon' and st['boss'] == 'oculus', '4-B: 우주적 고치(그림 10-24) · 관장자 오큘러스', str(st))
     g.js(CLEAN + "b.monsterX = 420; m.setMonsterPosition(420); b.boss.x = 700; b.boss.dom.style.left = '700px'; b.boss.speed = 0;"
          "b.pSlowT = 0; b.boss.cd.goo = 99; b.boss.cd.wave = 0;")
     g.wait(900)

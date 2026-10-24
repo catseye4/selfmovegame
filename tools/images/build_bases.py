@@ -4,7 +4,8 @@
 실행: 프로젝트 루트에서  python tools/images/build_bases.py
 
 입력: assets/sprites/stage/src/<그림>_{1,2,3}_gemini.png  (1 온전 / 2 파손 / 3 붕괴) — 그림 목록은 BASES
-출력: assets/sprites/stage/<그림>_{1,2,3}.png  (게임 크기의 2배 — 화면을 키워도 선명하게)
+출력: assets/sprites/stage/<그림>_{1,2,3}.png  (게임 크기의 2배 — 화면을 키워도 선명하게, 무손실 원본)
+      assets/sprites/stage/<그림>_{1,2,3}.webp (게임이 읽는 것 — 품질 90, PNG의 약 1/6 · 로딩 단축 2026-10-24)
       js/engine_v2/stageArt_v2.js  (게임 크기·바닥 위치·포구 위치, 자동 생성)
       tools/images/_out/bases_preview.png  (게임 1배 크기로 세 상태를 나란히)
 
@@ -44,8 +45,17 @@ BASES = {
     'gate': {'h': 220, 'key': 'magenta', 'blank': [(2, 445, 268, 493, 297), (2, 618, 410, 676, 441)]},
     'furnace': {'h': 280, 'key': 'magenta', 'top': 95, 'muzzle': (431, 96)},
     'barricade': {'h': 80, 'key': 'magenta', 'states': 2},
+    # 구역 3 · 성왕국 수도 (D-056, 그림 2026-10-24) — 심문소 통제탑(꼭대기 수정에서 화살·마법), 대성당 정문, 방패 장벽
+    'inqtower': {'h': 200, 'muzzle': (398, 178)},
+    'cathedral': {'h': 240},
+    'shieldwall': {'h': 66, 'states': 2},
+    # 구역 4 · 진화의 심연 (그림 2026-10-24, 노랑 배경) — 박동하는 유기질 벽(노즐에서 독액), 우주적 고치(촉수 끝은 높이에서 뺌), 갑각 장벽
+    'fleshwall': {'h': 230, 'key': 'yellow', 'muzzle': (262, 228)},
+    'cocoon': {'h': 270, 'key': 'yellow', 'top': 120},
+    'chitin': {'h': 66, 'key': 'yellow', 'states': 2},
 }
 OUT_SCALE = 2
+WEBP_Q = 90                 # 게임이 읽는 .webp 품질 (stageArt_v2.js src) — 이펙트 시트와 같음 (D-062)
 KEY_LO, KEY_HI = 12, 60     # 초록 정도(초록 - max(빨강, 파랑)): LO 이하 불투명, HI 이상 투명, 사이는 반투명
 MIN_PART = 40               # 이보다 작은 떨어진 덩어리는 잡티로 지움
 GROUND_B = 60               # 게임 바닥 높이 (bottom px, index.css .building-entity)
@@ -130,8 +140,10 @@ def build(name, spec):
             crop[:top - y0, :, 3] = (crop[:top - y0, :, 3] * fade).astype(np.uint8)
         img = shrink(crop, (w * OUT_SCALE, h * OUT_SCALE))
         path = OUT.format(name=name, n=n)
-        img.save(path, optimize=True)
-        out.append(path)
+        img.save(path, optimize=True)                       # 무손실 원본 (미리보기·다시 굽기용)
+        webp = path[:-4] + '.webp'                           # 게임용: WebP 품질 90 — PNG의 약 1/6 (로딩 단축, 2026-10-24)
+        img.save(webp, 'WEBP', quality=WEBP_Q, method=6)
+        out.append(webp)
     art = {'w': w, 'h': h, 'sink': round((y1 - ground) * s), 'src': out}
     if 'muzzle' in spec:
         mx, my = spec['muzzle']

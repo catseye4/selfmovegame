@@ -77,6 +77,8 @@ def main():
             for name in filenames:
                 if not keep(name):
                     continue
+                if name.endswith('.png') and name[:-4] + '.webp' in filenames and rel.replace(os.sep, '/').startswith('assets/sprites/stage'):
+                    continue   # 거점·배경은 게임이 .webp를 읽음 — 무손실 원본 PNG는 앱에 넣지 않음 (2026-10-24)
                 dst = os.path.join(OUT, rel, name)
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 shutil.copy2(os.path.join(dirpath, name), dst)

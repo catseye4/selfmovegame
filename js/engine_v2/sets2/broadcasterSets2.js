@@ -13,7 +13,8 @@ const WAVE = '255, 80, 170', PURPLE = '190, 110, 255', GREEN = '120, 255, 160', 
 const DOME = { cls: 'is-dome', w: 260, h: 150 };   // 정적의 장막 그림 (ui_v2.css)
 
 // ---- 기본·강화 파츠 (같은 스킬, 강화는 능력치·그림) ----
-const SONIC = { kind: 'pierce', n: 3, decay: 0.75, vfx: V.beam(WAVE, 12), hitVfx: V.sheet('sonic_pink', 80, { dur: 0.35 }) };
+const SONIC = { kind: 'pierce', n: 3, decay: 0.6,   // 밸런스 1차(10-24): 0.75 → 0.6
+    vfx: V.beam(WAVE, 12), hitVfx: V.sheet('sonic_pink', 80, { dur: 0.35 }) };
 export const BROADCASTER_BASE = basePackOf('broadcaster', {
     head: [
         { id: 'head_broadcaster', name: '안테나 헤드폰', cost: 400, src: 'head.png', stats: { hp: 550, dps: 80, range: 30, speed: 10 }, skill: 'bcEmergency',
@@ -28,16 +29,16 @@ export const BROADCASTER_BASE = basePackOf('broadcaster', {
             desc: '정적의 장막 (강화 코트: 가슴 스피커)' }
     ],
     arm: [
-        { id: 'arm_broadcaster', name: '분홍 소리굽쇠', cost: 500, src: 'armF.png', stats: { hp: 300, dps: 420, range: 280, speed: 0 }, skill: 'bcBurst', kitAttack: SONIC,
+        { id: 'arm_broadcaster', name: '분홍 소리굽쇠', cost: 500, src: 'armF.png', stats: { hp: 300, dps: 370, range: 280, speed: 0 }, skill: 'bcBurst', kitAttack: SONIC,
             desc: '기본 공격 공명 음파 (앞 적 셋 관통) · 공명 파열' },
-        { id: 'arm_broadcaster_up', name: '소리굽쇠 장치·스피커 대포', cost: 1100, src: 'armF_up.png', stats: { hp: 400, dps: 510, range: 310, speed: 0 }, skill: 'bcBurst', kitAttack: SONIC, up: true,
+        { id: 'arm_broadcaster_up', name: '소리굽쇠 장치·스피커 대포', cost: 1100, src: 'armF_up.png', stats: { hp: 400, dps: 450, range: 310, speed: 0 }, skill: 'bcBurst', kitAttack: SONIC, up: true,
             desc: '큰 소리굽쇠 장치 · 공명 파열' }
     ],
     leg: [
-        { id: 'leg_broadcaster', name: '운동화', cost: 400, src: 'legF.png', stats: { hp: 550, dps: 40, range: 0, speed: 100 },
+        { id: 'leg_broadcaster', name: '운동화', cost: 400, src: 'legF.png', stats: { hp: 550, dps: 40, range: 0, speed: 90 },
             desc: '잡음 차단: 침묵한 적에게 주는 피해 +20%',
             passive: { name: '잡음 차단', desc: '침묵한 적에게 주는 피해 +20%', target: [{ when: 'status', status: 'silence', dmg: 0.2 }] } },
-        { id: 'leg_broadcaster_up', name: '스피커 부츠', cost: 950, src: 'legF_up.png', stats: { hp: 750, dps: 60, range: 0, speed: 115 }, up: true,
+        { id: 'leg_broadcaster_up', name: '스피커 부츠', cost: 950, src: 'legF_up.png', stats: { hp: 750, dps: 60, range: 0, speed: 105 }, up: true,
             desc: '잡음 차단 (강화): 침묵한 적에게 주는 피해 +30%',
             passive: { name: '잡음 차단 (강화)', desc: '침묵한 적에게 주는 피해 +30%', target: [{ when: 'status', status: 'silence', dmg: 0.3 }] } }
     ]

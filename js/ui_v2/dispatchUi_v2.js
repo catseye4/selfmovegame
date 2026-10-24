@@ -34,34 +34,32 @@ const FIGHT = { hits: 2, maxSec: 2.2, gap: [5, 10] };   // 맞붙음: 타격 2�
 export const DISPATCH_ZONES = {
     1: {
         trek: `${ART}zone1_trek.webp`, back: `${ART}zone1_return.webp`,
-        far: [`${BG}bg/hall.png`, 'brightness(0.55) saturate(0.85)', 1280 / 715],
-        mid: [`${BG}bg/machinery.png`, 'brightness(0.66) saturate(0.85)'], ground: [`${BG}bg/floor.png`, 'brightness(0.85)'],
+        far: [`${BG}bg/hall.webp`, 'brightness(0.55) saturate(0.85)', 1280 / 715],
+        mid: [`${BG}bg/machinery.webp`, 'brightness(0.66) saturate(0.85)'], ground: [`${BG}bg/floor.webp`, 'brightness(0.85)'],
         enemies: ['guard', 'shield', 'tranq', 'shock', 'medic'],
         places: ['격리 복도', '배양 홀', '보안 검문소', '환풍 통로', '폐쇄된 실험동'],
         finds: ['버려진 실험 장비', '보안실 사물함', '시약 보관함', '부서진 경비 드론']
     },
     2: {
         trek: `${ART}zone2_trek.webp`, back: `${ART}zone2_return.webp`,
-        far: [`${BG}bg2/dump.png`, 'brightness(0.5) saturate(0.85)', 1280 / 715],
-        mid: [`${BG}bg2/shanty.png`, 'brightness(0.55) saturate(0.8)'], ground: [`${BG}bg2/ground.png`, 'none'],
+        far: [`${BG}bg2/dump.webp`, 'brightness(0.5) saturate(0.85)', 1280 / 715],
+        mid: [`${BG}bg2/shanty.webp`, 'brightness(0.55) saturate(0.8)'], ground: [`${BG}bg2/ground.webp`, 'none'],
         enemies: ['raider', 'builder', 'sludge', 'netter', 'mechanic'],
         places: ['고철 산', '판잣집 골목', '소각로 아래', '배수 터널', '버려진 화물 열차'],
         finds: ['쓸 만한 고철 더미', '약탈자 창고', '녹슨 금고', '버려진 화물칸']
     },
     3: {
         trek: `${ART}zone3_trek.webp`, back: `${ART}zone3_return.webp`,
-        far: [`${BG}bg/hall.png`, 'brightness(0.4) sepia(0.7) saturate(1.5) hue-rotate(-28deg)', 1280 / 715],
-        mid: [`${BG}bg/machinery.png`, 'brightness(0.45) sepia(0.8) saturate(1.2) hue-rotate(-20deg)'],
-        ground: [`${BG}bg/floor.png`, 'brightness(0.7) sepia(0.6) saturate(1.1) hue-rotate(-15deg)'],
+        far: [`${BG}bg3/city.webp`, 'brightness(0.62) saturate(0.95)', 1280 / 715],
+        mid: [`${BG}bg3/statues.webp`, 'brightness(0.6) saturate(0.85)'], ground: [`${BG}bg3/cobble.webp`, 'brightness(0.85)'],
         enemies: ['soldier', 'inquisitor', 'holyshield', 'priest', 'mage'],
         places: ['진홍의 순례길', '무너진 성벽', '대성당 앞 광장', '석상 회랑', '불 꺼진 시장'],
         finds: ['봉헌물 상자', '기사단 무기고', '금빛 장식함', '버려진 수레']
     },
     4: {
         trek: `${ART}zone4_trek.webp`, back: `${ART}zone4_return.webp`,
-        far: [`${BG}bg2/dump.png`, 'brightness(0.38) hue-rotate(230deg) saturate(1.4)', 1280 / 715],
-        mid: [`${BG}bg2/shanty.png`, 'brightness(0.4) hue-rotate(240deg) saturate(1.3)'],
-        ground: [`${BG}bg2/ground.png`, 'hue-rotate(250deg) saturate(1.3) brightness(0.8)'],
+        far: [`${BG}bg4/void.webp`, 'brightness(0.7) saturate(1)', 1280 / 715],
+        mid: [`${BG}bg4/pillars.webp`, 'brightness(0.5) saturate(0.9)'], ground: [`${BG}bg4/flesh.webp`, 'brightness(0.85)'],
         enemies: ['cultist', 'tentacle', 'carapace', 'sporer', 'slime'],
         places: ['꿈틀대는 요람', '포자 숲', '유기질 기둥 사이', '심연의 틈', '빛나는 웅덩이'],
         finds: ['빛나는 변이 결정', '굳은 고치', '심연 광맥', '버려진 연구 장비']
@@ -69,9 +67,9 @@ export const DISPATCH_ZONES = {
     // 구역 6 · 성왕국 변두리 (D-078): 파견 그림은 Gemini 전 (trek·back = null) — 그동안 전투 배경 3층을 잿빛으로
     6: {
         trek: null, back: null,
-        far: [`${BG}bg/hall.png`, 'brightness(0.38) grayscale(0.75) sepia(0.15) hue-rotate(190deg)', 1280 / 715],
-        mid: [`${BG}bg/machinery.png`, 'brightness(0.42) grayscale(0.85) sepia(0.1)'],
-        ground: [`${BG}bg/floor.png`, 'brightness(0.62) grayscale(0.7) sepia(0.15) hue-rotate(190deg)'],
+        far: [`${BG}bg/hall.webp`, 'brightness(0.38) grayscale(0.75) sepia(0.15) hue-rotate(190deg)', 1280 / 715],
+        mid: [`${BG}bg/machinery.webp`, 'brightness(0.42) grayscale(0.85) sepia(0.1)'],
+        ground: [`${BG}bg/floor.webp`, 'brightness(0.62) grayscale(0.7) sepia(0.15) hue-rotate(190deg)'],
         enemies: ['soldier', 'warden', 'shade', 'priest', 'tithe'],
         places: ['잿빛 빈민가', '잠긴 약창고', '헌금 광장', '사라진 사람들의 골목', '백색 병동 회랑'],
         finds: ['풀려난 약 상자', '헌금함 더미', '버려진 병상 담요', '금빛 성수 단지']

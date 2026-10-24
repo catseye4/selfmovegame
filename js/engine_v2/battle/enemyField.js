@@ -15,6 +15,7 @@ import { gameTime } from '../gameTime.js';
 import { sound } from '../audio/sound_v2.js';
 import { KAIJU_VFX, BATTLE_VFX, ZONE_VFX, ELITE_VFX } from '../vfx/vfxDefs.js';
 import { spawnEnemy, updateEnemy, pickType, killReward, ENEMY_TYPES, ELITE_AFFIXES } from '../enemies_v2.js';
+import { coach } from '../../ui_v2/coach_v2.js';
 import { icon } from '../../ui_v2/icons.js';
 import { KIT_STATUS_ICON, KIT_STATUS_TINT } from './kit.js';
 import { BASE_STATE, baseArt, baseArtName, baseSize, aimAt as aimOf, dressBase, setBaseState } from '../bases_v2.js';
@@ -116,7 +117,7 @@ export const EnemyMethods = {
     },
 
     spawnFont(x) {
-        const f = this.spawnBarricade(x, Math.round(FONT.hp * this.stage.enemy.hp), '✨ 축복 성수대 — 근처 적 피해 감소!');
+        const f = this.spawnBarricade(x, Math.round(FONT.hp * this.stage.enemy.hp), '✨ 축복 성수대 — 근처 적 피해 감소!', 'barricade');
         if (!f) return null;
         f.isFont = true;
         f.type = 'font';
@@ -281,6 +282,7 @@ export const EnemyMethods = {
             });
         } else {
             this.midBaseDestroyed = true;
+            (this.stats.marks ||= {}).midDown = this.stats.time;
             this.starFlags[0] = true;
             this.ruinHoldT = BASE_STATE.ruinHold;
             gameState.addDarkMatter(this.stage.reward.mid);
@@ -299,6 +301,7 @@ export const EnemyMethods = {
     /** 정문(최종 기지) 붕괴: 별 2·보상 → 잔해는 요새처럼 흘러감 → 잠시 뒤 보스 출현. 승리는 보스를 쓰러뜨릴 때 */
     openBossGate(gate) {
         this.bossPhase = true;
+        (this.stats.marks ||= {}).gateDown = this.stats.time;
         this.starFlags[1] = true;
         gameState.addDarkMatter(this.stage.reward.final);
         gate.isFinal = false;   // collapseBase가 요새 잔해처럼 바닥과 함께 흘려보냄
@@ -308,7 +311,7 @@ export const EnemyMethods = {
         const x = gate.x + (gate.size ? gate.size.w / 2 : 60) - 40;
         this.schedule(1.3, () => {
             if (!this.isActive || this.finalBaseDestroyed) return;
-            this.director.warning('final', `${unit.name} 출현 — 쓰러뜨리면 승리`);
+            this.director.bossCard(this.stage.boss.unit, unit, '쓰러뜨리면 승리');   // 보스 등장 카드 (battleDirector_v2.js)
             this.boss = this.spawnMinion(this.stage.boss.unit, { x, elite: false });   // 체력은 HUD 보스 막대 (battleHud_v2.js)
             this.knightTimer = 0;
             this.knightWarned = false;
@@ -560,8 +563,10 @@ export const EnemyMethods = {
     spawnMidBase() {
         if (this.midBaseSpawned || !this.domEnemies) return;
         this.midBaseSpawned = true;
+        (this.stats.marks ||= {}).midSeen = this.stats.time;   // 패배 원인 알려주기 (runReport.js)
         this.spawnBase('mid');
         this.director.warning('mid');
+        coach('battle_base', '#hud-timer-v2');   // 처음 한 번: 별·승리 조건·제한 시간 안내
         this.updateHud();
     },
 
@@ -569,12 +574,13 @@ export const EnemyMethods = {
     spawnFinalBase() {
         if (this.finalBaseSpawned || !this.domEnemies) return;
         this.finalBaseSpawned = true;
+        (this.stats.marks ||= {}).finalSeen = this.stats.time;
         const base = this.spawnBase('final');
 
         const boss = this.stage.boss;
         const name = boss && ENEMY_TYPES[boss.unit].name;
-        this.director.warning('final', !boss ? null
-            : boss.afterBase ? `최종 기지를 부수면 ${name}이(가) 나타난다` : `${name} 출현 — 최종 기지를 지키고 있다`);
+        if (boss && !boss.afterBase) this.director.bossCard(boss.unit, ENEMY_TYPES[boss.unit], '최종 기지를 지키고 있다 — 기지를 부수면 승리');
+        else this.director.warning('final', boss ? `최종 기지를 부수면 ${name}이(가) 나타난다` : null);
         sound.playBgm('boss', 0.8);
         // 보스전: 기지 앞에 보스 (구역 3은 기지를 부순 뒤 — openBossGate)
         if (boss && !boss.afterBase) this.boss = this.spawnMinion(boss.unit, { x: base.x - 70, elite: false });
@@ -661,13 +667,14 @@ export const EnemyMethods = {
     },
 
     // ---- 구역 2 장애물 ----
-    /** 바리케이드 (방벽병이 세움): 체력 있는 작은 벽 — 주인공·아군이 부숴야 지나감, 수리공이 고침 */
-    spawnBarricade(x, hp, label = '🚧 바리케이드!') {
+    /** 바리케이드 (방벽병이 세움): 체력 있는 작은 벽 — 주인공·아군이 부숴야 지나감, 수리공이 고침.
+     *  그림 = 챕터 art.barricade (구역 3 방패 장벽 · 구역 4 갑각 장벽), 없으면 구역 2 바리케이드 */
+    spawnBarricade(x, hp, label = '🚧 바리케이드!', art = (this.stage && this.stage.art && this.stage.art.barricade) || 'barricade') {
         if (!this.domEnemies) return null;
         const el = document.createElement('div');
         el.className = 'enemy-entity v2-barricade';
         el.style.left = `${x}px`;
-        dressBase(el, 'barricade', 'barricade');
+        dressBase(el, art, 'barricade');
         const track = document.createElement('div');
         track.className = 'enemy-hp-track';
         const bar = document.createElement('div');
@@ -677,8 +684,8 @@ export const EnemyMethods = {
         el.appendChild(track);
         this.domEnemies.appendChild(el);
         const b = {
-            id: `barricade_${Date.now()}_${Math.random()}`, type: 'barricade', isBarricade: true, art: 'barricade', artState: 0,
-            size: baseSize('barricade', 'mid'), x, hp, maxHp: hp, dps: 0, speed: 0, knockResist: true, reward: 0.5,
+            id: `barricade_${Date.now()}_${Math.random()}`, type: 'barricade', isBarricade: true, art, artState: 0,
+            size: baseSize(art, 'mid'), x, hp, maxHp: hp, dps: 0, speed: 0, knockResist: true, reward: 0.5,
             dom: el, hpBar: bar, baseFilter: '', t: { name: '바리케이드' }, cd: {}
         };
         this.enemies.push(b);

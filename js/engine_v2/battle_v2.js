@@ -29,12 +29,13 @@ import { HERO_VFX, MECH_VFX } from './vfx/vfxDefs.js';
 import { skillsForParts } from './skills_v2.js';
 import { BattleHud } from '../ui_v2/battleHud_v2.js';
 import { BattleDirector } from '../ui_v2/battleDirector_v2.js';
+import { coach } from '../ui_v2/coach_v2.js';
 import { sound } from './audio/sound_v2.js';
 import { progress } from './progress_v2.js';
 import { stageById, defaultStage, nextStageOf } from './stages_v2.js';
 import { stageFor, difficultyOf, difficultyUnlocked, nextDifficultyOf, FINAL_STAGE_ID, DEFAULT_DIFFICULTY } from './difficulty_v2.js';
 import { aimAt as aimOf } from './bases_v2.js';
-import { HERO, POPUP, FOOT_B } from './battle/tuning.js';
+import { HERO, POPUP, FOOT_B, OVERLOAD } from './battle/tuning.js';
 import { PlayerMethods } from './battle/player.js';
 import { AttackMethods, SKILL_AUTO_KEY } from './battle/attacks.js';
 import { EnemyMethods } from './battle/enemyField.js';
@@ -47,6 +48,7 @@ import { FrostMethods } from './battle/frost.js';
 import { DollMethods } from './battle/doll.js';
 import { GrowthBattleMethods } from './battle/growth.js';
 import { predecodeStageArt } from './enemies_v2.js';
+import { runReport } from './battle/runReport.js';
 
 export class BattleEngine {
     constructor() {
@@ -125,7 +127,7 @@ export class BattleEngine {
         this.onNavigate = null;                     // (화면 이름) => 화면 전환 (main_v2.js가 연결)
         this.runId = 0;
         this.cinematic = false;                     // 끝 연출 중: 입력/스킬 막음
-        this.stats = { kills: 0, time: 0, startDm: 0 };
+        this.stats = { kills: 0, time: 0, startDm: 0, marks: {} };
         this.popupSlots = new Map();
         this.buffs = {};
         this.zones = [];
@@ -214,7 +216,7 @@ export class BattleEngine {
         this.runId += 1;
         this.cinematic = false;
         this.ended = false;
-        this.stats = { kills: 0, time: 0, startDm: gameState.darkMatter };
+        this.stats = { kills: 0, time: 0, startDm: gameState.darkMatter, marks: {} };   // marks = 구간 시각 (runReport.js)
         gameTime.reset();
 
         // 현재 장착 파츠 스탯 불러오기
@@ -270,7 +272,10 @@ export class BattleEngine {
 
         // 출격 인트로 (레터박스 + 작전명 → SORTIE!) + 전투 배경음
         this.director.clear();
-        this.director.intro(this.stage);
+        const run = this.runId;
+        this.director.intro(this.stage).then(() => {   // 처음 한 번: 스킬 안내 (coach_v2.js)
+            if (this.isActive && this.runId === run) coach('battle_skills', '#battle-hud-v2 .v2-skills');
+        });
         sound.playBgm('battle');
 
         this.lastTime = performance.now();
@@ -422,13 +427,27 @@ export class BattleEngine {
             distance: Math.min(this.maxDistance, this.distanceTraveled),
             kills: this.stats.kills,
             time: this.stats.time,
-            dm: Math.max(0, gameState.darkMatter - this.stats.startDm)
+            dm: Math.max(0, gameState.darkMatter - this.stats.startDm),
+            report: victory ? null : this.runReport()   // 패배 원인·할 일 (runReport.js)
         };
         this.stopBattle();
         setTimeout(() => { if (!this.isActive) sound.playBgm('menu', 2.5); }, 1200);
         this.director.showResult(result, act => {
             if (act === 'next' && next) progress.selectStage(next.id);
             if (this.onNavigate) this.onNavigate(act === 'retry' || act === 'next' ? 'battle' : act);
+        });
+    }
+
+    /** 패배 원인 알려주기: 구간 시각 + 남은 거점·보스 체력 → runReport.js */
+    runReport() {
+        const fin = this.enemies.find(e => e.isFinal && e.isBuilding);
+        const boss = this.boss && this.boss.hp > 0 ? this.boss : null;
+        return runReport({
+            time: this.stats.time, marks: this.stats.marks || {},
+            finalPct: fin ? fin.hp / fin.maxHp : null,
+            bossPct: boss ? boss.hp / boss.maxHp : null, bossName: boss && boss.t && boss.t.name,
+            distance: Math.min(this.maxDistance, this.distanceTraveled), maxDistance: this.maxDistance,
+            overloads: this.stats.overloads || 0, overloadSec: OVERLOAD.sec
         });
     }
 

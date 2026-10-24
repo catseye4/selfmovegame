@@ -9,6 +9,7 @@ import { LabController } from './ui_v2/lab_v2.js';
 import { SelectController } from './ui_v2/select_v2.js';
 import { sound } from './engine_v2/audio/sound_v2.js';
 import { progress } from './engine_v2/progress_v2.js';
+import { coach } from './ui_v2/coach_v2.js';
 import { registerV2Parts } from './engine_v2/partsExtra_v2.js';
 import { registerAllSets2 } from './engine_v2/sets2/index.js';
 import { runLoading } from './ui_v2/loading_v2.js';
@@ -122,6 +123,8 @@ class GameRouterV2 {
         if (screenName === 'menu' || screenName === 'lab' || screenName === 'select') sound.playBgm('menu');
         if (screenName === 'menu') {
             this.menuController.updateDisplay();
+            // 처음 한 번: 전투를 한 판 해 본 뒤 연구소 안내 (coach_v2.js)
+            if (Object.keys(progress.stages).length) setTimeout(() => coach('menu_lab', '#btn-to-lab-v2'), 700);
         } else if (screenName === 'select') {
             this.selectController.render();
         } else if (screenName === 'lab') {

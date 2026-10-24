@@ -138,12 +138,12 @@ const MAP7 = [[-0.74, 0.56], [-0.48, 0.38], [-0.22, 0.2], [0.04, 0.0], [0.3, -0.
 // 구역 3: 성왕국 이단심문소 & 타락 기사단 (D-056, MD/구역3_설계안.md) — 7판(6 + 보스).
 // 요새(심문소 통제탑)는 다가오면 화살·마법을 쏨(defense.mid), 3-B는 정문(최종 기지)을 부수면 대주교가 나오고 대주교를 쓰러뜨려야 승리(afterBase),
 // 보스전 기믹 = 심연의 문 개방: 정문을 부순 뒤 knights.every초마다 악마기사(엘리트)
-// 그림은 Gemini 전까지 임시(구역 1 통제탑 · 구역 2 관문 + 색조, ui_v2.css .v2-zone-3)
+// 그림 (2026-10-24 Gemini): 심문소 통제탑 · 대성당 정문 · 방패 장벽 (stageArt_v2.js), 배경 ui_v2.css .v2-zone-3
 export const CHAPTER3 = {
     id: 'ch3',
     zone: 3,
     name: '구역 3 · 성왕국 수도: 진홍의 순례길',
-    art: { mid: 'tower', final: 'gate' },
+    art: { mid: 'inqtower', final: 'cathedral', barricade: 'shieldwall' },
     defense: { mid: { range: 420, every: 2.2, dmg: 24, color: '255, 214, 120', label: '🏹 화살·마법', hitFx: 'arrowHit' } },
     stages: [
         {
@@ -194,12 +194,12 @@ export const CHAPTER3 = {
 
 // 구역 4: 별의 사도들과 실패한 진화체들 (D-056, MD/구역4_설계안.md) — 7판(6 + 보스).
 // 요새(박동하는 유기질 벽)는 다가오면 독액(피해 + 독 웅덩이), 4-B 보스 오큘러스는 체력 50%에서 2페이즈(enemies_v2.js rage)
-// 그림은 Gemini 전까지 임시(구역 1 벙커 · 구역 2 소각탑 + 색조, ui_v2.css .v2-zone-4)
+// 그림 (2026-10-24 Gemini, 노랑 배경): 유기질 벽 · 우주적 고치 · 갑각 장벽 (stageArt_v2.js), 배경 ui_v2.css .v2-zone-4
 export const CHAPTER4 = {
     id: 'ch4',
     zone: 4,
     name: '구역 4 · 진화의 심연: 꿈틀대는 요람',
-    art: { mid: 'bunker', final: 'furnace' },
+    art: { mid: 'fleshwall', final: 'cocoon', barricade: 'chitin' },   // 그림 2026-10-24: 박동하는 유기질 벽 · 우주적 고치 · 갑각 장벽
     defense: { mid: { range: 300, every: 3.2, dmg: 16, color: '150, 255, 90', label: '☣ 독액', puddle: { sec: 3, width: 110 }, hitFx: 'venomSplash' } },
     stages: [
         {
