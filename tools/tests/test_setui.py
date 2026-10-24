@@ -1,0 +1,55 @@
+"""연구소 세트 알아보기 (2026-10-24): 세트 탭(세트마다 네 부위·세트 효과·[세트로 담기]), 카드 그림 모서리 세트 표시(R① 등),
+모으는 세트의 짝 카드 맨 앞·테두리, 부위 탭의 점"""
+
+
+def run(ctx):
+    g = ctx.game(fresh=True)
+    g.enter_v2()
+    g.page.click('#btn-to-lab-v2')
+    g.wait(900)
+
+    # 세트 탭: 거대로봇 9세트, 레어 ① 포격 사령부가 맨 위, 강화 칸은 숨김
+    g.page.click('.v2-slottab[data-slot="set"]')
+    g.wait(200)
+    st = g.js("""const rows = [...document.querySelectorAll('#parts-grid-v2 .v2-setrow')];
+        return { n: rows.length, first: rows[0] && rows[0].querySelector('.v2-setrow__head b').textContent,
+                 parts: rows[0] ? rows[0].querySelectorAll('.v2-setrow__part[data-id]').length : 0,
+                 bonus: rows[0] ? rows[0].querySelectorAll('.v2-setrow__bonus li').length : 0,
+                 upgHidden: document.getElementById('lab-upgrade-v2').hidden };""")
+    ctx.check(st['n'] == 9 and st['first'] == '레어 ① 포격 사령부' and st['parts'] == 4 and st['bonus'] >= 1 and st['upgHidden'],
+              '세트 탭: 거대로봇 9세트 (레어 → 유니크 → 레전더리 순), 한 줄에 네 부위·세트 효과, 강화 칸 숨김', str(st))
+
+    # [세트로 담기] → 네 부위가 장바구니에, 세트 효과 켜짐 표시, 부위 탭 점 4개
+    g.page.locator('.v2-setrow', has_text='레어 ① 포격 사령부').locator('.v2-setrow__take').click()
+    g.wait(300)
+    st = g.js("""const { setCounts } = await import('/js/engine_v2/sets_v2.js');
+        const row = [...document.querySelectorAll('.v2-setrow')].find(r => r.textContent.includes('포격 사령부'));
+        return { n: setCounts(gameState.getCartObjects()).mech_a, inRow: row.querySelectorAll('.v2-setrow__part.is-in').length,
+                 on: row.querySelectorAll('.v2-setrow__bonus li.is-on').length,
+                 dots: [...document.querySelectorAll('.v2-slottab__dot.is-on')].length };""")
+    ctx.check(st['n'] == 4 and st['inRow'] == 4 and st['on'] >= 1 and st['dots'] == 4,
+              '[세트로 담기]: 네 부위 한 번에 장바구니, 세트 효과 켜짐, 부위 탭 점 4개', str(st))
+    g.shot('setui_sets', '.v2-lab__parts')
+
+    # 부위 탭: 모으는 세트의 짝이 맨 앞 + 테두리 + 그림 모서리 R①, 강화 칸 다시 보임
+    g.page.click('.v2-slottab[data-slot="body"]')
+    g.wait(200)
+    st = g.js("""const c = document.querySelector('#parts-grid-v2 .v2-partcard');
+        return { mate: c.classList.contains('is-setmate'), mark: c.querySelector('.v2-setmark') && c.querySelector('.v2-setmark').textContent,
+                 label: c.querySelector('.v2-partcard__faction').textContent, upg: document.getElementById('lab-upgrade-v2').hidden,
+                 marks: [...document.querySelectorAll('#parts-grid-v2 .v2-setmark')].map(m => m.textContent) };""")
+    ctx.check(st['mate'] and st['mark'] == 'R①' and '모으는 중 4/4' in st['label'] and not st['upg']
+              and 'U①' in st['marks'] and 'L②' in st['marks'],
+              '몸통 탭: 모으는 세트 짝이 맨 앞(테두리·"모으는 중 4/4"), 그림 모서리 세트 표시(R①·U①·L② …)', str(st))
+    g.shot('setui_body', '.v2-lab__parts')
+
+    # 다른 세트 파츠를 고르면 그 세트가 모으는 세트가 됨 (팔: 레어 ② 돌격 강습대) → 팔 점만 켜짐
+    g.page.click('.v2-slottab[data-slot="arm"]')
+    g.wait(200)
+    g.js("""const { setIdOf } = await import('/js/engine_v2/sets_v2.js');
+        [...document.querySelectorAll('#parts-grid-v2 .v2-partcard')].find(c => c.textContent.includes('레어 ② 돌격 강습대')).click();""")
+    g.wait(200)
+    st = g.js("""const c = document.querySelector('#parts-grid-v2 .v2-partcard');
+        const dots = [...document.querySelectorAll('.v2-slottab[data-slot]')].filter(t => t.querySelector('.v2-slottab__dot.is-on')).map(t => t.dataset.slot);
+        return { first: c.querySelector('.v2-partcard__faction').textContent, dots };""")
+    ctx.check('돌격 강습대' in st['first'] and st['dots'] == ['arm'], '다른 세트 파츠를 고르면 그 세트가 모으는 세트 (맨 앞·점은 팔만)', str(st))

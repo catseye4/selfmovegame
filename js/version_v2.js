@@ -7,6 +7,6 @@
    RELEASE_REPO는 업데이트 주소를 넣지 않고 빌드한 앱이 읽는 곳 (GitHub).
    ========================================================================== */
 
-export const VERSION = '0.2.2';
-export const BUILD = 4;
+export const VERSION = '0.2.3';
+export const BUILD = 5;
 export const RELEASE_REPO = 'catseye4/selfmovegame';

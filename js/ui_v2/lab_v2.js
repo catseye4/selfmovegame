@@ -7,6 +7,9 @@
    - 아래: 변경 수, 구매 비용, 개조 후 잔액, 되돌리기, 개조 확정
    세트 장비 (Q-008, sets_v2.js): 카드에 "레어 ① 포격 사령부"·등급 바닥, 스킬 구성 아래에 세트 효과(2·4부위),
      안 가진 세트 파츠는 등급 칸 버튼이 "만들기"(파츠 조각), 드랍 전용(유니크 세트)은 DM으로 못 삼
+   세트 알아보기 (2026-10-24): 카드 그림 모서리에 세트 표시(R① · U② · L① — 등급 색), 지금 모으는 세트(마지막으로 고른 세트 파츠,
+     없으면 장바구니에 가장 많이 낀 세트)의 짝 카드는 맨 앞 + 테두리, 부위 탭에 그 세트를 담은 부위 점(●),
+     다섯째 "세트" 탭 = 세트마다 네 부위 그림·보유·세트 효과 한 줄 + [세트로 담기](네 부위를 한 번에 장바구니로)
    파츠 소유·강화·저장은 js/engine_v2/progress_v2.js (D-015). 파츠 데이터는 js/data/parts.js (구버전과 공용, 읽기만), 캐릭터별 목록은 roster_v2.js
    ========================================================================== */
 
@@ -22,7 +25,7 @@ import { icon, fillIcons } from './icons.js';
 import { openSettings } from './settingsPanel_v2.js';
 import { gradeOf, SKILL_LEVEL } from '../engine_v2/growth_v2.js';
 import { gradeTag, optionText, resChipHtml } from './growthUi_v2.js';
-import { setOf, setBonusList, isDropOnly } from '../engine_v2/sets_v2.js';
+import { setOf, setIdOf, setCounts, setLabelOf, setBonusList, isDropOnly, SETS, SET_TIERS } from '../engine_v2/sets_v2.js';
 
 const $ = id => document.getElementById(id);
 const ROLE = { arm: { tag: '1', label: '스킬 1' }, body: { tag: '2', label: '스킬 2' }, head: { tag: 'ULT', label: '필살기' }, leg: { tag: 'P', label: '패시브' } };
@@ -42,6 +45,12 @@ const THUMB = {
     architect: NEW_THUMB,
     broadcaster: NEW_THUMB
 };
+const SLOTS4 = ['head', 'body', 'arm', 'leg'];
+const SLOT_NAME = { head: '머리', body: '몸통', arm: '팔', leg: '다리' };
+const TIER_ORDER = { rare: 0, unique: 1, legendary: 2 };
+const TIER_SHORT = { rare: 'R', unique: 'U', legendary: 'L' };
+/** 카드 그림 모서리의 세트 표시: 등급 첫 글자 + 번호 (R① · U② · L①), 등급 색 */
+const setMark = s => (s ? `<span class="v2-setmark" style="--grade:${gradeOf(SET_TIERS[s.tier].minGrade).color}">${TIER_SHORT[s.tier]}${'①②③④'[s.no - 1] || s.no}</span>` : '');
 const LAB_RIG = { width: 350, height: 400, rootX: 175, rootY: 384, scale: 0.36, fit: { x: 22, y: 16 }, shadow: true };
 
 /** 카드 그림 { src, filter }: A·B 세트 파츠는 세트 그림(있으면) 또는 기본 그림 + 세트 색 (D-050) */
@@ -89,6 +98,8 @@ export class LabController {
             tabs.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             this.activeSlot = btn.dataset.slot || 'head';
+            const upg = $('lab-upgrade-v2');
+            if (upg) upg.hidden = this.activeSlot === 'set';   // 세트 탭: 강화 칸 대신 목록을 길게
             this.renderPartsGrid();
             this.renderUpgrade();
         }));
@@ -165,10 +176,40 @@ export class LabController {
     }
 
     // ------------------------------------------------------------------
+    /** 지금 모으는 세트 id: 마지막으로 고른 세트 파츠의 세트(장바구니에 남아 있으면), 아니면 장바구니에 가장 많이 낀 세트 */
+    focusSet() {
+        const counts = setCounts(gameState.getCartObjects());
+        if (this.lastSet && counts[this.lastSet]) return this.lastSet;
+        const best = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+        return best ? best[0] : null;
+    }
+
+    /** 부위 탭의 점: 지금 모으는 세트를 장바구니에 담은 부위 */
+    renderTabDots() {
+        const focus = this.focusSet();
+        const cart = gameState.getCartObjects();
+        this.root.querySelectorAll('.v2-slottab[data-slot]').forEach(tab => {
+            const slot = tab.dataset.slot;
+            if (slot === 'set') return;
+            let dot = tab.querySelector('.v2-slottab__dot');
+            if (!dot) { dot = document.createElement('i'); dot.className = 'v2-slottab__dot'; tab.appendChild(dot); }
+            const on = !!focus && setIdOf(cart[slot]) === focus;
+            dot.hidden = !focus;
+            dot.classList.toggle('is-on', on);
+            dot.title = focus ? `${setLabelOf({ id: focus, ...SETS[focus] })} — ${on ? '담음' : '아직 안 담음'}` : '';
+        });
+    }
+
     renderPartsGrid() {
         if (!this.domPartsGrid) return;
         const slot = this.activeSlot;
-        const list = partsOfCharacter(progress.character, slot);   // 고른 캐릭터의 파츠만 (D-051)
+        this.renderTabDots();
+        if (slot === 'set') { this.renderSetGrid(); return; }
+        this.domPartsGrid.classList.remove('is-sets');
+        const focus = this.focusSet();
+        let list = partsOfCharacter(progress.character, slot);   // 고른 캐릭터의 파츠만 (D-051)
+        if (focus) list = [...list.filter(p => setIdOf(p) === focus), ...list.filter(p => setIdOf(p) !== focus)];   // 모으는 세트의 짝을 맨 앞에
+        const focusCount = focus ? setCounts(gameState.getCartObjects())[focus] || 0 : 0;
         const cartId = gameState.cartParts[slot];
         const equippedId = gameState.equippedParts[slot];
 
@@ -187,27 +228,83 @@ export class LabController {
             const lv = progress.levelOf(part.id);
             const card = document.createElement('div');
             const grade = owned || isSet ? gradeOf(progress.gradeOf(part.id)) : gradeOf('common');   // 세트 파츠는 안 가져도 등급 바닥을 보임
-            card.className = `part-card v2-partcard${part.id === cartId ? ' is-selected' : ''}${grade.id !== 'common' ? ' has-grade' : ''}`;
+            const mate = !!focus && setIdOf(part) === focus;
+            card.className = `part-card v2-partcard${part.id === cartId ? ' is-selected' : ''}${grade.id !== 'common' ? ' has-grade' : ''}${mate ? ' is-setmate' : ''}`;
             card.style.setProperty('--fc', color);
             card.style.setProperty('--grade', grade.color);
             card.innerHTML = `
                 <div class="v2-partcard__side">
-                    <div class="v2-partcard__thumb">${thumb ? `<img src="${thumb.src}" alt=""${thumb.filter ? ` style="filter: ${thumb.filter}"` : ''}>` : icon('retreat', 30)}</div>
+                    <div class="v2-partcard__thumb">${thumb ? `<img src="${thumb.src}" alt=""${thumb.filter ? ` style="filter: ${thumb.filter}"` : ''}>` : icon('retreat', 30)}${setMark(setOf(part))}</div>
                     <span class="v2-partcard__badge ${badge[1]}">${badge[0]}</span>
                 </div>
                 <div class="v2-partcard__body">
                     <div class="v2-partcard__name">${part.name}${part.id !== 'none' && lv > 1 ? `<span class="v2-partcard__lv">Lv${lv}</span>` : ''}${owned || isSet ? gradeTag(part.id) : ''}</div>
-                    <div class="v2-partcard__faction">세트 · ${partSetLabel(part)}</div>
+                    <div class="v2-partcard__faction">세트 · ${partSetLabel(part)}${mate ? `<b class="v2-partcard__mate">모으는 중 ${focusCount}/4</b>` : ''}</div>
                     <div class="v2-partcard__stats">HP +${st.hp} · DPS +${st.dps}${st.range ? ` · RNG +${st.range}` : ''}</div>
                     ${sk ? `<div class="v2-partcard__skill" style="--sk:${sk.color}"><em>${ROLE[slot].tag}</em>${icon(sk.icon, 13)}${sk.name}</div>` : '<div class="v2-partcard__skill">스킬 없음</div>'}
                 </div>`;
             card.addEventListener('click', () => {
                 gameState.selectCartPart(slot, part.id);
+                const sid = setIdOf(part);
+                if (sid) this.lastSet = sid;
                 this.renderPartsGrid();
                 this.updateMvvmFeedback();
             });
             this.domPartsGrid.appendChild(card);
         });
+    }
+
+    /** 세트 탭: 세트마다 한 줄 — 등급·이름·보유/담음, 네 부위 그림(누르면 그 부위만 담기), 세트 효과, [세트로 담기] */
+    renderSetGrid() {
+        const char = progress.character;
+        const cart = gameState.getCartObjects();
+        const grid = this.domPartsGrid;
+        grid.innerHTML = '';
+        grid.classList.add('is-sets');
+        const sets = Object.entries(SETS).filter(([, s]) => s.character === char)
+            .sort(([, a], [, b]) => (TIER_ORDER[a.tier] - TIER_ORDER[b.tier]) || (a.no - b.no));
+        if (!sets.length) {
+            grid.innerHTML = '<p class="v2-setrow__empty">이 캐릭터는 아직 세트가 없습니다</p>';
+            return;
+        }
+        const color = (rosterOf(char) || {}).color || '#5a6272';
+        for (const [sid, s] of sets) {
+            const parts = SLOTS4.map(slot => partsOfCharacter(char, slot).find(p => setIdOf(p) === sid) || null);
+            const owned = parts.filter(p => p && progress.isOwned(p.id)).length;
+            const inCart = parts.filter((p, i) => p && cart[SLOTS4[i]] && cart[SLOTS4[i]].id === p.id).length;
+            const row = document.createElement('div');
+            row.className = `v2-setrow${inCart ? ' is-in' : ''}`;
+            row.style.setProperty('--grade', gradeOf(SET_TIERS[s.tier].minGrade).color);
+            row.style.setProperty('--fc', color);
+            const cells = parts.map((p, i) => {
+                if (!p) return '<div class="v2-setrow__part is-none"></div>';
+                const t = thumbOf(SLOTS4[i], p);
+                const cls = `${cart[SLOTS4[i]] && cart[SLOTS4[i]].id === p.id ? ' is-in' : ''}${progress.isOwned(p.id) ? ' is-owned' : ''}`;
+                return `<button class="v2-setrow__part${cls}" data-slot="${SLOTS4[i]}" data-id="${p.id}" title="${p.name}">`
+                    + `<span class="v2-setrow__img">${t ? `<img src="${t.src}" alt=""${t.filter ? ` style="filter: ${t.filter}"` : ''}>` : ''}</span>`
+                    + `<small>${SLOT_NAME[SLOTS4[i]]}</small><span class="v2-setrow__name">${p.name}</span></button>`;
+            }).join('');
+            const bonus = Object.entries(s.bonus || {}).map(([n, d]) => `<li class="${inCart >= Number(n) ? 'is-on' : ''}"><b>${n}부위</b> ${d}</li>`).join('');
+            row.innerHTML = `
+                <div class="v2-setrow__head">${setMark(s)}<b>${setLabelOf({ id: sid, ...s })}</b>
+                    <small>보유 ${owned}/4 · 담음 ${inCart}/4</small>
+                    <button class="v2-btn v2-setrow__take" ${inCart === 4 ? 'disabled' : ''}>${inCart === 4 ? '담음' : '세트로 담기'}</button></div>
+                <div class="v2-setrow__parts">${cells}</div>
+                <ul class="v2-setrow__bonus">${bonus}</ul>`;
+            row.querySelector('.v2-setrow__take').addEventListener('click', () => {
+                parts.forEach((p, i) => { if (p) gameState.selectCartPart(SLOTS4[i], p.id); });
+                this.lastSet = sid;
+                sound.play('ui_click');
+                this.refresh();
+            });
+            row.querySelectorAll('.v2-setrow__part[data-id]').forEach(b => b.addEventListener('click', () => {
+                gameState.selectCartPart(b.dataset.slot, b.dataset.id);
+                this.lastSet = sid;
+                sound.play('ui_click');
+                this.refresh();
+            }));
+            grid.appendChild(row);
+        }
     }
 
     updateMvvmFeedback() {
