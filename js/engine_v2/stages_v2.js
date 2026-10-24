@@ -3,9 +3,11 @@
    챕터 1 = 구역 1 "지하 비밀 연구소" 1-1 ~ 1-5 + 보스전 (결정 D-018, D-021)
    챕터 2 = 구역 2 "하부 쓰레기 폐기 정착지" 2-1 ~ 2-5 + 보스전 (D-040) — 1-B를 깨면 열림
    챕터 3·4 = 구역 3 "성왕국 수도" · 구역 4 "진화의 심연" 3-1 ~ 3-6 + 보스전, 4-1 ~ 4-6 + 보스전 (D-056)
+   챕터 6 = 구역 6 "성왕국 변두리" 6-1 ~ 6-6 + 보스전 (D-076·D-078) — 구역 5가 생기기 전까지 4-B 다음
 
    챕터 항목: id, zone, name, art { mid, final } (거점 그림 이름, bases_v2.js),
-             defense { mid|final: { range, every, dmg, color, label, puddle? } } (다가오면 거점이 쏨, 구역 3·4), stages
+             defense { mid|final: { range, every, dmg, color, label, puddle? } } (다가오면 거점이 쏨, 구역 3·4),
+             midHeal (요새를 부수면 주인공 최대 내구도의 이 비율만큼 회복, 구역 6), stages
    스테이지는 앞에서부터 한 줄로 이어짐(1-1 … 1-B, 2-1 … 2-B): 앞 스테이지를 깨면 다음이 열리고, 결과 화면 "다음"도 이 순서
 
    스테이지 항목
@@ -20,6 +22,7 @@
                           또는 gas: { every, warn, sec (감속 시간), silence (증원 중단 초) } (구역 2 유독 가스) }  — 기획서 2-⑥ 광역 기믹
                           afterBase: true → 최종 기지를 부수면 보스가 나오고, 보스를 쓰러뜨려야 승리 (구역 3)
                           knights: { every, warn, unit } → 보스가 나온 뒤 every초마다 엘리트 소환 (구역 3 심연의 문 개방)
+     fonts : 축복 성수대가 나오는 거리(m) 목록 (구역 6) — 부술 때까지 근처 적 받는 피해 감소
      map   : 메인 레이더에 찍을 위치 (레이더 중심 기준 -1~1)
    난이도 곡선은 tools/tests/balance_sim.py 결과(MD/밸런스_기록.md)를 보고 조정한다.
    ========================================================================== */
@@ -135,12 +138,12 @@ const MAP7 = [[-0.74, 0.56], [-0.48, 0.38], [-0.22, 0.2], [0.04, 0.0], [0.3, -0.
 // 구역 3: 성왕국 이단심문소 & 타락 기사단 (D-056, MD/구역3_설계안.md) — 7판(6 + 보스).
 // 요새(심문소 통제탑)는 다가오면 화살·마법을 쏨(defense.mid), 3-B는 정문(최종 기지)을 부수면 대주교가 나오고 대주교를 쓰러뜨려야 승리(afterBase),
 // 보스전 기믹 = 심연의 문 개방: 정문을 부순 뒤 knights.every초마다 악마기사(엘리트)
-// 그림은 Gemini 전까지 임시(구역 1 통제탑 · 구역 2 관문 + 색조, ui_v2.css .v2-zone-3)
+// 그림 (2026-10-24 Gemini): 심문소 통제탑 · 대성당 정문 · 방패 장벽 (stageArt_v2.js), 배경 ui_v2.css .v2-zone-3
 export const CHAPTER3 = {
     id: 'ch3',
     zone: 3,
     name: '구역 3 · 성왕국 수도: 진홍의 순례길',
-    art: { mid: 'tower', final: 'gate' },
+    art: { mid: 'inqtower', final: 'cathedral', barricade: 'shieldwall' },
     defense: { mid: { range: 420, every: 2.2, dmg: 24, color: '255, 214, 120', label: '🏹 화살·마법', hitFx: 'arrowHit' } },
     stages: [
         {
@@ -191,12 +194,12 @@ export const CHAPTER3 = {
 
 // 구역 4: 별의 사도들과 실패한 진화체들 (D-056, MD/구역4_설계안.md) — 7판(6 + 보스).
 // 요새(박동하는 유기질 벽)는 다가오면 독액(피해 + 독 웅덩이), 4-B 보스 오큘러스는 체력 50%에서 2페이즈(enemies_v2.js rage)
-// 그림은 Gemini 전까지 임시(구역 1 벙커 · 구역 2 소각탑 + 색조, ui_v2.css .v2-zone-4)
+// 그림 (2026-10-24 Gemini, 노랑 배경): 유기질 벽 · 우주적 고치 · 갑각 장벽 (stageArt_v2.js), 배경 ui_v2.css .v2-zone-4
 export const CHAPTER4 = {
     id: 'ch4',
     zone: 4,
     name: '구역 4 · 진화의 심연: 꿈틀대는 요람',
-    art: { mid: 'bunker', final: 'furnace' },
+    art: { mid: 'fleshwall', final: 'cocoon', barricade: 'chitin' },   // 그림 2026-10-24: 박동하는 유기질 벽 · 우주적 고치 · 갑각 장벽
     defense: { mid: { range: 300, every: 3.2, dmg: 16, color: '150, 255, 90', label: '☣ 독액', puddle: { sec: 3, width: 110 }, hitFx: 'venomSplash' } },
     stages: [
         {
@@ -244,11 +247,73 @@ export const CHAPTER4 = {
         }
     ]
 };
-[CHAPTER3, CHAPTER4].forEach(ch => ch.stages.forEach((st, i) => { st.map = MAP7[i]; }));
+// 구역 6: 성왕국 변두리 — 교단 의료원 & 이단심문소 (D-076·D-078, MD/구역6_설계안.md) — 7판(6 + 보스).
+// 구역 3과 같은 교단: 구역 3 적 5종 + 병동 간수(사슬 속박)·그림자 집행자(은신)·헌금 기사(축복 오라).
+// 요새(봉인된 약창고)는 쏘지 않는 대신 부수면 주인공 체력 midHeal만큼 회복(잠긴 약이 풀림),
+// fonts = 축복 성수대가 나오는 거리(m) — 서 있는 동안 근처 적 받는 피해 감소 (battle/enemyField.js),
+// 6-B는 정문(대성당 의료원)을 부수면 대사제 오르비안 (생명의 저울·헌금 소집·파문의 종, enemies_v2.js)
+// 그림은 Gemini 전까지 임시(구역 1 벙커 · 구역 2 관문 + 색조, ui_v2.css .v2-zone-6).
+// 구역 5(어비스)가 생기기 전까지는 4-B를 깨면 열림 — 구역 5를 넣으면 CHAPTERS에서 이 앞에 (D-078 임의 결정)
+export const CHAPTER6 = {
+    id: 'ch6',
+    zone: 6,
+    name: '구역 6 · 성왕국 변두리: 잠긴 병동',
+    art: { mid: 'bunker', final: 'gate' },
+    midHeal: 0.15,
+    stages: [
+        {
+            id: '6-1', timeLimit: 225, starTime: 145, name: '성벽 밖 잿빛 거리', desc: '버려진 사람들이 모여 사는 성벽 밖. 교단 순찰대가 길을 막는다.',
+            distance: 1000, midAt: 450, finalAt: 900,
+            enemy: { hp: 3.9, dps: 2.6, spawn: 1.9, max: 8, mix: { soldier: 1 } }, elite: 0.07,
+            base: { mid: 9000, final: 15800 }, reward: { kill: 70, mid: 3800, final: 10000 }
+        },
+        {
+            id: '6-2', timeLimit: 230, starTime: 150, name: '잠긴 약창고', desc: '약과 병상을 잠가 둔 창고 거리. 사슬을 든 간수들이 지킨다.',
+            distance: 1050, midAt: 470, finalAt: 950,
+            enemy: { hp: 3.95, dps: 2.65, spawn: 2.0, max: 8, mix: { soldier: 3, warden: 1 } }, elite: 0.09,
+            base: { mid: 9200, final: 16200 }, reward: { kill: 72, mid: 3900, final: 10300 }
+        },
+        {
+            id: '6-3', timeLimit: 240, starTime: 155, name: '헌금 광장', desc: '헌금을 낸 자만 축복받는 광장. 금빛 성수대가 적을 지킨다.',
+            distance: 1100, midAt: 500, finalAt: 1000, fonts: [240, 680],
+            enemy: { hp: 4.0, dps: 2.7, spawn: 2.0, max: 8, mix: { soldier: 3, warden: 1, priest: 1 } }, elite: 0.1,
+            base: { mid: 9400, final: 16600 }, reward: { kill: 74, mid: 4000, final: 10600 }
+        },
+        {
+            id: '6-4', timeLimit: 245, starTime: 160, name: '사라진 사람들의 골목', desc: '살려 낸 사람들이 하나둘 사라지던 골목. 보이지 않는 집행자가 노린다.',
+            distance: 1100, midAt: 500, finalAt: 1000,
+            enemy: { hp: 4.05, dps: 2.7, spawn: 1.95, max: 9, mix: { soldier: 3, warden: 1, shade: 1 } }, elite: 0.11,
+            base: { mid: 9600, final: 17000 }, reward: { kill: 76, mid: 4100, final: 10900 }
+        },
+        {
+            id: '6-5', timeLimit: 250, starTime: 165, name: '이단 심판소', desc: '성녀를 마녀로 낙인찍던 심판대. 심문관과 마법사가 몰려든다.',
+            distance: 1150, midAt: 520, finalAt: 1050,
+            enemy: { hp: 4.1, dps: 2.75, spawn: 1.9, max: 9, mix: { soldier: 2, inquisitor: 2, mage: 2, warden: 1, shade: 1 } }, elite: 0.12,
+            base: { mid: 9800, final: 17400 }, reward: { kill: 78, mid: 4200, final: 11200 }
+        },
+        {
+            id: '6-6', timeLimit: 260, starTime: 170, name: '백색 병동 회랑', desc: '돈을 낸 자만 눕던 침상이 늘어선 회랑. 교단의 마지막 저지선.',
+            distance: 1200, midAt: 550, finalAt: 1100, fonts: [720],
+            enemy: { hp: 4.2, dps: 2.8, spawn: 1.95, max: 9,
+                mix: { soldier: 3, inquisitor: 1, holyshield: 1, priest: 1, mage: 1, warden: 1, shade: 1, tithe: 1 } }, elite: 0.14,
+            base: { mid: 10000, final: 17800 }, reward: { kill: 80, mid: 4300, final: 11500 }
+        },
+        {
+            id: '6-B', timeLimit: 275, starTime: 190, name: '대성당 의료원', desc: '의료원 정문을 부수면, 생명을 저울질하던 대사제가 기다린다.',
+            distance: 1050, midAt: 470, finalAt: 950, fonts: [260],
+            enemy: { hp: 4.3, dps: 2.8, spawn: 2.0, max: 9, mix: { soldier: 3, inquisitor: 1, holyshield: 1, priest: 1, warden: 1, shade: 1 } }, elite: 0.12,
+            base: { mid: 9800, final: 15200 }, reward: { kill: 86, mid: 4500, final: 13500 },
+            boss: { unit: 'orbian', afterBase: true }
+        }
+    ]
+};
+[CHAPTER3, CHAPTER4, CHAPTER6].forEach(ch => ch.stages.forEach((st, i) => { st.map = MAP7[i]; }));
 
-export const CHAPTERS = [CHAPTER1, CHAPTER2, CHAPTER3, CHAPTER4];
-// 스테이지마다 챕터 정보(거점 그림 art, 요새 사격 defense, chapter id, 구역 번호)를 붙여 둠 — 전투·메뉴가 stage.art / stage.chapter / stage.zone으로 씀
-CHAPTERS.forEach(ch => ch.stages.forEach(st => { st.chapter = ch.id; st.zone = ch.zone; st.art = ch.art; st.defense = ch.defense || null; }));
+export const CHAPTERS = [CHAPTER1, CHAPTER2, CHAPTER3, CHAPTER4, CHAPTER6];
+// 스테이지마다 챕터 정보(거점 그림 art, 요새 사격 defense, 요새 회복 midHeal, chapter id, 구역 번호)를 붙여 둠 — 전투·메뉴가 stage.art / stage.chapter / stage.zone으로 씀
+CHAPTERS.forEach(ch => ch.stages.forEach(st => {
+    st.chapter = ch.id; st.zone = ch.zone; st.art = ch.art; st.defense = ch.defense || null; st.midHeal = ch.midHeal || 0;
+}));
 export const STAGES = CHAPTERS.flatMap(ch => ch.stages);
 
 export function chapterOf(stageOrId) {

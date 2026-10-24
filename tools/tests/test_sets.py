@@ -40,7 +40,7 @@ def run(ctx):
         const { PART_SKILL, SKILLS, LEG_PASSIVES } = await import('/js/engine_v2/skills_v2.js');
         const { characterOfPart } = await import('/js/engine_v2/roster_v2.js');
         const { icon } = await import('/js/ui_v2/icons.js');
-        const all = Object.values(PARTS_DB).flat().filter(p => /_(a|b)$/.test(p.id) && p.rigVariant);
+        const all = Object.values(PARTS_DB).flat().filter(p => /_(mech|kaiju|hero|chimera)_(a|b)$/.test(p.id) && p.rigVariant);   // 기존 4종 A·B (새 캐릭터 a·b는 2차 세트 — test_kit)
         const noSkill = all.filter(p => (p.id.startsWith('leg_') ? !LEG_PASSIVES[p.id] : !SKILLS[PART_SKILL[p.id]])).map(p => p.id);
         const wrongChar = all.filter(p => !p.id.includes('_' + characterOfPart(p) + '_')).map(p => p.id);
         const star = icon('star');

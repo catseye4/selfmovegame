@@ -27,9 +27,9 @@ def run(ctx):
         g.page.click(f'.v2-slottab[data-slot="{slot}"]')
         g.wait(100)
         names += g.js("return [...document.querySelectorAll('#parts-grid-v2 .v2-partcard__name')].map(e => e.firstChild.textContent);")  # 이름만 (뒤의 Lv·등급 표시 빼고)
-    ctx.check(len(names) == 17 and '[파츠제거]' not in names and '흑마법 룬 갑옷' not in names and '산성 발톱 팔' not in names
-              and '레일건' in names and '파일 벙커' in names,
-              '연구소: 거대로봇 파츠만 17개 (기본 9 + A·B 세트 8, [파츠제거]·다른 캐릭터 없음)', str(names))
+    ctx.check(len(names) == 45 and '[파츠제거]' not in names and '흑마법 룬 갑옷' not in names and '산성 발톱 팔' not in names
+              and '레일건' in names and '파일 벙커' in names and '뇌운 관제 헬름' in names,
+              '연구소: 거대로봇 파츠만 45개 (기본 9 + A·B 세트 8 + 2차 7세트 28, [파츠제거]·다른 캐릭터 없음)', str(names))
 
     # 머리 구매: 타겟팅 레이저 바이저 (500 DM)
     g.page.click('.v2-slottab[data-slot="head"]')
@@ -64,7 +64,7 @@ def run(ctx):
     ctx.check(st['hp'] > hp1, '강화: 능력치 상승 (HP)', f"{hp1} → {st['hp']}")
     g.shot('lab_upgrade', '#screen-lab-v2')
 
-    # 캐릭터 선택창 (D-051): 카드 8장(기존 4 + 새 캐릭터 4, 한 화면 4장 + 가로로 넘김), 지금 캐릭터 표시
+    # 캐릭터 선택창 (D-051): 카드 10장(기존 4 + 새 캐릭터 6, 한 화면 4장 + 가로로 넘김), 지금 캐릭터 표시
     g.page.click('#btn-lab-back-v2')
     g.wait(400)
     g.page.click('#btn-to-select-v2')
@@ -73,8 +73,8 @@ def run(ctx):
         const vis = [...document.querySelectorAll('.v2-charcard')].filter(c => c.offsetLeft + c.offsetWidth <= grid.scrollLeft + grid.clientWidth + 1);
         return { cards: document.querySelectorAll('.v2-charcard').length, visible: vis.length, scroll: grid.scrollWidth > grid.clientWidth,
             sel: document.querySelector('.v2-charcard.is-selected')?.dataset.char };""")
-    ctx.check(st['cards'] == 8 and st['visible'] == 4 and st['scroll'] and st['sel'] == 'mech',
-              '선택창: 카드 8장 (한 화면 4장 + 가로로 넘김), 지금 캐릭터 = 거대로봇', str(st))
+    ctx.check(st['cards'] == 10 and st['visible'] == 4 and st['scroll'] and st['sel'] == 'mech',
+              '선택창: 카드 10장 (한 화면 4장 + 가로로 넘김), 지금 캐릭터 = 거대로봇', str(st))
 
     # 별로 여는 캐릭터 (Q-006): 별이 없으면 잠김 안내, 별을 모으면 눌러서 해금
     st = g.js("""return { lock: document.querySelector('.v2-charcard[data-char="chimera"]').classList.contains('is-locked'),
@@ -114,7 +114,8 @@ def run(ctx):
     g.wait(800)
     g.page.click('.v2-slottab[data-slot="body"]')
     names = g.js("return [...document.querySelectorAll('#parts-grid-v2 .v2-partcard__name')].map(e => e.firstChild.textContent);")  # 이름만 (뒤의 Lv·등급 표시 빼고)
-    ctx.check(names == ['흑마법 룬 갑옷', '찢어진 망토 갑옷', '저주 룬 로브'], '연구소: 타락 히어로 몸통만 표시 (기본 + A·B 세트)', str(names))
+    ctx.check(names[:3] == ['흑마법 룬 갑옷', '찢어진 망토 갑옷', '저주 룬 로브'] and len(names) == 10 and '검은 날개 갑주' in names,
+              '연구소: 타락 히어로 몸통만 표시 (기본 + A·B 세트 + 2차 7세트)', str(names))
     g.page.locator('.v2-partcard', has_text='흑마법 룬 갑옷').click()
     g.page.click('#btn-equip-confirm-v2')
     g.wait(300)

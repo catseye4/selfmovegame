@@ -21,7 +21,10 @@ export const ROSTER = [
     { id: 'diver', faction: '심연의 길잡이', tag: 'ABYSS', color: '#3fe0c8', desc: '무거운 탱커. 물줄기로 꿰뚫고 앵커로 먼 적을 끌어와, 심연의 손으로 붙잡는다.' },
     { id: 'saint', faction: '봉합 성녀', tag: 'SUTURE', color: '#ff4d6d', desc: '버티며 쓰러진 적을 꿰매 아군으로. 봉합 주사·생명 봉인·억지 부활.' },
     { id: 'frost', faction: '서리의 무희', tag: 'FROST', color: '#7fd4ff', desc: '냉기를 쌓아 얼리고 깨뜨리는 원거리. 초승달 참격·눈보라 춤·영원한 안식.' },
-    { id: 'doll', faction: '뒤틀린 인형사', tag: 'PUPPET', color: '#5ae6f0', desc: '토끼 인형 가족으로 막고 꼭두각시로 교란하는 근접. 가위 X자 참격.' }
+    { id: 'doll', faction: '뒤틀린 인형사', tag: 'PUPPET', color: '#5ae6f0', desc: '토끼 인형 가족으로 막고 꼭두각시로 교란하는 근접. 가위 X자 참격.' },
+    // 새 캐릭터 5·6 (D-079, MD/새캐릭터2종_설계안.md) — 탐욕의 도시, 기본·강화 파츠도 부품 스킬(sets2/<id>Sets2.js)
+    { id: 'architect', faction: '철거의 설계자', tag: 'DEMOLISH', color: '#ff9a2e', desc: '드릴로 갈아 버리는 근접 브루저. 철골 바리케이드로 적을 막고 거점을 철거.' },
+    { id: 'broadcaster', faction: '침묵의 방송자', tag: 'SILENCE', color: '#ff50aa', desc: '분홍 음파로 넓게 때리는 원거리. 정적의 장막으로 적의 기술을 침묵시킴.' }
 ];
 
 export function rosterOf(id) {

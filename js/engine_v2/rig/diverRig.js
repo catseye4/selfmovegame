@@ -168,6 +168,37 @@ export const DIVER_CLIPS = {
         ]
     },
 
+    // ---- 2차 세트 전용 동작 (D-071, MD/파츠확장_2차_기획안.md 5-5). 물대포 팔은 20° 안쪽만 (이음새) ----
+    // 찌르기 (산호 가시·삼연 찌르기): 몸을 당겼다(0.15) 앞발을 디디며 물대포 팔을 겨눠 내지름(0.25)
+    thrust: {
+        duration: 0.7,
+        loop: false,
+        tracks: {
+            armF: { rot: [[0, 0], [0.15, 10, 'in'], [0.25, AIM, 'out'], [0.45, AIM + 2], [0.7, 0]] },
+            armB: { rot: [[0, 0], [0.25, 10], [0.7, 0]] },
+            anchorB: { rot: [[0, 0], [0.25, 8], [0.45, -4], [0.7, 0]] },
+            torso: { x: [[0, 0], [0.15, -10, 'in'], [0.25, 22, 'out'], [0.45, 16], [0.7, 0]], rot: [[0, 0], [0.15, -2], [0.25, 3, 'out'], [0.7, 0]] },
+            head: { rot: [[0, 0], [0.25, 2], [0.7, 0]] },
+            legF: { rot: [[0, 0], [0.25, -6, 'out'], [0.7, 0]] }
+        },
+        events: [[0.25, 'fire', { color: WATER, size: 1.4 }]]
+    },
+
+    // 내려찍기 (사슬 휘두르기·증기 해머·리바이어던·촉수 채찍): 앵커를 뒤로 크게 젖혔다(0.3) 머리 위로 돌려 앞에 내리꽂음(0.5)
+    slam: {
+        duration: 1.1,
+        loop: false,
+        tracks: {
+            armB: { rot: [[0, 0], [0.3, 40, 'in'], [0.5, -80, 'out'], [0.65, -62], [1.1, 0]] },
+            anchorB: { rot: [[0, 0], [0.3, -20], [0.5, 30, 'out'], [0.7, 10], [1.1, 0]] },
+            armF: { rot: [[0, 0], [0.3, 8], [0.5, -6], [1.1, 0]] },
+            torso: { y: [[0, 0], [0.3, -8, 'out'], [0.5, 14, 'in'], [0.7, 10], [1.1, 0]], rot: [[0, 0], [0.3, -4], [0.5, 5, 'out'], [1.1, 0]] },
+            head: { rot: [[0, 0], [0.3, -4], [0.5, 4], [1.1, 0]] },
+            legF: { rot: [[0, 0], [0.5, -5, 'out'], [1.1, 0]] }
+        },
+        events: [[0.5, 'impact', { socket: 'anchor', bone: 'anchorB', color: ABYSS }]]
+    },
+
     // 승리: 물대포를 비스듬히 치켜들어 물을 뿜고 앵커를 흔들며 들썩임
     victory: {
         duration: 1.0,
@@ -194,7 +225,7 @@ export const DIVER = {
     attack: 'attack_water',
     hitSocket: ['muzzle', 'armF'],
     upgrade: DIVER_UPGRADE,
-    skillClips: [['앵커 견인', 'anchor'], ['시전 동작', 'cast']],   // rig_test.html 동작 버튼
+    skillClips: [['앵커 견인', 'anchor'], ['시전 동작', 'cast'], ['찌르기', 'thrust'], ['내려찍기', 'slam']],   // rig_test.html 동작 버튼 (뒤 둘은 2차 세트, D-071)
     // 등불에서 피어오르는 청록 유령 불티, 물대포 끝에서 떨어지는 물방울
     ambient: [
         { kind: 'ember', socket: 'lamp', bone: 'torso', layer: 'front', rate: 4,

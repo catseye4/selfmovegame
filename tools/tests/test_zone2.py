@@ -34,7 +34,7 @@ def run(ctx):
     battle_at(g, '2-1')
     st = g.js("""const bg = k => getComputedStyle(document.getElementById(`bg-${k}-v2`)).backgroundImage;
         return { zone: document.getElementById('screen-battle-v2').classList.contains('v2-zone-2'), sky: bg('sky'), city: bg('city'), ground: bg('ground') };""")
-    ctx.check(st['zone'] and 'bg2/dump.png' in st['sky'] and 'bg2/shanty.png' in st['city'] and 'bg2/ground.png' in st['ground'],
+    ctx.check(st['zone'] and 'bg2/dump.webp' in st['sky'] and 'bg2/shanty.webp' in st['city'] and 'bg2/ground.webp' in st['ground'],
               '구역 2 배경 3층 = 폐기장·판잣집·고철판', str(st))
     g.js("b.distanceTraveled = b.stage.midAt - 0.5; b.playerSpeed = 100;")
     g.wait(1500)

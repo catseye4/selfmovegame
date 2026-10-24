@@ -7,11 +7,10 @@
 
 import { gameState } from '../engine/state.js';
 import { progress } from '../engine_v2/progress_v2.js';
-import { rosterOf, ROSTER } from '../engine_v2/roster_v2.js';
-import { CHAPTERS } from '../engine_v2/stages_v2.js';
-import { MODULES, MODULE_MAX_LEVEL, RESEARCH, DISPATCH, gradeOf, OPTIONS } from '../engine_v2/growth_v2.js';
+import { MODULES, MODULE_MAX_LEVEL, RESEARCH, gradeOf, OPTIONS } from '../engine_v2/growth_v2.js';
 import { sound } from '../engine_v2/audio/sound_v2.js';
 import { icon } from './icons.js';
+import { mountDispatch, tickDispatch, unmountDispatch, dispatchAct, showReturn } from './dispatchUi_v2.js';
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -33,12 +32,6 @@ export function optionText(partId) {
     const opts = progress.optionsOf(partId).map(o => OPTIONS[o]).filter(Boolean);
     return opts.length ? `옵션: ${opts.map(o => `${o.name}(${o.desc})`).join(' · ')}` : '';
 }
-
-const clock = ms => {
-    const s = Math.max(0, Math.ceil(ms / 1000));
-    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-    return h ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
-};
 
 // ---- 작전 지원 창 ----
 let panel = null;
@@ -64,36 +57,13 @@ export function openGrowthPanel(startTab = 'modules', changed = null) {
     document.body.appendChild(panel);   // 설정 창처럼 화면 전체 위 (settingsPanel_v2.js)
     render();
     clearInterval(timer);
-    timer = setInterval(updateDispatchTimes, 1000);
+    timer = setInterval(() => { if (tab === 'dispatch' && panel.isConnected && tickDispatch()) render(); }, 1000);   // 파견: 시간만 고치고, 끝난 파견이 생기면 다시 그림
     sound.play('ui_click');
-}
-
-function updateDispatchTimes() {
-    if (!panel?.isConnected || tab !== 'dispatch') return;
-    const now = Date.now();
-    let needFullRender = false;
-    progress.dispatch.forEach((d, i) => {
-        const left = d.end - now;
-        const itemEl = panel.querySelector(`.v2-dispatch[data-dispatch-idx="${i}"]`);
-        if (!itemEl) {
-            needFullRender = true;
-            return;
-        }
-        if (left <= 0) {
-            if (!itemEl.classList.contains('is-done')) needFullRender = true;
-        } else {
-            const pct = Math.min(100, Math.max(0, ((now - d.start) / (d.end - d.start)) * 100));
-            const barI = itemEl.querySelector('.v2-dispatch__bar i');
-            if (barI) barI.style.width = `${pct}%`;
-            const timeSpan = itemEl.querySelector(`[data-dispatch-time="${i}"]`);
-            if (timeSpan) timeSpan.textContent = `${clock(left)} 남음`;
-        }
-    });
-    if (needFullRender) render();
 }
 
 export function closeGrowthPanel() {
     clearInterval(timer);
+    unmountDispatch();
     if (panel?.isConnected) panel.remove();
     if (onChange) onChange();
 }
@@ -109,32 +79,29 @@ function toast(msg, ok = true) {
 
 function act(name, d) {
     let r = null;
-    if (name === 'tab') { tab = d.tab; sound.play('ui_tab'); return render(); }
+    if (name === 'tab') { if (tab === 'dispatch' && d.tab !== 'dispatch') unmountDispatch(); tab = d.tab; sound.play('ui_tab'); return render(); }
+    if (name.startsWith('dsp')) return dispatchAct(name, d) ? render() : null;   // 파견 탭: 구역·캐릭터 고르기, 귀환 장면 닫기
     if (name === 'close') return closeGrowthPanel();
     if (name === 'buyModule') r = progress.buyModule(d.id);
     if (name === 'equipModule') { progress.equipModule(Number(d.slot), d.id || null); sound.play('ui_tab'); return render(); }
     if (name === 'upModule') r = progress.upgradeModule(d.id);
     if (name === 'buyResearch') r = progress.buyResearch(d.id);
-    if (name === 'dispatch') {
-        const sel = panel.querySelector(`select[data-zone-for="${d.char}"]`);
-        r = progress.startDispatch(d.char, Number(sel ? sel.value : 0));
-    }
+    if (name === 'dispatch') r = progress.startDispatch(d.char, Number(d.zone));
     if (name === 'collect') {
         r = progress.collectDispatch(Number(d.index));
         if (r.success) {
-            const part = r.part ? ` · ${r.part.name}(${gradeOf(r.part.grade).name}) ${r.part.type === 'refund' ? '환급' : '획득'}` : '';
-            render();   // 다시 그린 뒤 알림 (먼저 띄우면 다시 그리며 지워짐)
-            return toast(`파견 보상: +${r.dm.toLocaleString()} DM · 조각 +${r.shards} · 코어 +${r.cores}${part}`);
+            showReturn(r);   // 귀환 장면 (구역 일러스트 + 승리 동작 + 보상) — 다시 그려도 창 위에 남음
+            return render();
         }
     }
     render();
-    if (r) toast(r.success ? '완료!' : r.reason, r.success);
+    if (r) toast(r.success ? (name === 'dispatch' ? '파견 출발!' : '완료!') : r.reason, r.success);
 }
 
 function render() {
     if (!panel) return;
     const tabs = [['modules', '전술 모듈'], ['dispatch', '파견'], ['research', '계정 연구']];
-    const body = tab === 'dispatch' ? dispatchHtml() : tab === 'research' ? researchHtml() : modulesHtml();
+    const body = tab === 'dispatch' ? '' : tab === 'research' ? researchHtml() : modulesHtml();
     panel.innerHTML = `<div class="v2-growth__box v2-panel">
         <div class="v2-growth__head">
             <h2>작전 지원</h2>
@@ -143,8 +110,9 @@ function render() {
             <button class="v2-iconbtn" data-act="close" aria-label="닫기">✕</button>
         </div>
         <nav class="v2-growth__tabs">${tabs.map(([id, label]) => `<button data-act="tab" data-tab="${id}" class="${tab === id ? 'is-on' : ''}">${label}</button>`).join('')}</nav>
-        <div class="v2-growth__body">${body}</div>
+        <div class="v2-growth__body${tab === 'dispatch' ? ' is-dispatch' : ''}">${body}</div>
     </div>`;
+    if (tab === 'dispatch') mountDispatch(panel.querySelector('.v2-growth__body'));   // 파견 중 장면 (dispatchUi_v2.js)
 }
 
 function modulesHtml() {
@@ -168,33 +136,6 @@ function modulesHtml() {
     }).join('');
     return `<p class="v2-growth__hint">출격 때 끼우는 보조 스킬 (키 4·5, AUTO면 쓸 상황에 자동). 칸: 노말 1칸 → 하드를 열면 2칸. 별로 해금, DM으로 강화.</p>
         <div class="v2-modslots">${slotHtml}</div><div class="v2-modgrid">${cards}</div>`;
-}
-
-function dispatchHtml() {
-    const now = Date.now();
-    const zones = progress.dispatchZones();
-    const slots = progress.dispatchSlots();
-    const running = progress.dispatch.map((d, i) => {
-        const left = d.end - now, done = left <= 0;
-        const pct = Math.min(100, ((now - d.start) / (d.end - d.start)) * 100);
-        const r = rosterOf(d.character);
-        return `<div class="v2-dispatch${done ? ' is-done' : ''}" data-dispatch-idx="${i}" style="--sk:${r ? r.color : '#888'}">
-            <b>${r ? r.faction : d.character}</b><small>구역 ${d.zone} · ${CHAPTERS[d.zone - 1]?.name.split('·')[1]?.trim() || ''}</small>
-            <div class="v2-dispatch__bar"><i style="width:${pct}%"></i></div>
-            ${done ? `<button data-act="collect" data-index="${i}">받기</button>` : `<span data-dispatch-time="${i}">${clock(left)} 남음</span>`}</div>`;
-    }).join('');
-    const free = slots - progress.dispatch.length;
-    const cands = ROSTER.filter(c => c.id !== progress.character && progress.isCharacterUnlocked(c.id) && !progress.isDispatched(c.id));
-    const opts = zones.map(z => `<option value="${z}">구역 ${z}</option>`).join('');
-    const list = !zones.length ? '<p class="v2-growth__hint">노말에서 구역 보스전(1-B)을 깨면 그 구역에 파견할 수 있어요.</p>'
-        : !cands.length ? '<p class="v2-growth__hint">보낼 캐릭터가 없어요 — 출전 중이 아닌 열린 캐릭터만 보낼 수 있어요.</p>'
-            : cands.map(c => `<div class="v2-dispatch v2-dispatch--new" style="--sk:${c.color}"><b>${c.faction}</b>
-                <select data-zone-for="${c.id}" aria-label="${c.faction} 파견 구역">${opts}</select>
-                <button data-act="dispatch" data-char="${c.id}" ${free <= 0 ? 'disabled' : ''}>파견</button></div>`).join('');
-    const ex = DISPATCH.reward(zones[zones.length - 1] || 1);
-    return `<p class="v2-growth__hint">출전하지 않는 캐릭터를 깬 구역에 ${DISPATCH.hours}시간(연구로 단축) 보내면 DM·파츠 조각·스킬 코어를 가져와요 (30% 확률로 그 캐릭터 파츠, 레어 이하).
-        예: 구역 ${zones[zones.length - 1] || 1} = DM ${ex.dm.toLocaleString()} · 조각 ${ex.shards} · 코어 ${ex.cores}. 칸 ${progress.dispatch.length}/${slots} (하드·헬을 열면 늘어남).</p>
-        <div class="v2-dispatchlist">${running}${list}</div>`;
 }
 
 function researchHtml() {

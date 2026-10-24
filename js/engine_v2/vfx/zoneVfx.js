@@ -1,7 +1,7 @@
 /* ==========================================================================
-   PROJECT: MAD OVERLORD // 구역 2·3·4 적·보스·거점 전용 이펙트 (v2)
+   PROJECT: MAD OVERLORD // 구역 2·3·4·6 적·보스·거점 전용 이펙트 (v2)
    구역 2: 누런 연두 독가스 / 구역 3: 칠흑·진홍 마력·바랜 금빛
-   구역 4: 심연의 보라·광택 갑각·생체 발광 녹색 점액
+   구역 4: 심연의 보라·광택 갑각·생체 발광 녹색 점액 / 구역 6: 잿빛 그림자·금빛 종·붉은 실
    ========================================================================== */
 
 const TOXIC = '200, 220, 60';
@@ -20,6 +20,9 @@ const BOLT = '255, 240, 120';
 const ICE = '150, 220, 255';
 const WHITE = '245, 250, 255';
 const STONE = '75, 65, 75';
+const ASH = '150, 150, 160';
+const ASH_DARK = '60, 58, 70';
+const THREAD = '230, 50, 70';
 
 export const ZONE_VFX = {
     // ======== 구역 2 · 하부 폐기물 정착지 ========
@@ -247,6 +250,64 @@ export const ZONE_VFX = {
             { type: 'ring', at: 0.02, dur: 0.5, r: 55, ground: true, width: 3, color: BIO, dy: 20 },
             { type: 'mist', at: 0.1, r: 48, h: 9, life: 0.9, drift: 14, color: VOID, dy: 20 },
             { type: 'glow', at: 0, dur: 0.9, r: 50, color: VOID, dy: 20 }
+        ]
+    },
+
+    // ======== 구역 6 · 성왕국 변두리 (D-078) — 잿빛 그림자 · 흰 병동 · 금빛 헌금 · 붉은 실 ========
+    // 그림자 집행자 기습: 짧고 검은 베기 + 잿빛 연기 (주인공 가슴 높이)
+    shadowStrike: {
+        sfx: 'generic_slash',
+        layers: [
+            { type: 'slash', at: 0, dur: 0.24, r: 72, arc: 2.0, sweep: 0.08, thick: 0.8, angle: 0.9, width: 13, color: ASH_DARK, dy: -10 },
+            { type: 'slash', at: 0.02, dur: 0.2, r: 64, arc: 1.8, sweep: 0.08, thick: 0.6, angle: 0.9, width: 5, color: WHITE, dy: -10 },
+            { type: 'smoke', at: 0, count: 4, spread: 20, spreadY: 16, size: 14, life: [0.4, 0.7], rise: 20, color: ASH },
+            { type: 'flash', at: 0, dur: 0.08, r: 18, color: WHITE }
+        ]
+    },
+    // 그림자 집행자가 드러나거나 숨을 때: 잿빛 연기 한 줌
+    shadowPuff: {
+        layers: [
+            { type: 'smoke', at: 0, count: 6, spread: 26, spreadY: 30, size: 18, life: [0.5, 0.8], rise: 30, color: ASH },
+            { type: 'motes', at: 0.05, count: 5, spread: 24, rise: [20, 45], life: [0.4, 0.7], size: 2, color: ASH_DARK }
+        ]
+    },
+    // 파문의 종 예고: 보스 둘레 금빛 룬이 돎
+    bellWarn: {
+        layers: [
+            { type: 'rune', at: 0, dur: 1.2, r: 80, color: HOLY_GOLD, spin: 4 },
+            { type: 'glow', at: 0, dur: 1.2, r: 90, color: HOLY_GOLD },
+            { type: 'ring', at: 0.8, dur: 0.4, r: 80, ground: true, inward: true, color: HOLY_WHITE, width: 2 }
+        ]
+    },
+    // 파문의 종: 금빛 고리 파동이 크게 퍼짐 (범위 = bell.range)
+    bellToll: {
+        sfx: 'zone_judgment',
+        layers: [
+            { type: 'flash', at: 0, dur: 0.18, r: 60, color: HOLY_WHITE },
+            { type: 'ring', at: 0, dur: 0.7, r: 560, ground: true, color: HOLY_GOLD, width: 10 },
+            { type: 'ring', at: 0.12, dur: 0.7, r: 420, ground: true, color: HOLY_WHITE, width: 4 },
+            { type: 'ring', at: 0.05, dur: 0.6, r: 140, color: HOLY_GOLD, width: 3 },
+            { type: 'motes', at: 0.05, count: 10, spread: 90, rise: [40, 90], life: [0.6, 1.0], size: 2.5, color: HOLY_GOLD }
+        ]
+    },
+    // 생명의 저울: 보스 둘레 금빛 저울 빛 + 붉은 빛이 모여듦
+    scalesTilt: {
+        sfx: 'zone_heal_holy',
+        layers: [
+            { type: 'rune', at: 0, dur: 0.9, r: 56, color: HOLY_GOLD, spin: -3, dy: 60 },
+            { type: 'glow', at: 0, dur: 1.0, r: 80, color: HOLY_GOLD, dy: 60 },
+            { type: 'ring', at: 0, dur: 0.6, r: 90, inward: true, color: THREAD, width: 3, dy: 60 },
+            { type: 'motes', at: 0.1, count: 10, spread: 60, rise: [30, 70], life: [0.6, 1.0], size: 2.5, color: THREAD, dy: 20 }
+        ]
+    },
+    // 축복 성수대가 부서짐: 금빛 성수 물보라
+    fontBreak: {
+        sfx: 'zone_heal_holy',
+        layers: [
+            { type: 'flash', at: 0, dur: 0.16, r: 40, color: HOLY_WHITE },
+            { type: 'goo', at: 0, count: 8, speed: 200, size: 7, life: [0.7, 1.1], splat: true, floor: 0, color: HOLY_GOLD },
+            { type: 'ring', at: 0.02, dur: 0.6, r: 120, ground: true, width: 4, color: HOLY_GOLD },
+            { type: 'motes', at: 0.05, count: 12, spread: 50, rise: [50, 110], life: [0.6, 1.1], size: 2.5, color: HOLY_GOLD }
         ]
     }
 };

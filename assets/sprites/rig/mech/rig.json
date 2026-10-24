@@ -158,6 +158,349 @@
       "y": 685,
       "w": 225,
       "h": 309
+    },
+    "body_u": {
+      "src": "body_u.png",
+      "x": 40,
+      "y": 80,
+      "w": 817,
+      "h": 719
+    },
+    "head_u": {
+      "src": "head_u.png",
+      "x": 279,
+      "y": 83,
+      "w": 376,
+      "h": 432
+    },
+    "canister_u": {
+      "src": "canister_u.png",
+      "x": 610,
+      "y": 36,
+      "w": 174,
+      "h": 282
+    },
+    "armR_fist_u": {
+      "src": "armR_fist_u.png",
+      "x": 648,
+      "y": 549,
+      "w": 275,
+      "h": 238
+    },
+    "armL_u": {
+      "src": "armL_u.png",
+      "x": 51,
+      "y": 552,
+      "w": 248,
+      "h": 289
+    },
+    "legR_u": {
+      "src": "legR_u.png",
+      "x": 505,
+      "y": 715,
+      "w": 266,
+      "h": 255
+    },
+    "legL_u": {
+      "src": "legL_u.png",
+      "x": 175,
+      "y": 685,
+      "w": 229,
+      "h": 293
+    },
+    "body_c": {
+      "src": "body_c.png",
+      "x": 40,
+      "y": 180,
+      "w": 793,
+      "h": 615
+    },
+    "head_c": {
+      "src": "head_c.png",
+      "x": 279,
+      "y": 86,
+      "w": 379,
+      "h": 429
+    },
+    "canister_c": {
+      "src": "canister_c.png",
+      "x": 604,
+      "y": 36,
+      "w": 180,
+      "h": 282
+    },
+    "armR_fist_c": {
+      "src": "armR_fist_c.png",
+      "x": 648,
+      "y": 549,
+      "w": 286,
+      "h": 223
+    },
+    "armL_c": {
+      "src": "armL_c.png",
+      "x": 51,
+      "y": 552,
+      "w": 248,
+      "h": 289
+    },
+    "legR_c": {
+      "src": "legR_c.png",
+      "x": 493,
+      "y": 715,
+      "w": 259,
+      "h": 255
+    },
+    "legL_c": {
+      "src": "legL_c.png",
+      "x": 190,
+      "y": 685,
+      "w": 214,
+      "h": 293
+    },
+    "body_d": {
+      "src": "body_d.png",
+      "x": 40,
+      "y": 133,
+      "w": 887,
+      "h": 829
+    },
+    "head_d": {
+      "src": "head_d.png",
+      "x": 279,
+      "y": 133,
+      "w": 379,
+      "h": 382
+    },
+    "canister_d": {
+      "src": "canister_d.png",
+      "x": 610,
+      "y": 36,
+      "w": 174,
+      "h": 282
+    },
+    "armR_cannon_d": {
+      "src": "armR_cannon_d.png",
+      "x": 648,
+      "y": 549,
+      "w": 279,
+      "h": 321
+    },
+    "armL_d": {
+      "src": "armL_d.png",
+      "x": 51,
+      "y": 552,
+      "w": 248,
+      "h": 296
+    },
+    "legR_d": {
+      "src": "legR_d.png",
+      "x": 506,
+      "y": 715,
+      "w": 265,
+      "h": 255
+    },
+    "legL_d": {
+      "src": "legL_d.png",
+      "x": 175,
+      "y": 685,
+      "w": 229,
+      "h": 292
+    },
+    "body_v": {
+      "src": "body_v.png",
+      "x": 40,
+      "y": 257,
+      "w": 794,
+      "h": 539
+    },
+    "head_v": {
+      "src": "head_v.png",
+      "x": 279,
+      "y": 133,
+      "w": 379,
+      "h": 382
+    },
+    "canister_v": {
+      "src": "canister_v.png",
+      "x": 610,
+      "y": 36,
+      "w": 174,
+      "h": 282
+    },
+    "armR_cannon_v": {
+      "src": "armR_cannon_v.png",
+      "x": 648,
+      "y": 549,
+      "w": 271,
+      "h": 273
+    },
+    "armL_v": {
+      "src": "armL_v.png",
+      "x": 51,
+      "y": 552,
+      "w": 248,
+      "h": 289
+    },
+    "legR_v": {
+      "src": "legR_v.png",
+      "x": 506,
+      "y": 715,
+      "w": 265,
+      "h": 255
+    },
+    "legL_v": {
+      "src": "legL_v.png",
+      "x": 176,
+      "y": 685,
+      "w": 228,
+      "h": 293
+    },
+    "body_w": {
+      "src": "body_w.png",
+      "x": 40,
+      "y": 211,
+      "w": 875,
+      "h": 704
+    },
+    "head_w": {
+      "src": "head_w.png",
+      "x": 279,
+      "y": 133,
+      "w": 379,
+      "h": 382
+    },
+    "canister_w": {
+      "src": "canister_w.png",
+      "x": 604,
+      "y": 36,
+      "w": 180,
+      "h": 282
+    },
+    "armR_fist_w": {
+      "src": "armR_fist_w.png",
+      "x": 648,
+      "y": 549,
+      "w": 267,
+      "h": 321
+    },
+    "armL_w": {
+      "src": "armL_w.png",
+      "x": 51,
+      "y": 552,
+      "w": 248,
+      "h": 289
+    },
+    "legR_w": {
+      "src": "legR_w.png",
+      "x": 506,
+      "y": 715,
+      "w": 265,
+      "h": 254
+    },
+    "legL_w": {
+      "src": "legL_w.png",
+      "x": 175,
+      "y": 685,
+      "w": 229,
+      "h": 292
+    },
+    "body_l": {
+      "src": "body_l.png",
+      "x": 40,
+      "y": 140,
+      "w": 793,
+      "h": 655
+    },
+    "head_l": {
+      "src": "head_l.png",
+      "x": 279,
+      "y": 95,
+      "w": 379,
+      "h": 420
+    },
+    "canister_l": {
+      "src": "canister_l.png",
+      "x": 604,
+      "y": 36,
+      "w": 180,
+      "h": 282
+    },
+    "armR_cannon_l": {
+      "src": "armR_cannon_l.png",
+      "x": 648,
+      "y": 549,
+      "w": 271,
+      "h": 254
+    },
+    "armL_l": {
+      "src": "armL_l.png",
+      "x": 51,
+      "y": 552,
+      "w": 248,
+      "h": 289
+    },
+    "legR_l": {
+      "src": "legR_l.png",
+      "x": 506,
+      "y": 715,
+      "w": 265,
+      "h": 255
+    },
+    "legL_l": {
+      "src": "legL_l.png",
+      "x": 175,
+      "y": 685,
+      "w": 229,
+      "h": 292
+    },
+    "body_m": {
+      "src": "body_m.png",
+      "x": 38,
+      "y": 213,
+      "w": 795,
+      "h": 585
+    },
+    "head_m": {
+      "src": "head_m.png",
+      "x": 279,
+      "y": 131,
+      "w": 376,
+      "h": 384
+    },
+    "canister_m": {
+      "src": "canister_m.png",
+      "x": 610,
+      "y": 36,
+      "w": 174,
+      "h": 282
+    },
+    "armR_fist_m": {
+      "src": "armR_fist_m.png",
+      "x": 648,
+      "y": 549,
+      "w": 291,
+      "h": 198
+    },
+    "armL_m": {
+      "src": "armL_m.png",
+      "x": 50,
+      "y": 552,
+      "w": 249,
+      "h": 289
+    },
+    "legR_m": {
+      "src": "legR_m.png",
+      "x": 509,
+      "y": 715,
+      "w": 250,
+      "h": 283
+    },
+    "legL_m": {
+      "src": "legL_m.png",
+      "x": 174,
+      "y": 685,
+      "w": 230,
+      "h": 317
     }
   },
   "pivots": {

@@ -32,8 +32,12 @@ export const DIFFICULTIES = [
         mutators: true }
 ];
 export const DEFAULT_DIFFICULTY = 'normal';
-/** 다음 난이도를 여는 스테이지 (마지막 구역 보스전) */
-export const FINAL_STAGE_ID = STAGES[STAGES.length - 1].id;
+/**
+ * 다음 난이도를 여는 스테이지: 구역 4 보스전. 구역 5~8을 더하는 동안은 4-B 그대로 둔다 —
+ * 마지막 스테이지로 옮기면 이미 연 난이도가 다시 잠김 (D-078 임의 결정, 구역이 다 들어오면 다시 정함)
+ */
+export const FINAL_STAGE_ID = '4-B';
+if (!STAGES.some(s => s.id === FINAL_STAGE_ID)) throw new Error(`difficulty_v2: FINAL_STAGE_ID '${FINAL_STAGE_ID}' 스테이지가 없음`);
 
 export function difficultyOf(id) {
     return DIFFICULTIES.find(d => d.id === id) || DIFFICULTIES[0];

@@ -104,7 +104,7 @@ export const SaintMethods = {
     /** 시체를 먼저, 모자라면 범위 안 체력이 가장 낮은 병사를 꿰매 아군으로 (최대 reviveMax, 아군 상한 allyMax) */
     forcedRevive(range) {
         this.fx.play(SAINT_VFX.reviveCall, this.monsterX + 35, FOOT_B);
-        const room = Math.max(0, SAINT.allyMax - this.allies.length);
+        const room = Math.max(0, SAINT.allyMax + (this.kitMod?.('allyMax') || 0) - this.allies.length);   // 2차 세트: 꿰맬 수 있는 아군 +
         let n = Math.min(SAINT.reviveMax, room);
         const corpses = [...this.corpses].sort((a, b) => a.x - b.x).slice(0, n);
         corpses.forEach((c, i) => this.schedule(0.15 + i * 0.12, () => this.raiseCorpse(c)));
@@ -207,8 +207,7 @@ export const SaintMethods = {
         if (regen && this.overloadT <= 0 && this.playerHp > 0 && this.playerHp < this.maxPlayerHp) {
             const missing = 1 - this.playerHp / this.maxPlayerHp;
             const heal = this.maxPlayerHp * (regen.base + regen.k * missing) * dt;
-            this.playerHp = Math.min(this.maxPlayerHp, this.playerHp + heal);
-            monsterControllerV2.updateHpBar(this.playerHp, this.maxPlayerHp);
+            this.healPlayer(heal);
             this.stitchHealAcc = (this.stitchHealAcc || 0) + heal;
             this.stitchHealT = (this.stitchHealT || 0) + dt;
             if (this.stitchHealT >= 1) {

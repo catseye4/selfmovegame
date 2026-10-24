@@ -187,9 +187,9 @@ def run_background(ctx):
     g.enter_v2()
     g.battle('mech', wait_ms=2900)
     sky, city, ground = g.js(BG)
-    ctx.check('hall.png' in sky and 'machinery.png' in city and 'floor.png' in ground, '배경 3층 = 탱크 홀·기계 띠·바닥', str([sky[-30:], city[-30:], ground[-30:]]))
+    ctx.check('hall.webp' in sky and 'machinery.webp' in city and 'floor.webp' in ground, '배경 3층 = 탱크 홀·기계 띠·바닥', str([sky[-30:], city[-30:], ground[-30:]]))
     ctx.check(g.js("return getComputedStyle(document.getElementById('bg-ground-v2')).animationName;") == 'scroll-bg', '걷는 동안 배경이 흐름')
     g.js("['1-1','1-2','1-3','1-4','1-5'].forEach(id => progress.stages[id] = { stars: [true,true,true], cleared: true, bestTime: 60 }); progress.selectStage('1-B');")
     g.battle('mech', wait_ms=1500)
     sky = g.js(BG)[0]
-    ctx.check('hall_alarm.png' in sky, '보스전: 붉은 경보 조명 배경', sky[-40:])
+    ctx.check('hall_alarm.webp' in sky, '보스전: 붉은 경보 조명 배경', sky[-40:])

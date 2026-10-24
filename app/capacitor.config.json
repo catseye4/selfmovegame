@@ -1,0 +1,11 @@
+{
+  "appId": "com.madoverlord.game",
+  "appName": "매드 오버로드",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#000000",
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  }
+}

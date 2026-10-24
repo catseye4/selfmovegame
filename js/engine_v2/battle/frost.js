@@ -28,7 +28,7 @@ export const FrostMethods = {
         e.chillT = FROST.chillSec;
         if (e.chill >= FROST.freezeAt && !e.boss) {
             e.chill = 0;
-            this.freezeEnemy(e, FROST.freezeSec);
+            this.freezeEnemy(e, FROST.freezeSec + (this.kitMod?.('freezeSec') || 0));   // 2차 세트 얼음 여왕 2부위: 빙결 시간 +
         } else {
             this.updateEnemyFilter(e);
         }
@@ -41,6 +41,7 @@ export const FrostMethods = {
         e.chill = 0;
         this.updateEnemyFilter(e);
         this.fx.play(FROST_VFX.freeze, aimOf(e).x, FOOT_B);
+        this.kitOnFreeze?.(e);   // 2차 패시브 얼음 왕국 (battle/kit.js)
     },
 
     /** 다리 패시브 빙판 걸음: 얼어 있는 적에게 주는 피해 배율 증가분 (아니면 0) */
@@ -141,7 +142,7 @@ export const FrostMethods = {
             }
             if (e.frozenT > 0) {
                 e.frozenT -= dt;
-                if (e.frozenT <= 0) this.updateEnemyFilter(e);
+                if (e.frozenT <= 0) { this.updateEnemyFilter(e); this.kitOnThaw?.(e); }   // 2차 패시브 동상 (battle/kit.js)
             }
         });
         if (!this.blizzard) return;

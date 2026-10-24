@@ -15,9 +15,10 @@ import { monsterControllerV2 } from '../engine_v2/monster_v2.js';
 import { SLOT_KEYS } from '../engine_v2/skills_v2.js';
 import { sound } from '../engine_v2/audio/sound_v2.js';
 import { openSettings } from './settingsPanel_v2.js';
+import { coach } from './coach_v2.js';
 import { difficultyOf, difficultyOfStage } from '../engine_v2/difficulty_v2.js';
 
-const FACTION_COLOR = { mech: '#3ee6ff', kaiju: '#a0ff32', hero: '#c86eff', chimera: '#ff9628', diver: '#3fe0c8', saint: '#ff4d6d', frost: '#7fd4ff', doll: '#5ae6f0' };
+const FACTION_COLOR = { mech: '#3ee6ff', kaiju: '#a0ff32', hero: '#c86eff', chimera: '#ff9628', diver: '#3fe0c8', saint: '#ff4d6d', frost: '#7fd4ff', doll: '#5ae6f0', architect: '#ff9a2e', broadcaster: '#ff50aa' };
 // 진행도 표시: 스테이지 거리와 요새·최종 기지 위치 (stages_v2.js)
 const $ = id => document.getElementById(id);
 
@@ -255,14 +256,17 @@ export class BattleHud {
             } else {
                 const remain = b.skillCd[slot];
                 this.set(`cd_${slot}`, Math.ceil(remain * 10), v => {
-                    btn.style.setProperty('--cd', sk.cd ? remain / sk.cd : 0);
+                    btn.style.setProperty('--cd', sk.cd ? Math.min(1, remain / sk.cd) : 0);   // 파문의 종(구역 6)으로 쿨다운보다 길어질 수 있음
                     num.textContent = v > 0 ? String(Math.ceil(v / 10)) : '';
                 });
             }
             const cls = `${st.ready}${st.hasTarget}`;
             this.set(`st_${slot}`, cls, () => {
                 // 쿨다운/게이지가 막 찼을 때 알림음 (전투 시작 시점의 상태는 제외)
-                if (this.readyPrev[slot] === false && st.ready) sound.play(sk.ult ? 'ult_ready' : 'skill_ready');
+                if (this.readyPrev[slot] === false && st.ready) {
+                    sound.play(sk.ult ? 'ult_ready' : 'skill_ready');
+                    if (sk.ult) coach('battle_ult', btn);   // 처음 한 번: 필살기 안내
+                }
                 this.readyPrev[slot] = st.ready;
                 btn.classList.toggle('is-ready', st.ready && st.hasTarget);
                 btn.classList.toggle('is-blocked', st.ready && !st.hasTarget);

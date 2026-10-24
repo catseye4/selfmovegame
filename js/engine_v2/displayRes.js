@@ -15,9 +15,10 @@ export function setFitScale(k) {
     fitScale = Number.isFinite(k) && k > 0 ? k : 1;
 }
 
-/** 지금 쓸 해상도 배율 (1 ~ MAX_RES, 0.25 단위 — 창을 조금 바꿀 때마다 캔버스를 다시 만들지 않게) */
+/** 지금 쓸 해상도 배율 (1 ~ MAX_RES, 0.25 단위 반올림 — 창을 조금 바꿀 때마다 캔버스를 다시 만들지 않게.
+ *  올림이면 1080p 전체 화면(1.506)이 1.75가 되어 픽셀을 괜히 많이 그림 — 성능 측정 2026-10-21) */
 export function displayRes() {
     if (settings.get('sharp') === false) return 1;
     const r = fitScale * (window.devicePixelRatio || 1);
-    return Math.max(1, Math.min(MAX_RES, Math.ceil(r * 4 - 0.01) / 4));
+    return Math.max(1, Math.min(MAX_RES, Math.round(r * 4) / 4));
 }

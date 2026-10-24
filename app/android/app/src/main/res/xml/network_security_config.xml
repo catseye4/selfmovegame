@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 보안 연결(https)만 쓰되, 이 기기 자신(localhost)만 http 허용 — 업데이트 시험 때 PC 파일을 adb reverse로 받기 위함 (D-074).
+     실제 업데이트는 GitHub(https)에서 받는다. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

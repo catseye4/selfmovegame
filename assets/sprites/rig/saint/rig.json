@@ -29,9 +29,9 @@
     "head": {
       "src": "head.png",
       "x": 249,
-      "y": 189,
+      "y": 174,
       "w": 375,
-      "h": 318
+      "h": 333
     },
     "armB": {
       "src": "armB.png",
@@ -71,9 +71,9 @@
     "head_up": {
       "src": "head_up.png",
       "x": 249,
-      "y": 183,
+      "y": 127,
       "w": 415,
-      "h": 324
+      "h": 380
     },
     "armB_up": {
       "src": "armB_up.png",

@@ -1,7 +1,7 @@
 """
 타락 히어로 A·B 세트 부위 그림 자르기 (D-050 파츠 확장) → assets/sprites/rig/hero/<부위>_a.png · <부위>_b.png + rig.json에 추가
 
-실행: 프로젝트 루트에서  python tools/rig/cut_hero_sets.py   (기본 그림은 cut_hero_parts.py가 만든 것을 그대로 둠)
+실행: 프로젝트 루트에서  python tools/rig/cut_hero_sets.py [글자…]   (기본 a b — 2차 세트는 u c d v w l m, D-071. 기본 그림은 cut_hero_parts.py가 만든 것을 그대로 둠)
 
 입력 (Gemini 원본 크기 다운로드, assets/sprites/parts/hero/src/, 2026-10-17)
  - hero_<a|b>_neutral_gemini.png : 세트 기본 자세 — 중립 원본(hero_neutral)을 첨부해 장비만 바꾼 것
@@ -41,12 +41,19 @@ SEAM = base.SEAM
 PAD = 220                      # 무기 그림은 칸을 오른쪽으로 이만큼 넓혀 맞춤
 WEAPON_ZONE = (540, 560, 1024 + PAD, 900)
 GRIP_T = 0.59
+ORB_AHEAD = (70, -10)          # 구슬(손잡이 없는 무기) 중심 = 주먹 + 이만큼
 
 SETS = {
     'a': {'min_part': None, 'grip': None, 'legs_box': base.LEGS_BOX, 'leg_poly': base.LEG_N_POLY},
     'b': {'min_part': 20, 'grip': base.SWORD_GRIP_OLD, 'legs_box': (425, base.LEG_TOP_Y, 775, 982),
           'leg_poly': base.LEG_N_POLY[:6] + [(775, 840), (775, 982), (515, 982)] + base.LEG_N_POLY[9:]},
 }
+# 2차 세트 (D-071): 갑옷 세트는 A처럼, 긴 로브·그림자 자락 세트는 B처럼. 칼이 아닌 무기(창·석궁·지팡이·낫·구슬)는
+# 칼날 가드가 없어 손잡이를 기본 칼 자리(SWORD_GRIP_OLD)로 — 칼(장검·마검)만 가드에서 찾음
+for _v in 'ucdvwlm':
+    _robe = _v in 'vm'
+    SETS[_v] = dict(SETS['b' if _robe else 'a'], grip=None if _v in 'dl' else base.SWORD_GRIP_OLD, min_part=20 if _v in 'vwm' else None)
+SETS['m']['grip'] = 'orb'   # 별빛 구슬: 손잡이가 없어 구슬 중심을 주먹 바로 앞(ORB_AHEAD)에 둠
 
 
 def find_grip(mask):
@@ -92,7 +99,11 @@ def cut_weapon(v, cfg):
     main = largest(m)
     m = main | (m & ~main & drop_specks(m, 60))      # 떨어진 구슬·반짝이도 남김
     m = grow(m, op_new & rect_mask(new.shape, WEAPON_ZONE), 2)
-    grip = cfg['grip'] or find_grip(main)
+    if cfg['grip'] == 'orb':
+        ys, xs = np.nonzero(main)
+        grip = (int(xs.mean()) - ORB_AHEAD[0], int(ys.mean()) - ORB_AHEAD[1])
+    else:
+        grip = cfg['grip'] or find_grip(main)
     dx, dy = base.FIST[0] - grip[0], base.FIST[1] - grip[1]
     print(f'[{v}] 무기 손잡이 {grip} → 주먹 {base.FIST} (이동 {dx}, {dy})')
     return np.roll(cut(new, m), (dy, dx), axis=(0, 1))
@@ -183,7 +194,7 @@ def cut_set(v):
 def main():
     path = f'{OUT_DIR}/rig.json'
     layout = json.load(open(path, encoding='utf-8'))
-    for v in ('a', 'b'):
+    for v in (sys.argv[1:] or ['a', 'b']):
         layout['parts'].update(cut_set(v))
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(layout, f, ensure_ascii=False, indent=2)

@@ -42,6 +42,28 @@ export const PlayerMethods = {
         monsterControllerV2.updateHpBar(this.playerHp, this.maxPlayerHp);
     },
 
+    /**
+     * 주인공 회복 (최대 내구도까지). 실제로 찬 양을 돌려주고 healTaken에 더함 —
+     * 구역 6 보스 '생명의 저울'이 그동안 회복한 양의 일부를 가져감 (enemies_v2.js tickMercyBoss). 과부하 뒤 긴급 수리는 회복으로 치지 않음
+     */
+    healPlayer(amount) {
+        if (!(amount > 0)) return 0;
+        const before = this.playerHp;
+        this.playerHp = Math.min(this.maxPlayerHp, this.playerHp + amount);
+        const got = this.playerHp - before;
+        this.healTaken += got;
+        monsterControllerV2.updateHpBar(this.playerHp, this.maxPlayerHp);
+        return got;
+    },
+
+    /** 팔·몸통 스킬 쿨다운 늘리기 (구역 6 보스 '파문의 종') — 필살기 게이지·전술 모듈은 그대로 */
+    delaySkills(sec, label) {
+        for (const slot of ['arm', 'body']) {
+            if (this.skills[slot] && !this.skills[slot].ult) this.skillCd[slot] += sec;
+        }
+        this.createDamagePopup(this.monsterX + 30, 220, `${label}${sec}초`, false);
+    },
+
     /** 맞으면 움찔 (Q-008 Q4, rig/reactions.js): 한 방은 바로(0.25초에 한 번까지), 계속 맞는 근접은 휘두르는 박자처럼 0.7초마다 */
     hurtReact(dt) {
         const now = this.stats.time;
@@ -106,7 +128,7 @@ export const PlayerMethods = {
 
     // ---- 주인공 상태 이상 (적 공격) ----
     applyPlayerSlow(sec, quiet = false) {
-        if (this.equippedLegId === 'leg_hero_hover') {   // 다리 패시브: 감속 무시
+        if (this.equippedLegId === 'leg_hero_hover' || this.kitFlag('slowImmune')) {   // 다리 패시브: 감속 무시 (2차 패시브 포함)
             if (!quiet) this.createDamagePopup(this.monsterX + 40, 190, '감속 무효', false);
             return;
         }
@@ -170,7 +192,7 @@ export const PlayerMethods = {
     },
 
     knockPlayerBack(px, label) {
-        if (this.equippedLegId === 'leg_kaiju_a' || this.knockImmuneBySet()) {   // '단단한 껍질' 다리 · 광폭 실험체 4부위(아드레날린 중): 밀려나지 않음
+        if (this.equippedLegId === 'leg_kaiju_a' || this.knockImmuneBySet() || this.kitFlag('knockImmune')) {   // 2차 패시브·버프도 (kit.js)   // '단단한 껍질' 다리 · 광폭 실험체 4부위(아드레날린 중): 밀려나지 않음
             this.createDamagePopup(this.monsterX + 30, 210, '버팀!', false);
             return;
         }
@@ -222,8 +244,7 @@ export const PlayerMethods = {
     tickFactionPassives(dt, frontX) {
         if (this.equippedHeadId === 'head_mutant' && this.playerHp < this.maxPlayerHp) {
             const regenAmount = this.maxPlayerHp * PASSIVE.regen * dt;
-            this.playerHp = Math.min(this.maxPlayerHp, this.playerHp + regenAmount);
-            monsterControllerV2.updateHpBar(this.playerHp, this.maxPlayerHp);
+            this.healPlayer(regenAmount);
 
             this.regenPopupTimer = (this.regenPopupTimer || 0) + dt;
             if (this.regenPopupTimer >= 1.0) {

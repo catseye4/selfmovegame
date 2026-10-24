@@ -1,7 +1,7 @@
 """
 거대로봇 A·B 세트 부위 그림 자르기 (D-050 파츠 확장) → assets/sprites/rig/mech/<부위>_a.png · <부위>_b.png + rig.json에 추가
 
-실행: 프로젝트 루트에서  python tools/rig/cut_mech_sets.py   (기본 그림은 cut_mech_parts.py가 만든 것을 그대로 둠)
+실행: 프로젝트 루트에서  python tools/rig/cut_mech_sets.py [글자…]   (기본 a b — 2차 세트는 u c d v w l m, D-071. 기본 그림은 cut_mech_parts.py가 만든 것을 그대로 둠)
 
 입력 (Gemini 원본 크기 다운로드, assets/sprites/parts/robot/src/, 2026-10-17)
  - mech_a_cannon_gemini.png / mech_a_armless_gemini.png : A 「포격 지휘」 — 캐논 원본(mech_rig_cannon)을 첨부해 장비만 바꾼 것 / 같은 대화에서 팔다리를 지운 몸
@@ -40,6 +40,12 @@ SETS = {
           'head_extra': [(350, 95), (650, 95), (650, 200), (638, 215), (638, 300), (308, 300), (306, 262),
                          (320, 215), (336, 170), (350, 125)]},
 }
+# 2차 세트 (D-071): 전신 = mech_<글자>_full, 팔다리 없는 몸 = mech_<글자>_armless ("이미지 복사" 939×1024).
+# 무기 팔은 세트의 rigArm과 같게 (캐논 팔 = 포·저격포·방사기, 주먹 팔 = 주먹·드릴·방패·칼날). 머리 위 장식은 돔 위 넓은 칸까지
+HEAD_TOP = [(380, 20), (600, 20), (600, 135), (380, 135)]
+for _v, _arm in {'u': 'fist', 'c': 'fist', 'd': 'cannon', 'v': 'cannon', 'w': 'fist', 'l': 'cannon', 'm': 'fist'}.items():
+    SETS[_v] = {'full': f'mech_{_v}_full', 'less': f'mech_{_v}_armless', 'ref': base.SRC_FIST if _arm == 'fist' else base.SRC_MAIN,
+                'weapon': f'armR_{_arm}', 'head_extra': HEAD_TOP}
 # 기본 선을 아래로 넓힌 것 (무기 끝·발이 기본보다 낮게 나옴)
 ARM_A_POLY = base.ARM_A_POLY[:8] + [(150, 790), (100, 840), (60, 862), (0, 862), (0, 549)]
 LEG_A_POLY = base.LEG_A_POLY[:7] + [(445, 1024), (155, 1024)]
@@ -158,7 +164,7 @@ def cut_set(v):
 def main():
     path = f'{OUT_DIR}/rig.json'
     layout = json.load(open(path, encoding='utf-8'))
-    for v in ('a', 'b'):
+    for v in (sys.argv[1:] or ['a', 'b']):
         layout['parts'].update(cut_set(v))
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(layout, f, ensure_ascii=False, indent=2)

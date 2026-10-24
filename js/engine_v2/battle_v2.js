@@ -29,22 +29,26 @@ import { HERO_VFX, MECH_VFX } from './vfx/vfxDefs.js';
 import { skillsForParts } from './skills_v2.js';
 import { BattleHud } from '../ui_v2/battleHud_v2.js';
 import { BattleDirector } from '../ui_v2/battleDirector_v2.js';
+import { coach } from '../ui_v2/coach_v2.js';
 import { sound } from './audio/sound_v2.js';
 import { progress } from './progress_v2.js';
 import { stageById, defaultStage, nextStageOf } from './stages_v2.js';
 import { stageFor, difficultyOf, difficultyUnlocked, nextDifficultyOf, FINAL_STAGE_ID, DEFAULT_DIFFICULTY } from './difficulty_v2.js';
 import { aimAt as aimOf } from './bases_v2.js';
-import { HERO, POPUP, FOOT_B } from './battle/tuning.js';
+import { HERO, POPUP, FOOT_B, OVERLOAD } from './battle/tuning.js';
 import { PlayerMethods } from './battle/player.js';
 import { AttackMethods, SKILL_AUTO_KEY } from './battle/attacks.js';
 import { EnemyMethods } from './battle/enemyField.js';
 import { AllyMethods } from './battle/allies.js';
 import { SetMethods } from './battle/sets.js';
+import { KitMethods } from './battle/kit.js';
 import { DiverMethods } from './battle/diver.js';
 import { SaintMethods } from './battle/saint.js';
 import { FrostMethods } from './battle/frost.js';
 import { DollMethods } from './battle/doll.js';
 import { GrowthBattleMethods } from './battle/growth.js';
+import { predecodeStageArt } from './enemies_v2.js';
+import { runReport } from './battle/runReport.js';
 
 export class BattleEngine {
     constructor() {
@@ -68,6 +72,7 @@ export class BattleEngine {
         this.monsterX = 150; // 캐릭터 초기 좌측 X 좌표
         this.playerHp = 0;
         this.maxPlayerHp = 0;
+        this.healTaken = 0;
         this.playerDps = 0;
         this.playerRange = 150;
         this.playerSpeed = 100;
@@ -122,11 +127,14 @@ export class BattleEngine {
         this.onNavigate = null;                     // (화면 이름) => 화면 전환 (main_v2.js가 연결)
         this.runId = 0;
         this.cinematic = false;                     // 끝 연출 중: 입력/스킬 막음
-        this.stats = { kills: 0, time: 0, startDm: 0 };
+        this.stats = { kills: 0, time: 0, startDm: 0, marks: {} };
         this.popupSlots = new Map();
         this.buffs = {};
         this.zones = [];
         this.setFx = {};
+        this.kitBuffs = {};       // 스킬 부품 (battle/kit.js, 파츠 확장 2차)
+        this.kitZones = [];
+        this.kitWaves = [];
         // 리그 애니메이션 이벤트 → 전장 이펙트 (거대로봇 출격 점프 착지)
         monsterControllerV2.onRigEvent = name => {
             if (!this.isActive) return;
@@ -134,7 +142,7 @@ export class BattleEngine {
             // 동작 효과음: 발걸음(거대 캐릭터 걷기 = stomp, 사람 크기 히어로 = step 가볍게), 점프 분사, 기 모으기
             if (name === 'stomp') sound.play('giant_step');
             else if (name === 'step') sound.play('giant_step', { vol: 0.45, rate: 1.5 });
-            if (name === 'stomp' || name === 'step') this.onFootstep();   // 다리 패시브 '짓밟기' (battle/sets.js)
+            if (name === 'stomp' || name === 'step') { this.onFootstep(); this.kitOnStep(); }   // 다리 패시브 '짓밟기' (battle/sets.js) · 2차 걸음 패시브 (battle/kit.js)
             else if (name === 'thrust') sound.play('mech_thrust');
             else if (name === 'charge') sound.play('charge_up');
         };
@@ -148,12 +156,13 @@ export class BattleEngine {
         // 난이도(D-063): 고른 난이도의 배율을 곱한 스테이지 복사본 — 전투 코드는 b.stage만 읽음
         this.difficulty = difficultyUnlocked(progress.difficulty, progress) ? progress.difficulty : DEFAULT_DIFFICULTY;
         this.stage = this.growthStage(stageFor(stageById(progress.selectedStage || defaultStage(progress).id), this.difficulty));   // + 계정 연구 DM (growth.js)
-        // 구역 배경 (ui_v2.css .v2-zone-2 ~ 4), 보스전은 경보 조명·불길 판 (.v2-stage-boss)
+        predecodeStageArt(this.stage);   // 이 스테이지 적 그림을 미리 풂 (enemies_v2.js — 처음 나올 때 멈칫하지 않게)
+        // 구역 배경 (ui_v2.css .v2-zone-2 ~ 4 · 6), 보스전은 경보 조명·불길 판 (.v2-stage-boss)
         // .v2-boss-rage(구역 4 보스 2페이즈)·.v2-crimson(구역 3 악마기사 소환 점멸)은 전투 중에 붙음
         const screen = document.getElementById('screen-battle-v2');
         screen?.classList.toggle('v2-stage-boss', !!this.stage.boss);
         if (screen) screen.dataset.difficulty = this.difficulty;   // HUD 난이도 표시 색 (ui_v2.css [data-difficulty])
-        [2, 3, 4].forEach(z => screen?.classList.toggle(`v2-zone-${z}`, this.stage.zone === z));
+        [2, 3, 4, 6].forEach(z => screen?.classList.toggle(`v2-zone-${z}`, this.stage.zone === z));
         screen?.classList.remove('v2-boss-rage', 'v2-crimson');
         this.maxDistance = this.stage.distance;
         this.spawnInterval = this.stage.enemy.spawn;
@@ -175,6 +184,8 @@ export class BattleEngine {
         this.knightTimer = 0;     // 구역 3: 심연의 문 개방 (악마기사 소환)
         this.knightWarned = false;
         this.ruins = [];          // 요새 잔해 (다시 걸으면 바닥과 함께 흘러 나감)
+        this.fontsSpawned = 0;    // 구역 6: 나온 축복 성수대 수 (stage.fonts, enemyField.js checkFonts)
+        this.blessTimer = 0;
         this.ruinHoldT = 0;       // 요새가 무너지는 동안 주인공이 멈춰 지켜보는 시간
         this.monsterX = 150;
         this.playerBaseHp = 5000;
@@ -205,7 +216,7 @@ export class BattleEngine {
         this.runId += 1;
         this.cinematic = false;
         this.ended = false;
-        this.stats = { kills: 0, time: 0, startDm: gameState.darkMatter };
+        this.stats = { kills: 0, time: 0, startDm: gameState.darkMatter, marks: {} };   // marks = 구간 시각 (runReport.js)
         gameTime.reset();
 
         // 현재 장착 파츠 스탯 불러오기
@@ -220,12 +231,14 @@ export class BattleEngine {
         this.equippedArmId = equippedObjs.arm ? equippedObjs.arm.id : null;
         this.maxPlayerHp = stats.hp;
         this.playerHp = stats.hp;
+        this.healTaken = 0;       // 이번 전투에서 회복한 양 (player.js healPlayer — 구역 6 보스 '생명의 저울')
         this.playerDps = stats.dps;
         this.playerRange = stats.range;
         this.playerSpeed = stats.speed;
         this.attackType = equippedObjs.arm ? (equippedObjs.arm.attackType || 'melee') : 'melee';
         this.skills = skillsForParts(equippedObjs);
         this.setupGrowth(equippedObjs);   // 옵션·스킬 레벨·전술 모듈·전장 변이 (battle/growth.js, Q-006)
+        this.setupKit(equippedObjs);      // 2차 세트 패시브·세트 효과·새 기본 공격 (battle/kit.js, D-071)
 
         if (this.equippedBodyId === 'body_chimera') {
             setTimeout(() => {
@@ -259,7 +272,10 @@ export class BattleEngine {
 
         // 출격 인트로 (레터박스 + 작전명 → SORTIE!) + 전투 배경음
         this.director.clear();
-        this.director.intro(this.stage);
+        const run = this.runId;
+        this.director.intro(this.stage).then(() => {   // 처음 한 번: 스킬 안내 (coach_v2.js)
+            if (this.isActive && this.runId === run) coach('battle_skills', '#battle-hud-v2 .v2-skills');
+        });
         sound.playBgm('battle');
 
         this.lastTime = performance.now();
@@ -411,13 +427,27 @@ export class BattleEngine {
             distance: Math.min(this.maxDistance, this.distanceTraveled),
             kills: this.stats.kills,
             time: this.stats.time,
-            dm: Math.max(0, gameState.darkMatter - this.stats.startDm)
+            dm: Math.max(0, gameState.darkMatter - this.stats.startDm),
+            report: victory ? null : this.runReport()   // 패배 원인·할 일 (runReport.js)
         };
         this.stopBattle();
         setTimeout(() => { if (!this.isActive) sound.playBgm('menu', 2.5); }, 1200);
         this.director.showResult(result, act => {
             if (act === 'next' && next) progress.selectStage(next.id);
             if (this.onNavigate) this.onNavigate(act === 'retry' || act === 'next' ? 'battle' : act);
+        });
+    }
+
+    /** 패배 원인 알려주기: 구간 시각 + 남은 거점·보스 체력 → runReport.js */
+    runReport() {
+        const fin = this.enemies.find(e => e.isFinal && e.isBuilding);
+        const boss = this.boss && this.boss.hp > 0 ? this.boss : null;
+        return runReport({
+            time: this.stats.time, marks: this.stats.marks || {},
+            finalPct: fin ? fin.hp / fin.maxHp : null,
+            bossPct: boss ? boss.hp / boss.maxHp : null, bossName: boss && boss.t && boss.t.name,
+            distance: Math.min(this.maxDistance, this.distanceTraveled), maxDistance: this.maxDistance,
+            overloads: this.stats.overloads || 0, overloadSec: OVERLOAD.sec
         });
     }
 
@@ -441,6 +471,7 @@ export class BattleEngine {
         this.checkOverload(dt);          // player.js
         this.tickAcid(dt);               // enemyField.js
         this.tickSets(dt);               // sets.js (버프·지속 피해 구역·출혈·블랙홀·포탑·분신)
+        this.tickKit(dt);                // kit.js (2차 버프·적 상태·장판·움직이는 판정·소환·변신)
         this.tickDiver(dt);              // diver.js (끌려오는 적, 심연의 손 지속 피해)
         this.tickSaint(dt);              // saint.js (봉합 표식, 생명 봉인 장판, 시체, 자가 봉합)
         this.tickFrost(dt);              // frost.js (냉기·빙결 시간, 눈보라)
@@ -516,6 +547,8 @@ export class BattleEngine {
             if (this.moveMul() > 0) {
                 this.scrollHazards(dt);
                 this.scrollZones(dt);    // sets.js: 독안개·화염·웅덩이도 바닥과 함께
+                this.scrollKit(dt);      // kit.js: 2차 장판·움직이는 판정
+                this.scrollFonts(dt);    // enemyField.js: 구역 6 축복 성수대
                 if (this.corpses.length) this.scrollCorpses(dt);   // saint.js
             }
 
@@ -533,6 +566,7 @@ export class BattleEngine {
                 } else if (this.distanceTraveled >= this.stage.finalAt && !this.finalBaseSpawned) {
                     this.spawnFinalBase();
                 }
+                this.checkFonts();       // enemyField.js: 구역 6 축복 성수대 (stage.fonts)
             }
         }
     }
@@ -553,6 +587,7 @@ attachMethods(BattleEngine.prototype, {
     'battle/enemyField.js': EnemyMethods,
     'battle/allies.js': AllyMethods,
     'battle/sets.js': SetMethods,
+    'battle/kit.js': KitMethods,
     'battle/diver.js': DiverMethods,
     'battle/saint.js': SaintMethods,
     'battle/frost.js': FrostMethods,

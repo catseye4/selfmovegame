@@ -4,7 +4,7 @@
 실행: 프로젝트 루트에서  python tools/images/build_bg.py
 
 입력: assets/sprites/stage/src/bg/<이름>_gemini.png   (없는 층은 건너뜀)
-출력: assets/sprites/stage/bg/<이름>.png
+출력: assets/sprites/stage/bg/<이름>.png  (무손실 원본) + <이름>.webp (게임·CSS가 읽는 것, 품질 90 — 로딩 단축 2026-10-24)
       tools/images/_out/bg_<이름>_tiled.png  (두 번 이어 붙인 미리보기 — 이음매 확인)
 
 처리
@@ -42,6 +42,16 @@ LAYERS = {
     'bg2/dump_fire': {'tile_w': 1280, 'seam': 0},    # 보스전: 소각로 불길로 물든 폐기장
     'bg2/shanty': {'tile_w': 640, 'seam': 0, 'key': 'magenta'},   # 중간 층: 낮은 판잣집 띠 (위·아래 분홍 = 투명)
     'bg2/ground': {'tile_w': 256, 'seam': 0, 'key': 'magenta', 'feet': (240, 60)},   # 바닥: 고철판 길 가운데에 발
+    # ---- 구역 3: 성왕국 수도 (D-056, 그림 2026-10-24) ----
+    'bg3/city': {'tile_w': 1280, 'seam': 24},        # 먼 배경: 연기 오르는 중세 도시와 대성당
+    'bg3/city_light': {'tile_w': 1280, 'seam': 24},  # 보스전: 대성당 위 금빛 빛줄기
+    'bg3/statues': {'tile_w': 640, 'seam': 0, 'key': True},   # 중간 층: 쓰러진 석상·깃발·촛대 띠
+    'bg3/cobble': {'tile_w': 256, 'seam': 0, 'key': True, 'feet': (245, 60)},   # 바닥: 꽃잎 흩어진 돌길 가운데에 발
+    # ---- 구역 4: 진화의 심연 (그림 2026-10-24, 노랑 배경) ----
+    'bg4/void': {'tile_w': 1280, 'seam': 0},         # 먼 배경: 유기질 막 너머 보라 우주와 거대한 눈
+    'bg4/void_dark': {'tile_w': 1280, 'seam': 0},    # 보스전: 더 어둡고 눈이 빛남
+    'bg4/pillars': {'tile_w': 640, 'seam': 0, 'key': 'yellow'},   # 중간 층: 유기질 기둥과 짐승이 잠든 알
+    'bg4/flesh': {'tile_w': 256, 'seam': 0, 'key': 'yellow', 'feet': (250, 60)},   # 바닥: 점액 배어 나오는 유기질 길에 발
 }
 WRAP = 8           # 줄일 때 양 끝에 덧붙이는 반대쪽 픽셀 수
 
@@ -88,7 +98,8 @@ def build(name, cfg):
         th = img.height
         print(f'  {name}: 게임 높이 {th}px (띠 맨 위가 화면 바닥에서 {th}px, 발 {feet_b}px)')
     os.makedirs(os.path.dirname(OUT.format(name=name)), exist_ok=True)
-    img.save(OUT.format(name=name), optimize=True)
+    img.save(OUT.format(name=name), optimize=True)                                    # 무손실 원본
+    img.save(OUT.format(name=name)[:-4] + '.webp', 'WEBP', quality=90, method=6)      # 게임이 읽는 것 (로딩 단축, 2026-10-24)
 
     tiled = Image.new('RGBA', (tw * 2, th), (30, 28, 40, 255))
     tiled.alpha_composite(img.convert('RGBA'), (0, 0))

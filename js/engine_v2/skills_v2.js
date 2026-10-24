@@ -28,7 +28,7 @@ export const SKILLS = {
         name: '연타 러시', slot: 'arm', cd: 8, icon: 'fist', color: '#3ee6ff', target: 'enemy', range: 40,
         desc: '가장 가까운 적에게 강타 3연속',
         use(b) {
-            monster.playSkillAnim('attack');
+            monster.playSkillAnim('rush');   // 거대로봇 전용 동작 (Q7)
             const hitVfx = meleeHitVfx(monster.getCharacterId(), b.equippedArmId);
             for (let i = 0; i < 3; i++) {
                 b.schedule(0.12 + i * 0.16, () => {
@@ -44,7 +44,7 @@ export const SKILLS = {
         name: '관통 레이저', slot: 'arm', cd: 9, icon: 'laser', color: '#d75aff', target: 'enemy', range: 250,
         desc: '전방 일직선의 모든 적을 꿰뚫는 굵은 광선',
         use(b) {
-            monster.playSkillAnim('attack');
+            monster.playSkillAnim('beam');
             b.schedule(0.3, () => {
                 const from = monster.getMuzzlePoint() || { x: b.monsterX + 90, bottom: 120 };
                 const endX = b.frontX() + b.playerRange + this.range;
@@ -61,6 +61,7 @@ export const SKILLS = {
         name: '미사일 일제 사격', slot: 'arm', cd: 9, icon: 'missile', color: '#ff9a3c', target: 'enemy', range: 200,
         desc: '미사일 6발을 여러 적에게 동시에 사출',
         use(b) {
+            monster.playSkillAnim('salvo');
             const targets = b.enemiesInRange(b.playerRange + this.range);
             for (let i = 0; i < 6; i++) {
                 b.schedule(i * 0.08, () => {
@@ -131,7 +132,7 @@ export const SKILLS = {
         name: '산성 돌진', slot: 'arm', cd: 9, icon: 'acid', color: '#a0ff32', target: 'enemy', range: 90,
         desc: '거체로 들이받아 큰 피해 + 주변 적을 밀쳐내고 산성 웅덩이로 부식 (거점에 강함)',
         use(b) {
-            monster.playSkillAnim('attack');
+            monster.playSkillAnim('lunge');   // 거대괴수 전용 동작 (Q7)
             b.schedule(0.35, () => {
                 const t = b.nearestEnemy(this.range);
                 if (!t) return;
@@ -152,6 +153,7 @@ export const SKILLS = {
         name: '반사 실드', slot: 'body', cd: 16, icon: 'shield', color: '#3ee6ff', target: 'self',
         desc: '5초간 최대 체력 20%의 피해를 막는 에너지 실드',
         use(b) {
+            monster.playSkillAnim('guard');
             b.applyShield(0.2, 5, '62, 230, 255');
         }
     },
@@ -159,6 +161,7 @@ export const SKILLS = {
         name: '졸개 호출', slot: 'body', cd: 14, icon: 'minions', color: '#ff9628', target: 'self',
         desc: '졸개 미니언 2기를 즉시 소환 (최대 8기)',
         use(b) {
+            monster.playSkillAnim('summon');   // 합성괴인 전용 동작 (Q7)
             [60, 110].forEach((dx, i) => b.schedule(i * 0.15, () => {
                 if (b.allies.length < 8) b.spawnAllyMinion(b.monsterX + dx, 'chimera');
             }));
@@ -168,6 +171,7 @@ export const SKILLS = {
         name: '산란', slot: 'body', cd: 14, icon: 'egg', color: '#a0ff32', target: 'self',
         desc: '알 2개를 낳아 새끼 괴수 부화 (최대 5마리)',
         use(b) {
+            monster.playSkillAnim('lay');
             [12, 55].forEach((dx, i) => b.schedule(i * 0.2, () => b.layEgg(b.monsterX + dx, 5)));
         }
     },
@@ -225,6 +229,7 @@ export const SKILLS = {
         name: '스웜 드론 총출격', slot: 'head', ult: true, icon: 'drone', color: '#d75aff', target: 'enemy', range: 400,
         desc: '자폭 드론 6기가 적진에 돌진',
         use(b) {
+            monster.playSkillAnim('launch');
             b.launchDrones(6);
         }
     },
@@ -232,7 +237,7 @@ export const SKILLS = {
         name: '대지 포효', slot: 'head', ult: true, icon: 'roar', color: '#a0ff32', target: 'enemy', range: 250,
         desc: '산성 충격파로 주변 적에게 큰 피해 + 2초 기절',
         use(b) {
-            monster.playSkillAnim('victory');
+            monster.playSkillAnim('roar');
             b.schedule(0.4, () => {
                 b.fx.play(KAIJU_VFX.roarBurst, b.monsterX + 60, 58);
                 b.enemiesInRange(b.playerRange + this.range).forEach(e => {
@@ -286,11 +291,13 @@ export const SKILLS = {
                 b.enterPhase2();
                 return;
             }
-            b.fx.play(CHIMERA_VFX.slam, b.monsterX + 35, 58);
-            b.enemiesInRange(b.playerRange + 200).forEach(e => {
-                b.dealDamageToEnemy(e, b.unit() * 3, false, { knock: 2, stop: true });
-                if (!e.isBuilding) b.stunEnemy(e, 1.5);
-            });
+            monster.playCast(() => {   // 두 손 내려치는 순간 충격파 (smash 'cast')
+                b.fx.play(CHIMERA_VFX.slam, b.monsterX + 35, 58);
+                b.enemiesInRange(b.playerRange + 200).forEach(e => {
+                    b.dealDamageToEnemy(e, b.unit() * 3, false, { knock: 2, stop: true });
+                    if (!e.isBuilding) b.stunEnemy(e, 1.5);
+                });
+            }, 'smash');
         }
     }
 };
@@ -308,7 +315,7 @@ Object.assign(SKILLS, {
         name: '궤도 폭격', slot: 'head', ult: true, icon: 'orbital', color: '#d75aff', target: 'enemy', range: 400,
         desc: '앞쪽 5곳에 위성 레이저가 차례로 떨어짐 (큰 범위 피해, 거점 1.5배)',
         use(b) {
-            monster.playSkillAnim('attack');
+            monster.playSkillAnim('call');
             const x0 = b.frontX() + 40;
             for (let i = 0; i < 5; i++) {
                 const x = x0 + i * 95;
@@ -327,6 +334,7 @@ Object.assign(SKILLS, {
         name: '자동 포탑 전개', slot: 'body', cd: 14, icon: 'turret', color: '#3ee6ff', target: 'self',
         desc: '8초간 어깨 포탑이 가장 가까운 적을 연사',
         use(b) {
+            monster.playSkillAnim('guard');
             b.startTurret(SET.turret.sec);
         }
     },
@@ -334,7 +342,7 @@ Object.assign(SKILLS, {
         name: '충전 레일 사격', slot: 'arm', cd: 9, icon: 'rail', color: '#00e6ff', target: 'enemy', range: 250,
         desc: '1초 충전 뒤 전장 끝까지 꿰뚫는 큰 피해',
         use(b) {
-            monster.playSkillAnim('attack');
+            monster.playSkillAnim(b.setOn('mech_a') ? 'railQuick' : 'rail');   // 충전 시간에 맞춘 반동 (포격 사령부 4부위 0.7초)
             const muzzle = () => monster.getMuzzlePoint() || { x: b.monsterX + 90, bottom: 120 };
             b.fx.play(SET_VFX.railCharge, muzzle().x, muzzle().bottom, { follow: () => [muzzle().x, muzzle().bottom] });
             const charge = b.setOn('mech_a') ? SET.setBonus.railCharge : 1.0;   // 포격 사령부 4부위
@@ -355,6 +363,7 @@ Object.assign(SKILLS, {
         name: '오버드라이브', slot: 'head', ult: true, icon: 'overdrive', color: '#d75aff', target: 'self',
         desc: '6초간 공격 속도 +50%·진격 속도 +40%·받는 피해 -30%',
         use(b) {
+            monster.playSkillAnim('power');
             b.fx.play(SET_VFX.overdrive, b.monsterX + 35, FOOT_B);
             b.addBuff('overdrive', SET.overdrive.sec);
             b.createDamagePopup(b.monsterX + 40, 210, 'OVERDRIVE!', false);
@@ -364,7 +373,7 @@ Object.assign(SKILLS, {
         name: '로켓 돌진', slot: 'body', cd: 13, icon: 'rocket', color: '#3ee6ff', target: 'enemy', range: 200,
         desc: '앞으로 200px 돌진 — 부딪힌 적을 밀쳐내고 피해',
         use(b) {
-            monster.playSkillAnim('attack');
+            monster.playSkillAnim('dash');
             sound.play('mech_thrust');
             b.dashForward(200, 0.3, e => {
                 b.fx.play(SET_VFX.rocketHit, aim(e).x, aim(e).b);
@@ -378,7 +387,7 @@ Object.assign(SKILLS, {
         name: '파일 벙커 관통', slot: 'arm', cd: 9, icon: 'pile', color: '#3ee6ff', target: 'enemy', range: 40,
         desc: '한 적에 큰 피해 + 1.5초 기절 (거점 2배)',
         use(b) {
-            monster.playSkillAnim('attack');
+            monster.playSkillAnim('pile');
             b.schedule(0.3, () => {
                 const t = b.nearestEnemy(this.range);
                 if (!t) return;
@@ -395,7 +404,7 @@ Object.assign(SKILLS, {
         name: '가시 폭풍', slot: 'head', ult: true, icon: 'spikes', color: '#a0ff32', target: 'enemy', range: 300,
         desc: '등 가시를 사방으로 쏴 범위 피해 + 4초 가시 독 (지속 피해)',
         use(b) {
-            monster.playSkillAnim('victory');
+            monster.playSkillAnim('roar');
             b.schedule(0.35, () => {
                 b.fx.play(SET_VFX.spikeStorm, b.monsterX + 50, FOOT_B);
                 b.enemiesInRange(b.playerRange + this.range).forEach(e => {
@@ -409,15 +418,17 @@ Object.assign(SKILLS, {
         name: '가시 갑옷', slot: 'body', cd: 15, icon: 'thorns', color: '#a0ff32', target: 'self',
         desc: '6초간 받는 피해 -25%, 나를 때린 적에게 받은 피해의 50%를 되돌림',
         use(b) {
-            b.fx.play(SET_VFX.thornOn, b.monsterX + 35, FOOT_B);
-            b.addBuff('thornArmor', SET.thorn.sec);
+            monster.playCast(() => {   // 움츠렸다 부풀 때 가시가 돋음 (brace 'cast')
+                b.fx.play(SET_VFX.thornOn, b.monsterX + 35, FOOT_B);
+                b.addBuff('thornArmor', SET.thorn.sec);
+            }, 'brace');
         }
     },
     groundSlam: {
         name: '지면 내려찍기', slot: 'arm', cd: 9, icon: 'slam', color: '#a0ff32', target: 'enemy', range: 80,
         desc: '앞쪽 충격파 — 피해 + 0.8초 기절',
         use(b) {
-            monster.playSkillAnim('attack');
+            monster.playSkillAnim('slam');
             b.schedule(0.4, () => {
                 b.fx.play(SET_VFX.groundSlam, b.frontX() + 60, FOOT_B);
                 b.director.shake(7, 260);
@@ -434,7 +445,7 @@ Object.assign(SKILLS, {
         name: '독안개 숨결', slot: 'head', ult: true, icon: 'breath', color: '#a0ff32', target: 'enemy', range: 260,
         desc: '앞쪽에 6초 독 구름 — 지속 피해 + 감속',
         use(b) {
-            monster.playSkillAnim('victory');
+            monster.playSkillAnim('breath');
             b.schedule(0.35, () => {
                 const x = b.frontX() + 10;
                 b.fx.play(SET_VFX.toxicBreath, x + 150, FOOT_B);
@@ -450,7 +461,7 @@ Object.assign(SKILLS, {
         desc: '입에서 불길 — 앞쪽 화염 피해 + 4초 불바다 (지속 피해, 거점 포함)',
         use(b) {
             const T = SET.dragonBreath;
-            monster.playSkillAnim('victory');
+            monster.playSkillAnim('breath');
             const mouth = () => monster.getSocketPoint('mouth', 'head') || monster.getMuzzlePoint() || { x: b.monsterX + 90, bottom: 130 };
             const n = Math.round(T.breathSec / 0.1);
             for (let k = 0; k < n; k++) {
@@ -470,18 +481,20 @@ Object.assign(SKILLS, {
         name: '독 포자 폭발', slot: 'body', cd: 14, icon: 'spore', color: '#a0ff32', target: 'enemy', range: 120,
         desc: '몸 둘레 폭발 — 피해 + 산성 부식 4초',
         use(b) {
-            b.fx.play(SET_VFX.sporeBurst, b.monsterX + 50, FOOT_B);
-            enemiesAhead(b, -160, 180).forEach(e => {
-                b.dealDamageToEnemy(e, b.unit() * 2, false, { knock: 1.5 });
-                b.applyAcid(e, 4);
-            });
+            monster.playCast(() => {   // 부풀었다 터지는 순간 (brace 'cast')
+                b.fx.play(SET_VFX.sporeBurst, b.monsterX + 50, FOOT_B);
+                enemiesAhead(b, -160, 180).forEach(e => {
+                    b.dealDamageToEnemy(e, b.unit() * 2, false, { knock: 1.5 });
+                    b.applyAcid(e, 4);
+                });
+            }, 'brace');
         }
     },
     acidSpit3: {
         name: '산성 침 3연발', slot: 'arm', cd: 8, icon: 'acid', color: '#a0ff32', target: 'enemy', range: 120,
         desc: '산성 침 3발을 연달아 — 맞은 자리마다 산성 웅덩이',
         use(b) {
-            monster.playSkillAnim('attack');
+            monster.playSkillAnim('spit');
             for (let i = 0; i < 3; i++) {
                 b.schedule(0.15 + i * 0.18, () => {
                     const list = b.enemiesInRange(b.playerRange + this.range);
@@ -578,7 +591,7 @@ Object.assign(SKILLS, {
         name: '광견 돌진', slot: 'head', ult: true, icon: 'maul', color: '#ff9628', target: 'enemy', range: 200,
         desc: '앞으로 돌진하며 지나간 적 모두 밀쳐내고 1.5초 기절',
         use(b) {
-            monster.playSkillAnim('attack');
+            monster.playSkillAnim('lunge');
             b.dashForward(240, 0.35, e => {
                 b.fx.play(SET_VFX.maulHit, aim(e).x, aim(e).b);
                 b.dealDamageToEnemy(e, b.unit() * 2.2, false, { knock: 3, stop: true });
@@ -590,15 +603,17 @@ Object.assign(SKILLS, {
         name: '아드레날린 주입', slot: 'body', cd: 15, icon: 'injector', color: '#ff9628', target: 'self',
         desc: '8초간 주는 피해 +40%',
         use(b) {
-            b.fx.play(SET_VFX.adrenaline, b.monsterX + 35, FOOT_B);
-            b.addBuff('adrenaline', SET.adrenaline.sec);
+            monster.playCast(() => {   // 근육을 부풀리는 순간 (flex 'cast')
+                b.fx.play(SET_VFX.adrenaline, b.monsterX + 35, FOOT_B);
+                b.addBuff('adrenaline', SET.adrenaline.sec);
+            }, 'flex');
         }
     },
     earthSmash: {
         name: '대지 강타', slot: 'arm', cd: 9, icon: 'hammer', color: '#ff9628', target: 'enemy', range: 80,
         desc: '크게 내리쳐 넓은 충격파 (거점 1.5배)',
         use(b) {
-            monster.playSkillAnim('attack');
+            monster.playSkillAnim('smash');
             b.schedule(0.4, () => {
                 b.fx.play(SET_VFX.earthSmash, b.frontX() + 50, FOOT_B);
                 b.director.shake(8, 300);
@@ -613,6 +628,7 @@ Object.assign(SKILLS, {
         name: '총동원령', slot: 'head', ult: true, icon: 'horn', color: '#ff9628', target: 'self',
         desc: '졸개 4기 소환 + 6초간 모든 졸개 피해 2배',
         use(b) {
+            monster.playSkillAnim('summon');
             b.fx.play(SET_VFX.mobilize, b.monsterX + 90, FOOT_B);
             for (let i = 0; i < SET.mobilize.count; i++) {
                 b.schedule(i * 0.12, () => {
@@ -626,19 +642,21 @@ Object.assign(SKILLS, {
         name: '강화 주사', slot: 'body', cd: 14, icon: 'injector', color: '#78ff8c', target: 'self',
         desc: '모든 아군 졸개 체력 50% 회복 + 6초 공격 속도 증가',
         use(b) {
-            b.allies.forEach(a => {
-                a.hp = Math.min(a.maxHp, a.hp + a.maxHp * SET.boost.heal);
-                if (a.hpBar) a.hpBar.style.width = `${(a.hp / a.maxHp) * 100}%`;
-                b.fx.play(SET_VFX.boostShot, a.x + 30, FOOT_B);
-            });
-            b.addBuff('boost', SET.boost.sec);
+            monster.playCast(() => {   // 힘주는 순간 졸개들에게 (flex 'cast')
+                b.allies.forEach(a => {
+                    a.hp = Math.min(a.maxHp, a.hp + a.maxHp * SET.boost.heal);
+                    if (a.hpBar) a.hpBar.style.width = `${(a.hp / a.maxHp) * 100}%`;
+                    b.fx.play(SET_VFX.boostShot, a.x + 30, FOOT_B);
+                });
+                b.addBuff('boost', SET.boost.sec);
+            }, 'flex');
         }
     },
     flamethrower: {
         name: '화염 방사', slot: 'arm', cd: 9, icon: 'fire', color: '#ff6a1e', target: 'enemy', range: 120,
         desc: '3초간 앞쪽 화염 지속 피해',
         use(b) {
-            monster.playSkillAnim('attack');
+            monster.playSkillAnim('spray');
             b.addZone({ x: b.frontX() - 10, w: b.playerRange + this.range, sec: 3, dps: b.playerDps * 0.7, puff: SET_VFX.flameTick, every: 0.14 });
             for (let k = 0; k < 25; k++) {
                 b.schedule(k * 0.12, () => {

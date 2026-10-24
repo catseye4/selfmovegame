@@ -1,0 +1,5 @@
+{
+ "_설명": "이 파일을 update.local.json으로 복사해 <> 부분을 바꿈 (update.local.json은 공개 저장소에 올리지 않음). MD/앱_빌드_가이드.md 6장",
+ "feed": "https://<NAS 주소>.synology.me/madoverlord/latest.json",
+ "nas_dir": "\\\\<NAS 이름 또는 IP>\\web\\madoverlord"
+}

@@ -13,6 +13,7 @@
    구역 2 (D-040): raider builder sludge netter mechanic + 보스 scrapking
    구역 3·4 (D-056): soldier inquisitor holyshield priest mage + demon demonknight + 보스 archbishop /
                      cultist tentacle carapace slime(→ slimelet) sporer + 보스 oculus — MD/구역3·4_설계안.md
+   구역 6 (D-078): 구역 3 적 5종 + warden shade(은신) tithe(축복 오라) + 보스 orbian — MD/구역6_설계안.md
    엘리트: 체력 ×3, 공격 ×1.5, 크기 ×1.3, 금색 이름표, 보상 ×4
    ========================================================================== */
 
@@ -23,6 +24,28 @@ import { aimAt } from './bases_v2.js';
 // 그림이 있는 종류는 구운 크기 그대로(종류별 scale·색조 대신), 없는 종류는 임시 고블린 + 색조 (D-023)
 import { ENEMY_ART } from './enemyArt_v2.js';
 import { hastedType } from './difficulty_v2.js';
+
+// ---- 적 그림 미리 풀기 (성능 측정 2026-10-21: 새 적이 처음 나올 때 그림 압축 풀기로 50~100ms 멈춤) ----
+const decoded = new Map();   // 그림 주소 → Image (붙잡아 두어 풀린 그림이 남게)
+function decodeOnce(src) {
+    if (decoded.has(src) || typeof Image === 'undefined') return;
+    const img = new Image();
+    img.src = src;
+    decoded.set(src, img);
+    if (img.decode) img.decode().catch(() => {});
+}
+/** 전투 시작 때 (battle_v2.js startBattle): 이 스테이지 적 섞기·보스의 그림(빌린 그림 포함)을 미리 풂 */
+export function predecodeStageArt(stage) {
+    const types = new Set(Object.keys((stage.enemy && stage.enemy.mix) || {}));
+    if (stage.boss && stage.boss.unit) types.add(stage.boss.unit);
+    for (const id of types) {
+        const t = ENEMY_TYPES[id];
+        const key = ENEMY_ART[id] ? id : t && t.artAs;
+        const art = key && ENEMY_ART[key];
+        if (!art) continue;
+        for (const v of Object.values(art)) if (v && v.src) decodeOnce(v.src);
+    }
+}
 
 export const ENEMY_TYPES = {
     guard: { name: '경비병', hp: 350, dps: 35, speed: [75, 100], reward: 1 },
@@ -164,6 +187,42 @@ Object.assign(ENEMY_TYPES, {
             charge: { every: 7, warn: 0.8, dmg: 0.08, push: 110 },
             gaze: { every: 9, warn: 1.0, dmg: 0.06, stun: 0.5 }
         }
+    }
+});
+// ---- 구역 6: 성왕국 교단 의료원 & 이단심문소 (D-076·D-078, MD/구역6_설계안.md) — 구역 3 적 5종 + 아래 3종 + 보스 ----
+// 그림이 오기 전까지 artAs + tint (구역 3 그림을 잿빛·금빛으로)
+Object.assign(ENEMY_TYPES, {
+    warden: {
+        name: '병동 간수', hp: 300, dps: 0, speed: [68, 82], reward: 1.6,
+        artAs: 'netter', tint: 'grayscale(0.7) brightness(1.3) sepia(0.15)',
+        // 사슬 투척: 구역 2 그물총 사수 행동 그대로 (맞으면 피해 + 속박)
+        net: { range: 280, every: 3.6, dmg: 20, root: 1.2, color: '205, 210, 220' }
+    },
+    shade: {
+        name: '그림자 집행자', hp: 300, dps: 30, speed: [92, 112], reward: 2,
+        artAs: 'inquisitor', tint: 'grayscale(0.85) brightness(0.62) drop-shadow(0 0 6px rgba(60, 40, 90, 0.9))',
+        // 은신: 반쯤 투명한 채 다가옴(받는 피해 cut 감소) → reveal px 안이면 드러나 hits번 베기(hit × 적 공격 배율, gap초 간격)
+        //       → open초 동안 드러난 채 근접 → 다시 숨어 back초 물러났다가 또 다가옴 (tickStealth)
+        stealth: { cut: 0.5, reveal: 140, hits: 2, gap: 0.22, hit: 46, open: 2.5, back: 0.7 }
+    },
+    tithe: {
+        name: '헌금 기사', hp: 920, dps: 34, speed: [44, 54], reward: 3, armor: 0.2, knockResist: true, scale: 1.15,
+        artAs: 'holyshield', tint: 'sepia(0.9) saturate(2.2) brightness(1.2) drop-shadow(0 0 6px rgba(255, 210, 90, 0.9))',
+        aura: { range: 220, cut: 0.2 }   // 축복: 주변 적(자기 빼고) 받는 피해 감소 (battle/enemyField.js tickBlessings)
+    },
+    orbian: {
+        name: '자애의 대사제 오르비안', boss: true, hp: 5000, dps: 0, speed: [30, 30], reward: 70, armor: 0.3, knockResist: true,
+        // 임시: 대주교 그림을 흰빛·금빛으로 (악마 그림자 없이)
+        artAs: 'archbishop', tint: 'grayscale(0.55) brightness(1.3) sepia(0.3) drop-shadow(0 0 9px rgba(255, 220, 120, 0.85))',
+        caster: { hold: 250 },
+        // 단죄의 빛: 예고 원 → 빛의 기둥 (기본 공격 — 설계안 기술 셋만으로는 보스가 가만히 있어서, D-078)
+        judgment: { every: 9, warn: 1.3, dmg: 0.07, label: '⚠ 단죄의 빛' },
+        // 생명의 저울: every초마다 주인공이 그동안 회복한 양의 share만큼 보스가 회복 (battle/player.js healPlayer가 셈)
+        scales: { every: 10, share: 0.5 },
+        // 헌금 소집: 체력 below 아래에서 every초마다 헌금 기사
+        summon: { below: 0.5, every: 14, unit: 'tithe', n: 1, label: '💰 헌금 소집 — 헌금 기사!', fx: 'holyHeal', flash: '#ffd970' },
+        // 파문의 종: 예고 warn초 → 보스에서 range px 안이면 팔·몸통 스킬 쿨다운 +cd초 + 작은 피해
+        bell: { every: 12, warn: 1.2, range: 560, cd: 2, dmg: 0.03 }
     }
 });
 export const ELITE = { hp: 3, dps: 1.5, scale: 1.3, reward: 4, affixReward: 0.25 };
@@ -390,9 +449,11 @@ export function updateEnemy(b, e, dt, frontX) {
     }
     const slowMul = e.slowT > 0 ? 0.5 : 1;
     const dist = e.x - frontX;
+    // 침묵 (침묵의 방송자, battle/kit.js kitStatus): 원거리·치유·바리케이드·특수 공격·보스 기술을 못 씀 — 걷고 근접으로 때리기만
+    const silenced = e.kitSilenceT > 0;
 
     // 수호의 결계: 거리·아군과의 교전 여부와 상관없이 주기마다 금빛 방벽
-    if (t.barrier) {
+    if (t.barrier && !silenced) {
         if (e.barrierT > 0) {
             e.barrierT = Math.max(0, e.barrierT - dt);
             if (e.barrierT <= 0) {
@@ -422,9 +483,12 @@ export function updateEnemy(b, e, dt, frontX) {
         }
     }
 
-    // 보스 기술 (거리와 상관없이 주기마다): 고철왕 자석·고철 낙하 / 대주교·오큘러스 (구역 3·4)
-    if (t.magnet || t.drop) tickBossSkills(b, e, dt, dist);
-    if (t.judgment || t.summon || t.wave || t.goo || t.rage) tickAbyssBoss(b, e, dt, dist);
+    // 보스 기술 (거리와 상관없이 주기마다): 고철왕 자석·고철 낙하 / 대주교·오큘러스 (구역 3·4) / 오르비안 저울·종 (구역 6)
+    if (!silenced) {
+        if (t.magnet || t.drop) tickBossSkills(b, e, dt, dist);
+        if (t.judgment || t.summon || t.wave || t.goo || t.rage) tickAbyssBoss(b, e, dt, dist);
+        if (t.scales || t.bell) tickMercyBoss(b, e, dt);
+    }
 
     // 원거리(마취총·오물·그물·마법·포자) · 치유(의무병·수리공·신관) · 뒤에 머무는 보스(caster):
     // 정해진 거리에서 멈추고 천천히 다가오며 능력 사용. 2페이즈(rage)가 되면 caster는 근접으로
@@ -433,6 +497,7 @@ export function updateEnemy(b, e, dt, frontX) {
     if (hold) {
         const moving = dist > hold ? 1 : dist > 40 ? CREEP : 0;
         if (moving) moveBy(b, e, e.speed * slowMul * moving * dt);
+        if (silenced) return;   // 침묵: 쏘지도 고치지도 못하고 자리만 지킴
         e.cd.skill += dt;
         // 주기가 [최소, 최대]면 쏠 때마다 새로 고름 (마법사·포자 술사 1~3초)
         const every = shot && (Array.isArray(shot.every) ? (e.cd.next ??= rand(shot.every)) : shot.every);
@@ -454,7 +519,7 @@ export function updateEnemy(b, e, dt, frontX) {
     }
 
     // 방벽병: 사거리에 들어오면 멈춰서 바리케이드를 박음 (망치 동작 동안 서 있음)
-    if (t.barricade) {
+    if (t.barricade && !silenced) {
         e.cd.build = (e.cd.build ?? t.barricade.every * 0.6) + dt;
         if (e.busyT > 0) {
             e.busyT -= dt;
@@ -472,6 +537,10 @@ export function updateEnemy(b, e, dt, frontX) {
         }
     }
 
+    // 그림자 집행자 (구역 6): 숨어서 다가와 기습 → 드러난 채 근접 → 다시 숨어 물러남. 침묵이면 숨지 못하고 드러남
+    if (t.stealth && silenced && e.hidden) setHidden(e, false, 'open');
+    if (t.stealth && !silenced && tickStealth(b, e, dt, dist, slowMul)) return;
+
     // 근접: 다가가서 닿으면 공격
     if (dist > MELEE.stop) moveBy(b, e, e.speed * slowMul * dt);
     if (dist > MELEE.reach) {
@@ -482,6 +551,7 @@ export function updateEnemy(b, e, dt, frontX) {
     setAttacking(e, true);
     b.damagePlayer(e.dps * dt, dt, e);   // e: 가시 갑옷 되돌림 대상
 
+    if (silenced) return;   // 침묵: 감전·도끼·방패 강타·정의의 일격·서리 같은 특수 공격 없이 근접만
     if (frost && e.dps > 0) {
         e.cd.frost = (e.cd.frost || 0) + dt;
         if (e.cd.frost >= frost.every) {
@@ -526,6 +596,7 @@ export function updateEnemy(b, e, dt, frontX) {
 
 function moveBy(b, e, px) {
     if (e.rootT > 0) return;   // 속박 (저주의 사슬): 제자리에서 공격만
+    px *= b.kitEnemyMove ? b.kitEnemyMove(e) : 1;   // 2차 패시브 마왕의 위압: 보통 적 이동 감소 (battle/kit.js)
     if (e.purifyUntil > b.stats.time && e.affixes?.includes('swift')) px /= ELITE_AFFIXES.swift.speedMul;   // 정화 파동: 가속 해제
     e.x -= px;
     if (e.dom) e.dom.style.left = `${e.x}px`;
@@ -570,13 +641,13 @@ function throwSludge(b, e) {
     }, null);
 }
 
-// 그물: 맞으면 피해 + 속박 (진격 불가, 공격은 가능)
+// 그물·사슬(병동 간수): 맞으면 피해 + 속박 (진격 불가, 공격은 가능)
 function shootNet(b, e) {
     const n = e.t.net;
     playOnce(e, 'attack');
     const from = { x: e.x + 4, bottom: 104 };
     sound.play('mech_missile_launch', { rate: 1.5, vol: 0.5 });
-    b.fx.launchOrb(from, () => ({ x: b.monsterX + 60, b: 110 }), '210, 190, 140', 0.42, () => {
+    b.fx.launchOrb(from, () => ({ x: b.monsterX + 60, b: 110 }), n.color || '210, 190, 140', 0.42, () => {
         if (!b.isActive) return;
         const k = b.rangedMul();
         b.damagePlayer(n.dmg * b.stage.enemy.dps * k, 0);
@@ -622,7 +693,8 @@ function lobSpore(b, e) {
     }, { apex: 150, dur: 0.95, color: '150, 255, 90' });
 }
 
-// 구역 3·4 보스: 대주교 베네딕트(천상의 심판·악마병 소환), 관장자 오큘러스(심연의 파동·유전자 붕괴·극한의 변이·돌진)
+// 구역 3·4·6 보스: 대주교 베네딕트(천상의 심판·악마병 소환), 관장자 오큘러스(심연의 파동·유전자 붕괴·극한의 변이·돌진),
+// 대사제 오르비안(단죄의 빛 = judgment, 헌금 소집 = summon — 이름·이펙트는 기술 설정의 label·fx·flash)
 function tickAbyssBoss(b, e, dt, dist) {
     const t = e.t;
     if (t.rage && !e.raged && e.hp <= e.maxHp * t.rage.at) enrage(b, e);
@@ -630,7 +702,7 @@ function tickAbyssBoss(b, e, dt, dist) {
         e.cd.judgment = (e.cd.judgment ?? t.judgment.every * 0.5) + dt;
         if (e.cd.judgment >= t.judgment.every) {
             e.cd.judgment = 0;
-            groundStrike(b, e, t.judgment, 'bash', '⚠ 천상의 심판', () => {
+            groundStrike(b, e, t.judgment, 'bash', t.judgment.label || '⚠ 천상의 심판', () => {
                 b.fx.play(ZONE_VFX.heavenPillar, b.monsterX + 35, FOOT_B, { scale: 1 });
                 b.director.flash('#fff6c8', 240, 0.6);
             }, ZONE_VFX.judgmentWarn, ZONE_VFX.heavenPillar);
@@ -642,11 +714,11 @@ function tickAbyssBoss(b, e, dt, dist) {
         if (e.cd.summon >= s.every) {
             e.cd.summon = 0;
             playOnce(e, 'attack');
-            b.director.flash('#7a0a1e', 320, 0.35);
-            b.createDamagePopup(e.x - 20, 260, '🔥 지옥문 — 악마병!', false);
+            b.director.flash(s.flash || '#7a0a1e', 320, 0.35);
+            b.createDamagePopup(e.x - 20, 260, s.label || '🔥 지옥문 — 악마병!', false);
             for (let i = 0; i < s.n; i++) {
                 const x = e.x - 60 - i * 45;
-                b.fx.play(ZONE_VFX.hellGate, x + 38, FOOT_B + 30);
+                b.fx.play(ZONE_VFX[s.fx || 'hellGate'], x + 38, FOOT_B + 30);
                 b.spawnMinion(s.unit, { x, elite: false });
             }
         }
@@ -727,6 +799,113 @@ function tickAbyssBoss(b, e, dt, dist) {
                 b.fx.play(BOSS_VFX.gaze, e.x + 40, 190, { to: [b.monsterX + 60, 120] });
                 b.damagePlayer(b.maxPlayerHp * g.dmg, 0);
                 b.applyPlayerStun(g.stun, '진홍 시선!');
+            });
+        }
+    }
+}
+
+// 그림자 집행자 은신 (구역 6, t.stealth): hidden(숨어서 다가감) → strike(드러나 연속 베기) → open(드러난 채 근접)
+// → back(다시 숨어 물러남) → hidden … 숨어 있는 동안(e.hidden) 받는 피해 감소는 battle/enemyField.js dealDamageToEnemy
+/** true면 이번 프레임은 여기서 끝, false면 아래 근접 행동 그대로 (open) */
+function tickStealth(b, e, dt, dist, slowMul) {
+    const s = e.t.stealth;
+    if (!e.sState) setHidden(e, true, 'hidden');
+    e.sT = (e.sT || 0) - dt;
+    if (e.sState === 'hidden') {
+        if (dist <= s.reveal) {
+            ambush(b, e, s);
+            return true;
+        }
+        setAttacking(e, false);
+        moveBy(b, e, e.speed * slowMul * dt);
+        return true;
+    }
+    if (e.sState === 'strike') {
+        if (e.sT <= 0) { e.sState = 'open'; e.sT = s.open; }
+        return true;
+    }
+    if (e.sState === 'open') {
+        if (e.sT > 0) return false;
+        setHidden(e, true, 'back');
+        e.sT = s.back;
+        b.fx.play(ZONE_VFX.shadowPuff, e.x + ENEMY_CENTER, FOOT_B + 30);
+        return true;
+    }
+    // back: 숨은 채 오른쪽으로 물러남 (속박이면 제자리)
+    if (e.sT <= 0) {
+        e.sState = 'hidden';
+        return true;
+    }
+    setAttacking(e, false);
+    if (!(e.rootT > 0)) {
+        e.x = Math.min(e.x + e.speed * 1.6 * dt, 1180);
+        if (e.dom) e.dom.style.left = `${e.x}px`;
+    }
+    return true;
+}
+
+function setHidden(e, on, state) {
+    e.sState = state;
+    e.hidden = on;
+    e.dom?.classList.toggle('is-stealth', on);
+}
+
+/** 기습: 드러나며 hits번 빠르게 벰 (맞을 때 아직 가까이 있으면 피해) */
+function ambush(b, e, s) {
+    setHidden(e, false, 'strike');
+    e.sT = s.hits * s.gap + 0.25;
+    b.fx.play(ZONE_VFX.shadowPuff, e.x + ENEMY_CENTER, FOOT_B + 30);
+    b.createDamagePopup(e.x, 200, '🗡 기습!', false);
+    for (let i = 0; i < s.hits; i++) {
+        b.schedule(0.08 + i * s.gap, () => {
+            if (!b.isActive || !b.enemies.includes(e) || e.stunT > 0 || e.x - b.frontX() > s.reveal + 30) return;
+            playOnce(e, 'attack');
+            b.fx.play(ZONE_VFX.shadowStrike, b.monsterX + 60, 115);
+            b.damagePlayer(s.hit * b.stage.enemy.dps, 0, e);
+        });
+    }
+}
+
+// 구역 6 보스 오르비안: 생명의 저울(주인공이 그동안 회복한 양의 일부를 보스가 회복) · 파문의 종(스킬 쿨다운 늘리기)
+function tickMercyBoss(b, e, dt) {
+    const t = e.t;
+    if (t.scales) {
+        const sc = t.scales;
+        e.cd.healMark ??= b.healTaken || 0;   // 보스가 나온 뒤 회복한 양만 셈
+        e.cd.scales = (e.cd.scales || 0) + dt;
+        if (e.cd.scales >= sc.every) {
+            e.cd.scales = 0;
+            const healed = Math.max(0, (b.healTaken || 0) - e.cd.healMark);
+            e.cd.healMark = b.healTaken || 0;
+            const gain = Math.min(e.maxHp - e.hp, healed * sc.share);
+            playOnce(e, 'attack');
+            b.fx.play(ZONE_VFX.scalesTilt, e.x + ENEMY_CENTER, FOOT_B + 40);
+            if (gain >= 1) {
+                e.hp += gain;
+                if (e.hpBar) e.hpBar.style.width = `${(e.hp / e.maxHp) * 100}%`;
+                b.createDamagePopup(e.x - 10, 250, `⚖ 생명의 저울 +${Math.round(gain)}`, false);
+                b.updateHud();
+            } else {
+                b.createDamagePopup(e.x - 10, 250, '⚖ 저울이 기울지 않는다', false);
+            }
+        }
+    }
+    if (t.bell) {
+        const bl = t.bell;
+        e.cd.bell = (e.cd.bell ?? bl.every * 0.6) + dt;
+        if (e.cd.bell >= bl.every) {
+            e.cd.bell = 0;
+            playOnce(e, 'bash');
+            b.fx.play(ZONE_VFX.bellWarn, e.x + ENEMY_CENTER, FOOT_B + 60, { follow: () => [e.x + ENEMY_CENTER, FOOT_B + 60] });
+            b.createDamagePopup(e.x, 270, '⚠ 파문의 종', false);
+            sound.play('warning', { vol: 0.5, rate: 1.1 });
+            b.schedule(bl.warn, () => {
+                if (!b.isActive || !b.enemies.includes(e)) return;
+                b.fx.play(ZONE_VFX.bellToll, e.x + ENEMY_CENTER, FOOT_B);
+                b.director.flash('#fff2c0', 260, 0.4);
+                if (e.x - b.frontX() > bl.range) return;
+                b.damagePlayer(b.maxPlayerHp * bl.dmg, 0);
+                b.delaySkills(bl.cd, '🔔 파문 — 스킬 쿨다운 +');
             });
         }
     }

@@ -146,6 +146,60 @@ export const HERO_CLIPS = {
         ]
     },
 
+    // ---- 2차 세트 전용 동작 (D-071, MD/파츠확장_2차_기획안.md 5-3). 팔은 -100°까지만 (더 돌리면 건틀릿이 얼굴을 덮음) ----
+    // 검 치켜들기 (일식·기사단 돌격·그림자 군단·마왕 강림): 무기를 하늘로 들어 올려(0.3) 힘을 모았다가(0.4 해방) 내림
+    raise: {
+        duration: 1.2,
+        loop: false,
+        tracks: {
+            armF: { rot: [[0, CARRY_ARM], [0.3, -100, 'out'], [0.4, -97], [0.9, -100], [1.2, CARRY_ARM]] },
+            sword: { rot: [[0, CARRY_SWORD], [0.3, -14, 'out'], [0.9, -10], [1.2, CARRY_SWORD]] },
+            torso: { rot: [[0, 0], [0.3, -3], [0.4, -1, 'out'], [0.9, -3], [1.2, 0]] },
+            head: { rot: [[0, 0], [0.3, -7], [0.9, -7], [1.2, 0]] },
+            thighF: { rot: [[0, 0], [0.3, -10], [0.9, -10], [1.2, 0]] },
+            thighB: { rot: [[0, 0], [0.3, 10], [0.9, 10], [1.2, 0]] },
+            cape1: { rot: [[0, 4], [0.4, 14, 'out'], [0.9, 10], [1.2, 4]] },
+            cape2: { rot: [[0, 6], [0.4, 20, 'out'], [0.9, 14], [1.2, 6]] }
+        },
+        events: [[0.08, 'charge', { socket: 'tip', bone: 'sword', color: AURA_COLOR }], [0.4, 'chargeEnd'], [0.4, 'roar', { socket: 'tip', bone: 'sword', color: AURA_COLOR }]]
+    },
+
+    // 찌르기 (찌르기 돌파): 무기를 뒤로 당겼다(0.15) 앞발을 내딛으며 수평으로 내지름(0.25 — 스킬 타격 0.15~0.4)
+    // 팔 -57° = 수평 앞, 손목 34° = 칼이 수평 (칼 방향 = 22.6 + 팔 + 손목)
+    thrust: {
+        duration: 0.7,
+        loop: false,
+        tracks: {
+            armF: { rot: [[0, CARRY_ARM], [0.15, 45, 'in'], [0.25, -57, 'out'], [0.45, -55], [0.7, CARRY_ARM]] },
+            sword: { rot: [[0, CARRY_SWORD], [0.15, carrySword(45)], [0.25, 34, 'out'], [0.45, 33], [0.7, CARRY_SWORD]] },
+            torso: { x: [[0, 0], [0.15, -12, 'in'], [0.25, 26, 'out'], [0.45, 20], [0.7, 0]], rot: [[0, 0], [0.15, -3], [0.25, 5, 'out'], [0.7, 0]] },
+            thighF: { rot: [[0, 0], [0.25, -22, 'out'], [0.45, -18], [0.7, 0]] },
+            shinF: { rot: [[0, 0], [0.25, 10], [0.7, 0]] },
+            thighB: { rot: [[0, 0], [0.25, 16], [0.7, 0]] },
+            head: { rot: [[0, 0], [0.25, 3], [0.7, 0]] },
+            cape1: { rot: [[0, 4], [0.25, 16, 'out'], [0.7, 4]] },
+            cape2: { rot: [[0, 6], [0.25, 22, 'out'], [0.7, 6]] }
+        },
+        events: [[0.2, 'trailStart', { socket: 'tip', bone: 'sword', color: SLASH_COLOR }], [0.25, 'impact', { hit: 1, color: SLASH_COLOR }], [0.4, 'trailEnd']]
+    },
+
+    // 크게 휩쓸기 (낫 휘두르기·마검 연무): 무기를 뒤로 크게 젖혔다(0.25) 앞으로 반원을 그리며 휩씀(0.42)
+    sweep: {
+        duration: 0.9,
+        loop: false,
+        tracks: {
+            armF: { rot: [[0, CARRY_ARM], [0.25, 70, 'in'], [0.42, -80, 'out'], [0.6, -70], [0.9, CARRY_ARM]] },
+            sword: { rot: [[0, CARRY_SWORD], [0.25, 20, 'in'], [0.42, -20, 'out'], [0.6, -15], [0.9, CARRY_SWORD]] },
+            torso: { x: [[0, 0], [0.25, -8, 'in'], [0.42, 16, 'out'], [0.6, 12], [0.9, 0]], rot: [[0, 0], [0.25, -6, 'in'], [0.42, 8, 'out'], [0.6, 6], [0.9, 0]] },
+            thighF: { rot: [[0, 0], [0.42, -16], [0.9, 0]] },
+            thighB: { rot: [[0, 0], [0.42, 12], [0.9, 0]] },
+            head: { rot: [[0, 0], [0.25, -4], [0.42, 4], [0.9, 0]] },
+            cape1: { rot: [[0, 4], [0.25, -4], [0.42, 18, 'out'], [0.9, 4]] },
+            cape2: { rot: [[0, 6], [0.25, -2], [0.42, 26, 'out'], [0.9, 6]] }
+        },
+        events: [[0.28, 'trailStart', { socket: 'tip', bone: 'sword', color: SLASH_COLOR }], [0.4, 'impact', { hit: 1, color: SLASH_COLOR }], [0.55, 'trailEnd']]
+    },
+
     // 승리: 넓게 버티고 서서 칼을 하늘로 치켜들고 보라 파동 (팔 -105° + 손목 -11° → 칼이 수직)
     victory: {
         duration: 1.2,
@@ -178,6 +232,7 @@ export const HERO = {
     hitSocket: ['tip', 'sword'],
     sockets: { hand: [660, 666] },       // 칼 쥔 주먹 (스킬 시전 에너지/세뇌 구체 발사 위치)
     autoGround: [['footF', 'shinF'], ['footB', 'shinB']],   // 다리가 몸통에 매달려 있어 발로 접지
+    skillClips: [['시전', 'cast'], ['검 치켜들기', 'raise'], ['찌르기', 'thrust'], ['크게 휩쓸기', 'sweep']],   // rig_test.html 동작 버튼 (뒤 셋은 2차 세트, D-071)
     wind: [{ bone: 'cape1', rot: 4 }, { bone: 'cape2', rot: 7 }],   // 빨리 걸을수록 망토가 뒤로 (Q-008 Q6, reactions.js WIND)
     // 컨셉의 보라 오라: 몸 뒤에서 연기가 피어올라 흩어지고, 앞쪽으로 불티가 떠오름
     ambient: [

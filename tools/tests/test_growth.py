@@ -110,7 +110,7 @@ def run(ctx):
               '세트 등급 바닥: A·B(레어 세트)는 안 가져도 레어, 능력치 ×1.1 · 기본 파츠는 커먼', str(st))
     ctx.check(set(st['normal']) == {'base'} and st['hard'] == ['base', 'base', 'rare', 'rare', 'rare'],
               '드랍 묶음 가중: 노말 기본·강화만 · 하드 기본 40% / 레어 세트 60%', str(st['normal']) + str(st['hard']))
-    ctx.check(st['first'] == 'rare' and st['hellFirst'] == 'rare', '보스 첫 클리어: 하드 레어 세트 · 헬 유니크(없으면 레어)', str(st))
+    ctx.check(st['first'] == 'rare' and st['hellFirst'] == 'unique', '보스 첫 클리어: 하드 레어 세트 · 헬 유니크 (2차 세트로 거대괴수도 유니크가 생김)', str(st))
     ctx.check(st['got'] == ['new', 'rare', 1], '드랍: 레어 세트 파츠는 커먼으로 뽑혀도 레어 + 옵션 1개', str(st['got']))
     ctx.check(st['c0'] == {'shards': 30, 'grade': 'rare'} and not st['poor'] and st['made'] == [True, 'rare', 30]
               and st['after'] == {'owned': True, 'shards': 10, 'again': None, 'base': None},

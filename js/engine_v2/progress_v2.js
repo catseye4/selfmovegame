@@ -49,6 +49,7 @@ class Progress {
         this.selectedStage = null;   // 메인 화면에서 고른 스테이지 (저장)
         this.character = DEFAULT_CHARACTER;   // 선택창에서 고른 캐릭터 (저장)
         this.loadouts = {};                   // 캐릭터별 마지막 장착 (저장)
+        this.tips = new Set();                // 본 첫 출격 안내 id (저장, coach_v2.js)
         Object.assign(this, emptyGrowth());   // 파츠 등급·조각·코어·스킬 레벨·모듈·연구·별 사용·파견 (저장)
         this.loaded = false;
         this.saveTimer = null;
@@ -79,6 +80,7 @@ class Progress {
             this.selectedStage = data.selectedStage || null;
             if (data.difficulty && difficultyUnlocked(data.difficulty, this)) this.difficulty = difficultyOf(data.difficulty).id;
             this.loadouts = { ...(data.loadouts || {}) };
+            (data.tips || []).forEach(t => this.tips.add(t));
             this.loadGrowth(data);
         }
         SLOTS.forEach(slot => this.owned.add(gameState.equippedParts[slot]));   // 장착 중인 파츠는 보유
@@ -90,6 +92,16 @@ class Progress {
         gameState.cartParts = { ...gameState.equippedParts };
         gameState.subscribe(() => this.saveSoon());
         this.save();
+    }
+
+    /** 첫 출격 안내 (coach_v2.js): 본 적 있는가 / 봤다고 저장 */
+    hasTip(id) {
+        return this.tips.has(id);
+    }
+
+    markTip(id) {
+        this.tips.add(id);
+        this.saveSoon();
     }
 
     saveSoon() {
@@ -114,6 +126,7 @@ class Progress {
             selectedStage: this.selectedStage,
             character: this.character,
             loadouts: this.loadouts,
+            tips: [...this.tips],
             ...this.growthData()
         };
         try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* 저장 불가 환경: 이번 실행에서만 유지 */ }
@@ -136,7 +149,7 @@ class Progress {
             if (id === 'none' || characterOfPart(partOf(slot, id)) === this.character) continue;
             const list = partsOfCharacter(this.character, slot);
             const pick = list.find(p => this.owned.has(p.id))
-                || (grant ? [...list].sort((a, b) => (a.cost || 0) - (b.cost || 0))[0] : null);
+                || (grant ? list.filter(p => !p.dropOnly && p.cost != null).sort((a, b) => a.cost - b.cost)[0] : null);   // 드랍 전용(값 없음) 세트 파츠는 빼고
             if (pick) this.owned.add(pick.id);
             gameState.equippedParts[slot] = pick ? pick.id : 'none';
         }
@@ -248,8 +261,8 @@ class Progress {
         const lv = this.levelOf(id);
         if (lv >= this.maxLevel() || id === 'none') return null;
         const p = partOf(slotOf(id), id);
-        // 강화 기준값 = 가격 (가격 없는 유니크 세트는 1200 — 레어 세트 부위 값보다 조금 위)
-        const base = Math.max(p ? p.cost || (dropGroupOf(p) === 'unique' ? 1200 : 0) : 0, 200);
+        // 강화 기준값 = 가격 (가격 없는 유니크 세트는 1200 — 레어 세트 부위 값보다 조금 위, 레전더리 세트는 1600)
+        const base = Math.max(p ? p.cost || ({ unique: 1200, legendary: 1600 }[dropGroupOf(p)] || 0) : 0, 200);
         return Math.round((base * 0.6 * lv) / 10) * 10;
     }
 

@@ -8,6 +8,8 @@ import { icon } from './icons.js';
 import { settings } from '../engine_v2/settings_v2.js';
 import { sound } from '../engine_v2/audio/sound_v2.js';
 import { progress } from '../engine_v2/progress_v2.js';
+import { VERSION, BUILD } from '../version_v2.js';
+import { isApp, checkForUpdate } from './appUpdate_v2.js';
 
 const SLIDERS = [
     { key: 'master', label: '전체 음량', preview: 'ui_click' },
@@ -50,6 +52,13 @@ export function openSettings() {
                 <div class="v2-settings__row">
                     <span>진행 초기화<small>DM·파츠·강화·스테이지 기록을 처음으로 (설정은 유지)</small></span>
                     <button class="v2-btn v2-btn--danger v2-settings__reset" data-act="wipe">초기화</button>
+                </div>
+            </section>
+            <section>
+                <h3>정보</h3>
+                <div class="v2-settings__row">
+                    <span>버전 ${VERSION} <small data-out="update">빌드 ${BUILD} · ${isApp() ? 'Android 앱' : '웹'}</small></span>
+                    ${isApp() ? '<button class="v2-btn v2-btn--ghost v2-settings__reset" data-act="update">업데이트 확인</button>' : ''}
                 </div>
             </section>
             <div class="v2-settings__actions">
@@ -118,6 +127,11 @@ export function openSettings() {
             return;
         }
         progress.resetAll();
+    });
+    el.querySelector('[data-act="update"]')?.addEventListener('click', () => {
+        sound.play('ui_click');
+        const out = el.querySelector('[data-out="update"]');
+        checkForUpdate({ silent: false, onStatus: text => { out.textContent = text; } });
     });
     el.querySelector('[data-act="reset"]').addEventListener('click', () => {
         settings.reset();

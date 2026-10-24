@@ -1,17 +1,22 @@
 /* ==========================================================================
-   PROJECT: MAD OVERLORD // 세트 장비 표 (v2, Q-008 — MD/세트장비_퀄리티업_단계계획.md)
-   캐릭터마다 레어 세트 ①·② + 유니크 세트 하나. 세트는 "등급 바닥"을 정한다 — 그 세트 파츠는 이 등급 아래로 없음.
+   PROJECT: MAD OVERLORD // 세트 장비 표 (v2, Q-008 — MD/세트장비_퀄리티업_단계계획.md, 2차 Q-009 — MD/파츠확장_2차_기획안.md)
+   캐릭터마다 레어 세트 ①~④ + 유니크 ①~③ + 레전더리 ①·②. 세트는 "등급 바닥"을 정한다 — 그 세트 파츠는 이 등급 아래로 없음.
      레어 세트: 연구소 DM 구매 + 하드부터 드랍 + 파츠 조각 제작 (기존 4종은 A·B 세트, D-053)
      유니크 세트: 헬부터 드랍 + 조각 제작 (DM 구매 없음 — 파츠에 cost 없이 dropOnly)
+     레전더리 세트 (D-071): 나이트메어 드랍 + 조각 제작 (DM 구매 없음)
    세트 효과: 같은 세트 부위를 n개 끼우면 켜짐 (bonus { 개수: 설명 }) — 효과는 전투 코드에서 b.setOn(세트 id, 개수)로 봄.
-   파츠 → 세트: 파츠 id 이름 규칙 `<부위>_<캐릭터>_<a|b|u>` (a = 레어 ①, b = 레어 ②, u = 유니크) → 세트 id `<캐릭터>_<a|b|u>`.
+   파츠 → 세트: 파츠 id 이름 규칙 `<부위>_<캐릭터>_<글자>` → 세트 id `<캐릭터>_<글자>`.
+     글자: 레어 a·b·c·d (①~④), 유니크 u·v·w (①~③), 레전더리 l·m (①·②). 2차 세트 표는 sets2/*.js가 SETS에 더함 (registerSets2).
    등급·드랍 수치는 growth_v2.js, 저장·지급은 progressGrowth_v2.js.
    ========================================================================== */
 
 export const SET_TIERS = {
     rare: { name: '레어', minGrade: 'rare' },
-    unique: { name: '유니크', minGrade: 'unique' }
+    unique: { name: '유니크', minGrade: 'unique' },
+    legendary: { name: '레전더리', minGrade: 'legendary' }
 };
+/** 세트 id 끝 글자 → { 등급, 번호 } */
+export const SET_LETTERS = { a: ['rare', 1], b: ['rare', 2], c: ['rare', 3], d: ['rare', 4], u: ['unique', 1], v: ['unique', 2], w: ['unique', 3], l: ['legendary', 1], m: ['legendary', 2] };
 
 export const SETS = {
     // ---- 기존 4종: A·B 세트 = 레어 ①·② (Q-008 S1·S3) ----
@@ -26,7 +31,7 @@ export const SETS = {
     // 유니크 세트(…_u)·새 캐릭터 세트는 그 세트를 만들 때 더함 (단계 3·4)
 };
 
-const SET_ID_RE = /^(?:head|body|arm|leg)_([a-z]+)_([abu])$/;
+const SET_ID_RE = /^(?:head|body|arm|leg)_([a-z]+)_([abcduvwlm])$/;
 
 /** 파츠(또는 파츠 id)의 세트 id — 세트 표에 없으면 null */
 export function setIdOf(part) {
@@ -47,27 +52,29 @@ export function minGradeOf(part) {
     return s ? SET_TIERS[s.tier].minGrade : 'common';
 }
 
-/** 드랍 묶음: 'base'(기본·강화) | 'rare' | 'unique' */
+/** 드랍 묶음: 'base'(기본·강화) | 'rare' | 'unique' | 'legendary' */
 export function dropGroupOf(part) {
     const s = setOf(part);
     return s ? s.tier : 'base';
 }
 
-/** DM으로 살 수 있는지: 가격이 있고 드랍 전용·유니크 세트가 아님 */
+const DROP_ONLY_GROUPS = new Set(['unique', 'legendary']);
+
+/** DM으로 살 수 있는지: 가격이 있고 드랍 전용·유니크·레전더리 세트가 아님 */
 export function isPurchasable(part) {
-    return !!(part && part.cost) && !part.dropOnly && dropGroupOf(part) !== 'unique';
+    return !!(part && part.cost) && !part.dropOnly && !DROP_ONLY_GROUPS.has(dropGroupOf(part));
 }
 
 /** 드랍·조각으로만 얻는 파츠 (연구소에서 "드랍 전용") */
 export function isDropOnly(part) {
-    return !!part && part.id !== 'none' && (!!part.dropOnly || dropGroupOf(part) === 'unique');
+    return !!part && part.id !== 'none' && (!!part.dropOnly || DROP_ONLY_GROUPS.has(dropGroupOf(part)));
 }
 
-/** 연구소·결과 화면 이름표: "레어 ① 포격 사령부" / "유니크 천둥 거신" */
+/** 연구소·결과 화면 이름표: "레어 ① 포격 사령부" / "유니크 ② 플라즈마 정화대" / "레전더리 ① 기신 아포칼립스" */
 export function setLabelOf(set) {
     if (!set) return '';
     const tier = SET_TIERS[set.tier].name;
-    return set.tier === 'rare' ? `${tier} ${'①②③'[set.no - 1] || set.no} ${set.name}` : `${tier} ${set.name}`;
+    return `${tier} ${'①②③④'[set.no - 1] || set.no} ${set.name}`;
 }
 
 /** 장착 파츠 { head, body, arm, leg } → { 세트 id: 끼운 부위 수 } */

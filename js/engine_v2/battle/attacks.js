@@ -24,16 +24,18 @@ export const AttackMethods = {
     // hitScale: 기본 1타 대비 피해 비율 (리그 캐논은 연사 1발당 0.2)
     fireAttack(targetEnemy, hitScale = 1) {
         if (!targetEnemy || !this.domProjectiles) return;
-        this.ultGauge = Math.min(1, this.ultGauge + ULT_FILL.perHit * hitScale);
+        this.ultGauge = Math.min(1, this.ultGauge + ULT_FILL.perHit * hitScale * this.kitUltRate());
 
         // 거대로봇 리그면 실제 총구 위치에서 발사, 아니면 기존 고정 위치
         const muzzle = monsterControllerV2.getMuzzlePoint();
         const monsterFireX = muzzle ? muzzle.x : this.monsterX + 90;
-        const dmg = this.playerDps * 0.5 * hitScale * this.dmgMul();   // 세트 버프·패시브 (battle/sets.js)
+        const dmg = this.playerDps * 0.5 * hitScale * this.dmgMul() * this.kitOnAttack(targetEnemy);   // 세트 버프·패시브 (battle/sets.js) · 2차 다음 공격 배율·N번째 덤 (kit.js)
         const isCrit = Math.random() < 0.2;
         const finalDmg = isCrit ? dmg * 1.5 : dmg;
         this.cloneEcho(targetEnemy, finalDmg);   // 그림자 분신이 있으면 같이 쏨
 
+        // 2차 세트 새 기본 공격 · 변신 공격 (battle/kit.js)
+        if ((this.attackType === 'kit' || this.kitXform?.attack) && this.fireKitAttack(targetEnemy, finalDmg, isCrit)) return;
         // A·B 세트 새 기본 공격 4종 (battle/sets.js)
         if (this.attackType === 'rail') return this.fireRail(targetEnemy, finalDmg, isCrit);
         if (this.attackType === 'spit') return this.fireSpit(targetEnemy, finalDmg, isCrit);
@@ -218,6 +220,7 @@ export const AttackMethods = {
         if (sk.ult) this.ultGauge = 0;
         else this.skillCd[slot] = this.skillCooldown(slot, sk);   // 스킬 레벨·재충전·과부하 변이 (growth.js)
         sk.use(sk.module ? this : this.skillCaster(slot));         // 스킬 레벨 피해 배율 (growth.js)
+        if (!sk.module) this.kitOnSkill(sk);                        // 2차 패시브·세트 계기 (kit.js)
         if (!sk.ult) sound.play('skill_use');
         this.hud.onSkillUsed(slot, sk);
         return true;
@@ -229,8 +232,9 @@ export const AttackMethods = {
     },
 
     tickSkills(dt) {
-        for (const slot in this.skillCd) this.skillCd[slot] = Math.max(0, this.skillCd[slot] - dt);   // 팔·몸통 + 전술 모듈 mod1·mod2
-        this.ultGauge = Math.min(1, this.ultGauge + ULT_FILL.perSec * dt);
+        const cdDt = dt * this.kitCdRate();   // 2차: 쿨다운이 빨리 줄어드는 버프 (kit.js)
+        for (const slot in this.skillCd) this.skillCd[slot] = Math.max(0, this.skillCd[slot] - (slot.startsWith('mod') ? dt : cdDt));   // 팔·몸통 + 전술 모듈 mod1·mod2
+        this.ultGauge = Math.min(1, this.ultGauge + ULT_FILL.perSec * dt * this.kitUltRate());
         if (this.shieldTimer !== Infinity) {
             this.shieldTimer -= dt;
             if (this.shieldTimer <= 0) {

@@ -243,8 +243,8 @@ export class Skeleton {
                 b.rest[0] + (p.x || 0) + (o.x || 0),
                 b.rest[1] + (p.y || 0) + (o.y || 0),
                 ((p.rot || 0) + (o.rot || 0)) * DEG,
-                p.sx ?? 1,
-                p.sy ?? 1
+                (p.sx ?? 1) + (o.sx || 0),   // 더하기 동작의 크기 변화 (착지 눌림 — reactions.js)
+                (p.sy ?? 1) + (o.sy || 0)
             );
             b.world = b.parentBone ? Mat.mul(b.parentBone.world, local) : local;
         }
