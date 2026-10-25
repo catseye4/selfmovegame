@@ -41,7 +41,12 @@
 // 중간 요새(보안 게이트)는 위 자동 포탑이 다가오면 빔을 쏨(defense.mid). 그림 2026-10-25 (stageArt_v2.js st1_*, 배경 ui_v2.css .v2-zone-1)
 const MAP11 = [[-0.78, 0.6], [-0.62, 0.46], [-0.46, 0.33], [-0.3, 0.2], [-0.14, 0.07], [0.02, -0.06], [0.18, -0.19],
     [0.34, -0.32], [0.5, -0.46], [0.64, -0.6], [0.78, -0.76]];
-const Z1_ALL = { conscript: 3, riot: 1, taser: 1, rocket: 1, empdrone: 1, hound: 2, flamer: 1, exo: 0.5 };
+// 밸런스 1차 (2026-10-25, D-087): 구역마다 8~10판이 가장 센 조합도 못 넘는 벽 — 피해 대부분이 8판 중장갑 적의 근접 →
+// 8판 중장갑 비중 1 → 0.45, 전체 혼합(Z*_ALL) 0.5 → 0.25, 10판 물량 소환 1.55초·최대 11 → 1.7초·최대 9 (중장갑 수치는 enemies_v2.js),
+// 8~10판 적 공격 배율 × 0.88, 3-B 악마기사 소환 20초 → 32초. 방패형 적 근접 × 0.6 (enemies_v2.js),
+// 9판 적 체력 × 0.95 · 10판 × 0.92 · 10판 소환 1.8초, 구역 6 구급 마차 비중 1 → 0.4 (6-8 · 혼합 0.5 → 0.3),
+// 구역 10 우퍼 메카 비중 10-6 1.2 → 0.8 · 혼합 0.7 → 0.5 (구역 5~10 방패형 장벽 체력·간격은 enemies_v2.js)
+const Z1_ALL = { conscript: 3, riot: 1, taser: 1, rocket: 1, empdrone: 1, hound: 2, flamer: 1, exo: 0.25 };
 export const CHAPTER1 = {
     id: 'ch1',
     zone: 1,
@@ -94,19 +99,19 @@ export const CHAPTER1 = {
         {
             id: '1-8', timeLimit: 220, starTime: 136, name: '도난당한 기술', desc: '빅터의 기술을 훔쳐 만든 육중한 외골격, 기계화 강화병이 나타난다.',
             distance: 1050, midAt: 470, finalAt: 950,
-            enemy: { hp: 2.0, dps: 1.7, spawn: 1.9, max: 8, mix: { conscript: 3, riot: 1, taser: 1, rocket: 1, empdrone: 1, hound: 1, flamer: 1, exo: 1 } }, elite: 0.12,
+            enemy: { hp: 2.0, dps: 1.5, spawn: 1.9, max: 8, mix: { conscript: 3, riot: 1, taser: 1, rocket: 1, empdrone: 1, hound: 1, flamer: 1, exo: 0.45 } }, elite: 0.12,
             base: { mid: 5200, final: 9200 }, reward: { kill: 19, mid: 1150, final: 3050 }
         },
         {
             id: '1-9', timeLimit: 230, starTime: 142, name: '엘리베이터 입구', desc: '승강기를 타기 위한 총력전. 블랙 하운드 전 병력이 몰려온다.',
             distance: 1100, midAt: 500, finalAt: 1000,
-            enemy: { hp: 2.1, dps: 1.78, spawn: 1.85, max: 8, mix: { ...Z1_ALL } }, elite: 0.13,
+            enemy: { hp: 1.99, dps: 1.57, spawn: 1.85, max: 8, mix: { ...Z1_ALL } }, elite: 0.13,
             base: { mid: 5400, final: 9600 }, reward: { kill: 20, mid: 1200, final: 3250 }
         },
         {
             id: '1-10', timeLimit: 240, starTime: 150, name: '최후의 저지선', desc: '사방에서 끝없이 쏟아지는 물량 웨이브를 뚫어라.',
             distance: 1150, midAt: 520, finalAt: 1050,
-            enemy: { hp: 2.2, dps: 1.82, spawn: 1.55, max: 10, mix: { ...Z1_ALL } }, elite: 0.15,
+            enemy: { hp: 2.02, dps: 1.6, spawn: 1.8, max: 9, mix: { ...Z1_ALL } }, elite: 0.15,
             base: { mid: 5600, final: 10000 }, reward: { kill: 21, mid: 1250, final: 3500 }
         },
         {
@@ -127,7 +132,9 @@ CHAPTER1.stages.forEach((st, i) => { st.map = MAP11[i]; });
 // → 대물 포격 워커(장거리 곡사) → 채굴용 엑스카베이터, 2-9·2-10 혼합(2-10 물량), 2-B 메인 시추 코어 앞 '기간틱 테라포머'
 // + 기믹 폐기물 컨테이너 투하(20초마다, enemyField.js tickContainers — 맞으면 기절, 떨어진 컨테이너는 잠시 바리케이드).
 // 중간 요새(해안 방파제 게이트)는 대함 미사일 포탑이 다가오면 쏨. 그림 2026-10-25 (stageArt_v2.js st2_*, 배경 ui_v2.css .v2-zone-2)
-const Z2_ALL = { merc: 3, dozer: 1, harpoon: 1, sawdrone: 1.5, acidmech: 1, sonictower: 0.7, spiderwalker: 0.8, excavator: 0.5 };
+// 밸런스 1차 (D-087): 구역 3보다 어려워서(레이저 로봇 Lv5도 2-5에서 시간 초과) 제한 시간 +12초, 2-5 중간 요새 8600 → 7600,
+// 2-7 포격 워커 비중 1.5 → 1 (불도저 체력 1150 → 950 · 포격 워커 철갑탄 78 → 62는 enemies_v2.js)
+const Z2_ALL = { merc: 3, dozer: 1, harpoon: 1, sawdrone: 1.5, acidmech: 1, sonictower: 0.7, spiderwalker: 0.8, excavator: 0.25 };
 export const CHAPTER2 = {
     id: 'ch2',
     zone: 2,
@@ -136,73 +143,73 @@ export const CHAPTER2 = {
     defense: { mid: { range: 440, every: 2.8, dmg: 26, color: '255, 160, 80', label: '🚀 대함 미사일 포탑' } },
     stages: [
         {
-            id: '2-1', timeLimit: 200, starTime: 130, name: '대지의 진동', desc: '상륙 직후. 하찮은 용병들을 짓밟으며 진격한다.',
+            id: '2-1', timeLimit: 212, starTime: 130, name: '대지의 진동', desc: '상륙 직후. 하찮은 용병들을 짓밟으며 진격한다.',
             distance: 1000, midAt: 450, finalAt: 900,
             enemy: { hp: 2.4, dps: 1.9, spawn: 2.2, max: 6, mix: { merc: 1 } }, elite: 0.06,
             base: { mid: 6000, final: 11000 }, reward: { kill: 24, mid: 1400, final: 4000 }
         },
         {
-            id: '2-2', timeLimit: 205, starTime: 132, name: '밀어붙이는 강철', desc: '불도저 드로이드의 배토판이 물리적 방어선을 친다.',
+            id: '2-2', timeLimit: 217, starTime: 132, name: '밀어붙이는 강철', desc: '불도저 드로이드의 배토판이 물리적 방어선을 친다.',
             distance: 1000, midAt: 450, finalAt: 900,
             enemy: { hp: 2.5, dps: 1.95, spawn: 2.15, max: 7, mix: { merc: 4, dozer: 1 } }, elite: 0.07,
             base: { mid: 6300, final: 11500 }, reward: { kill: 25, mid: 1450, final: 4150 }
         },
         {
-            id: '2-3', timeLimit: 210, starTime: 135, name: '짐승 사냥', desc: '고압 작살포 트럭이 괴수의 발을 묶기 시작한다.',
+            id: '2-3', timeLimit: 222, starTime: 135, name: '짐승 사냥', desc: '고압 작살포 트럭이 괴수의 발을 묶기 시작한다.',
             distance: 1050, midAt: 470, finalAt: 950,
             enemy: { hp: 2.6, dps: 2.0, spawn: 2.1, max: 7, mix: { merc: 4, dozer: 1, harpoon: 2 } }, elite: 0.08,
             base: { mid: 6600, final: 12000 }, reward: { kill: 26, mid: 1500, final: 4300 }
         },
         {
-            id: '2-4', timeLimit: 215, starTime: 138, name: '살을 에는 톱니', desc: '공중에서 회전톱 드론이 쏟아진다.',
+            id: '2-4', timeLimit: 227, starTime: 138, name: '살을 에는 톱니', desc: '공중에서 회전톱 드론이 쏟아진다.',
             distance: 1050, midAt: 470, finalAt: 950,
             enemy: { hp: 2.7, dps: 2.05, spawn: 2.05, max: 7, mix: { merc: 3, dozer: 1, harpoon: 1, sawdrone: 2 } }, elite: 0.09,
             base: { mid: 6900, final: 12500 }, reward: { kill: 27, mid: 1550, final: 4450 }
         },
         {
-            id: '2-5', timeLimit: 220, starTime: 140, name: '방파제 붕괴', desc: '대함 포탑이 달린 해안 방파제 게이트를 돌파한다. 산성액 메카가 웅덩이를 만든다.',
+            id: '2-5', timeLimit: 232, starTime: 140, name: '방파제 붕괴', desc: '대함 포탑이 달린 해안 방파제 게이트를 돌파한다. 산성액 메카가 웅덩이를 만든다.',
             distance: 1100, midAt: 500, finalAt: 1000,
             enemy: { hp: 2.8, dps: 2.1, spawn: 2.0, max: 7, mix: { merc: 3, dozer: 1, harpoon: 1, sawdrone: 1, acidmech: 2 } }, elite: 0.1,
-            base: { mid: 8600, final: 13000 }, reward: { kill: 28, mid: 1800, final: 4600 }
+            base: { mid: 7600, final: 13000 }, reward: { kill: 28, mid: 1800, final: 4600 }
         },
         {
-            id: '2-6', timeLimit: 225, starTime: 143, name: '귀를 찢는 기계음', desc: '음파 차단 탑의 고주파가 스킬 사용을 방해한다.',
+            id: '2-6', timeLimit: 237, starTime: 143, name: '귀를 찢는 기계음', desc: '음파 차단 탑의 고주파가 스킬 사용을 방해한다.',
             distance: 1100, midAt: 500, finalAt: 1000,
             enemy: { hp: 2.9, dps: 2.15, spawn: 2.0, max: 8, mix: { merc: 3, dozer: 1, harpoon: 1, sawdrone: 1, acidmech: 1, sonictower: 1 } }, elite: 0.11,
             base: { mid: 7400, final: 13500 }, reward: { kill: 29, mid: 1650, final: 4750 }
         },
         {
-            id: '2-7', timeLimit: 230, starTime: 146, name: '십자포화', desc: '대물 포격 워커가 멀리서 공성 철갑탄을 쏟아붓는다.',
+            id: '2-7', timeLimit: 242, starTime: 146, name: '십자포화', desc: '대물 포격 워커가 멀리서 공성 철갑탄을 쏟아붓는다.',
             distance: 1150, midAt: 520, finalAt: 1050,
-            enemy: { hp: 3.0, dps: 2.2, spawn: 1.95, max: 8, mix: { merc: 3, dozer: 1, harpoon: 1, sawdrone: 1, acidmech: 1, sonictower: 0.5, spiderwalker: 1.5 } }, elite: 0.12,
+            enemy: { hp: 3.0, dps: 2.2, spawn: 1.95, max: 8, mix: { merc: 3, dozer: 1, harpoon: 1, sawdrone: 1, acidmech: 1, sonictower: 0.5, spiderwalker: 1 } }, elite: 0.12,
             base: { mid: 7700, final: 14000 }, reward: { kill: 30, mid: 1700, final: 4900 }
         },
         {
-            id: '2-8', timeLimit: 235, starTime: 150, name: '뚫리지 않는 껍질', desc: '양팔에 유압 드릴을 단 중장갑 엑스카베이터와의 힘 싸움.',
+            id: '2-8', timeLimit: 247, starTime: 150, name: '뚫리지 않는 껍질', desc: '양팔에 유압 드릴을 단 중장갑 엑스카베이터와의 힘 싸움.',
             distance: 1150, midAt: 520, finalAt: 1050,
-            enemy: { hp: 3.1, dps: 2.25, spawn: 1.95, max: 8, mix: { merc: 3, dozer: 1, harpoon: 1, sawdrone: 1, acidmech: 1, sonictower: 0.5, spiderwalker: 0.8, excavator: 1 } }, elite: 0.12,
+            enemy: { hp: 3.1, dps: 1.98, spawn: 1.95, max: 8, mix: { merc: 3, dozer: 1, harpoon: 1, sawdrone: 1, acidmech: 1, sonictower: 0.5, spiderwalker: 0.8, excavator: 0.45 } }, elite: 0.12,
             base: { mid: 7900, final: 14400 }, reward: { kill: 31, mid: 1750, final: 5000 }
         },
         {
-            id: '2-9', timeLimit: 240, starTime: 153, name: '시추 코어 진입로', desc: '메인 기지를 지키기 위한 중장비들의 총공세.',
+            id: '2-9', timeLimit: 252, starTime: 153, name: '시추 코어 진입로', desc: '메인 기지를 지키기 위한 중장비들의 총공세.',
             distance: 1200, midAt: 550, finalAt: 1100,
-            enemy: { hp: 3.2, dps: 2.3, spawn: 1.9, max: 8, mix: { ...Z2_ALL } }, elite: 0.13,
+            enemy: { hp: 3.04, dps: 2.02, spawn: 1.9, max: 8, mix: { ...Z2_ALL } }, elite: 0.13,
             base: { mid: 8000, final: 14700 }, reward: { kill: 32, mid: 1800, final: 5150 }
         },
         {
-            id: '2-10', timeLimit: 245, starTime: 158, name: '최후의 발악', desc: '사방에서 끝없이 쏟아지는 기계 웨이브.',
+            id: '2-10', timeLimit: 257, starTime: 158, name: '최후의 발악', desc: '사방에서 끝없이 쏟아지는 기계 웨이브.',
             distance: 1200, midAt: 550, finalAt: 1100,
-            enemy: { hp: 3.3, dps: 2.35, spawn: 1.6, max: 10, mix: { ...Z2_ALL } }, elite: 0.15,
+            enemy: { hp: 3.04, dps: 2.07, spawn: 1.8, max: 9, mix: { ...Z2_ALL } }, elite: 0.15,
             base: { mid: 8200, final: 15000 }, reward: { kill: 33, mid: 1850, final: 5300 }
         },
         {
-            id: '2-B', timeLimit: 245, starTime: 162, name: '짓밟힌 오만', desc: '메인 시추 코어 앞. 환경 파괴 메카 "기간틱 테라포머"와 크레인의 컨테이너 투하가 기다린다.', boss: true,
+            id: '2-B', timeLimit: 257, starTime: 162, name: '짓밟힌 오만', desc: '메인 시추 코어 앞. 환경 파괴 메카 "기간틱 테라포머"와 크레인의 컨테이너 투하가 기다린다.', boss: true,
             distance: 1050, midAt: 470, finalAt: 950,
             enemy: { hp: 3.4, dps: 2.4, spawn: 2.0, max: 8, mix: { merc: 3, dozer: 1, harpoon: 1, sawdrone: 1, acidmech: 1, sonictower: 0.5, spiderwalker: 0.8 } }, elite: 0.12,
             base: { mid: 8000, final: 15000 }, reward: { kill: 34, mid: 2000, final: 6500 },
             // 컨테이너 투하: every초마다 경보 → warn초 뒤 n곳(하나는 주인공 바로 앞) — 그 자리 주인공은 최대 내구도 dmg + stun초 기절,
             // 컨테이너는 hp(× 적 체력 배율) 바리케이드로 sec초 남음
-            boss: { unit: 'terraformer', containers: { every: 20, warn: 2.2, n: 3, radius: 75, dmg: 0.05, stun: 1.2, hp: 900, sec: 8 } }
+            boss: { unit: 'terraformer', containers: { every: 20, warn: 2.2, n: 3, radius: 75, dmg: 0.05, stun: 1.2, hp: 500, sec: 8 } }
         }
     ]
 };
@@ -217,7 +224,7 @@ const MAP7 = [[-0.74, 0.56], [-0.48, 0.38], [-0.22, 0.2], [0.04, 0.0], [0.3, -0.
 // → 그리폰 기수(성수 약화, 비행) → 정화의 발리스타(밀어냄) → 처형인 성기사, 3-9·3-10 혼합(3-10 물량).
 // 3-B: 대성당 정문을 부수면 대주교 베네딕트(신성한 심판·숨겨진 마성) + 기믹 지옥문(20초마다 악마기사 2기, enemyField.js tickKnights).
 // 중간 요새(이단 심문소 철문)는 다가오면 쇠꼬챙이·화살을 쏨. 그림 2026-10-25 (stageArt_v2.js st3_*, 배경 ui_v2.css .v2-zone-3)
-const Z3_ALL = { zealot: 3, holyshield: 1, inquisitor: 1, lightmage: 1, battlepriest: 0.8, griffon: 1, ballista: 0.6, executioner: 0.5 };
+const Z3_ALL = { zealot: 3, holyshield: 1, inquisitor: 1, lightmage: 1, battlepriest: 0.8, griffon: 1, ballista: 0.6, executioner: 0.25 };
 export const CHAPTER3 = {
     id: 'ch3',
     zone: 3,
@@ -270,19 +277,19 @@ export const CHAPTER3 = {
         {
             id: '3-8', timeLimit: 245, starTime: 160, name: '원수의 얼굴', desc: '과거 목을 쳤던 처형인 성기사들과의 복수전.',
             distance: 1150, midAt: 520, finalAt: 1050,
-            enemy: { hp: 3.6, dps: 2.45, spawn: 1.88, max: 9, mix: { zealot: 3, holyshield: 1, inquisitor: 1, lightmage: 1, battlepriest: 0.8, griffon: 1, ballista: 0.6, executioner: 1 } }, elite: 0.12,
+            enemy: { hp: 3.6, dps: 2.16, spawn: 1.88, max: 9, mix: { zealot: 3, holyshield: 1, inquisitor: 1, lightmage: 1, battlepriest: 0.8, griffon: 1, ballista: 0.6, executioner: 0.45 } }, elite: 0.12,
             base: { mid: 8900, final: 15600 }, reward: { kill: 43, mid: 2450, final: 7050 }
         },
         {
             id: '3-9', timeLimit: 250, starTime: 164, name: '대성당의 계단', desc: '대성당 정문을 지키기 위한 성왕국의 총력전.',
             distance: 1200, midAt: 550, finalAt: 1100,
-            enemy: { hp: 3.7, dps: 2.5, spawn: 1.85, max: 9, mix: { ...Z3_ALL } }, elite: 0.13,
+            enemy: { hp: 3.52, dps: 2.2, spawn: 1.85, max: 9, mix: { ...Z3_ALL } }, elite: 0.13,
             base: { mid: 9000, final: 16000 }, reward: { kill: 44, mid: 2500, final: 7200 }
         },
         {
             id: '3-10', timeLimit: 255, starTime: 168, name: '무너지는 성역', desc: '사방에서 끝없이 쏟아지는 기사단 웨이브.',
             distance: 1200, midAt: 550, finalAt: 1100,
-            enemy: { hp: 3.75, dps: 2.55, spawn: 1.55, max: 11, mix: { ...Z3_ALL } }, elite: 0.15,
+            enemy: { hp: 3.45, dps: 2.24, spawn: 1.8, max: 9, mix: { ...Z3_ALL } }, elite: 0.15,
             base: { mid: 9200, final: 16400 }, reward: { kill: 45, mid: 2550, final: 7400 }
         },
         {
@@ -291,7 +298,7 @@ export const CHAPTER3 = {
             enemy: { hp: 3.8, dps: 2.6, spawn: 2.0, max: 9, mix: { zealot: 3, holyshield: 1, inquisitor: 1, lightmage: 1, battlepriest: 1, griffon: 1 } }, elite: 0.12,
             base: { mid: 8800, final: 14000 }, reward: { kill: 50, mid: 2800, final: 8500 },
             // 위선의 민낯: 보스가 나온 뒤 every초마다 지옥문 → 악마기사(엘리트) n기
-            boss: { unit: 'benedict', afterBase: true, knights: { every: 20, warn: 2, unit: 'demonknight', n: 2 } }
+            boss: { unit: 'benedict', afterBase: true, knights: { every: 32, warn: 2, unit: 'demonknight', n: 2 } }
         }
     ]
 };
@@ -303,7 +310,7 @@ CHAPTER3.stages.forEach((st, i) => { st.map = MAP11[i]; });
 // → 혈관 기생충(치유 + 광폭화) → 안구 감시탑(보랏빛 안광) → 광폭화 융합수(죽으면 산성 혈액), 4-9·4-10 혼합(4-10 물량).
 // 4-B: 우주적 고치 앞 관장자 오큘러스 — 체력 50%에서 외눈 괴수로 강제 변이(극한의 변이, enemies_v2.js rage).
 // 중간 요새(박동하는 고기 벽)는 다가오면 독액을 뿜음. 그림 2026-10-25 (stageArt_v2.js st4_*, 노랑 배경, 배경 ui_v2.css .v2-zone-4)
-const Z4_ALL = { mutant: 3, boneshield: 1, leechfiend: 1, chimeraslime: 1, sporecaster: 1, parasite: 0.8, eyetower: 0.6, fusionbeast: 0.5 };
+const Z4_ALL = { mutant: 3, boneshield: 1, leechfiend: 1, chimeraslime: 1, sporecaster: 1, parasite: 0.8, eyetower: 0.6, fusionbeast: 0.25 };
 export const CHAPTER4 = {
     id: 'ch4',
     zone: 4,
@@ -356,19 +363,19 @@ export const CHAPTER4 = {
         {
             id: '4-8', timeLimit: 250, starTime: 163, name: '실패작들의 무덤', desc: '모든 것이 뒤엉킨 거대한 융합 괴물이 나타난다.',
             distance: 1150, midAt: 520, finalAt: 1050,
-            enemy: { hp: 3.74, dps: 2.55, spawn: 1.88, max: 9, mix: { mutant: 3, boneshield: 1, leechfiend: 1, chimeraslime: 1, sporecaster: 1, parasite: 0.8, eyetower: 0.6, fusionbeast: 1 } }, elite: 0.12,
+            enemy: { hp: 3.74, dps: 2.24, spawn: 1.88, max: 9, mix: { mutant: 3, boneshield: 1, leechfiend: 1, chimeraslime: 1, sporecaster: 1, parasite: 0.8, eyetower: 0.6, fusionbeast: 0.45 } }, elite: 0.12,
             base: { mid: 9400, final: 16100 }, reward: { kill: 59, mid: 3250, final: 9050 }
         },
         {
             id: '4-9', timeLimit: 255, starTime: 166, name: '제단의 입구', desc: '우주적 고치를 지키려 쏟아져 나오는 생물들의 총공세.',
             distance: 1200, midAt: 550, finalAt: 1100,
-            enemy: { hp: 3.8, dps: 2.58, spawn: 1.85, max: 9, mix: { ...Z4_ALL } }, elite: 0.13,
+            enemy: { hp: 3.61, dps: 2.27, spawn: 1.85, max: 9, mix: { ...Z4_ALL } }, elite: 0.13,
             base: { mid: 9500, final: 16400 }, reward: { kill: 60, mid: 3300, final: 9200 }
         },
         {
             id: '4-10', timeLimit: 260, starTime: 170, name: '강요된 진화', desc: '고치 앞에서 끝없이 몰려오는 기괴한 살점 웨이브.',
             distance: 1200, midAt: 550, finalAt: 1100,
-            enemy: { hp: 3.85, dps: 2.6, spawn: 1.55, max: 11, mix: { ...Z4_ALL } }, elite: 0.15,
+            enemy: { hp: 3.54, dps: 2.29, spawn: 1.8, max: 9, mix: { ...Z4_ALL } }, elite: 0.15,
             base: { mid: 9700, final: 16800 }, reward: { kill: 62, mid: 3350, final: 9400 }
         },
         {
@@ -388,7 +395,7 @@ CHAPTER4.stages.forEach((st, i) => { st.map = MAP11[i]; });
 // → 소나 드론(스킬 지연, 비행) → 맹독 잠수부(자폭 + 산성 장판) → 심해 구축 워커, 5-9·5-10 혼합(5-10 물량).
 // 5-B: 중앙 통제 시추선 앞 해군 총사령관 아이언클래드(심해 압축포·폭뢰 융단폭격) + 기믹 오염된 해저 화산(20초마다 맹독 간헐천, enemyField.js tickGeysers).
 // 중간 요새(해상 차단 수문)는 다가오면 전기 작살을 쏨. 그림 2026-10-25 (stageArt_v2.js st5_*, 배경 ui_v2.css .v2-zone-5)
-const Z5_ALL = { marine: 3, hatchshield: 1, netgunner: 1, mineman: 1, deckgun: 0.6, sonardrone: 1, toxicdiver: 1, subwalker: 0.5 };
+const Z5_ALL = { marine: 3, hatchshield: 1, netgunner: 1, mineman: 1, deckgun: 0.6, sonardrone: 1, toxicdiver: 1, subwalker: 0.25 };
 export const CHAPTER5 = {
     id: 'ch5',
     zone: 5,
@@ -441,19 +448,19 @@ export const CHAPTER5 = {
         {
             id: '5-8', timeLimit: 252, starTime: 165, name: '강철의 심해어', desc: '잠수함을 개조한 중장갑 워커와의 힘 싸움.',
             distance: 1150, midAt: 520, finalAt: 1050,
-            enemy: { hp: 4.14, dps: 2.75, spawn: 1.88, max: 9, mix: { marine: 3, hatchshield: 1, netgunner: 1, mineman: 1, deckgun: 0.5, sonardrone: 0.8, toxicdiver: 0.8, subwalker: 1 } }, elite: 0.12,
+            enemy: { hp: 4.14, dps: 2.42, spawn: 1.88, max: 9, mix: { marine: 3, hatchshield: 1, netgunner: 1, mineman: 1, deckgun: 0.5, sonardrone: 0.8, toxicdiver: 0.8, subwalker: 0.45 } }, elite: 0.12,
             base: { mid: 10000, final: 17700 }, reward: { kill: 69, mid: 3650, final: 10050 }
         },
         {
             id: '5-9', timeLimit: 256, starTime: 168, name: '폭풍우 속으로', desc: '시추선을 지키기 위한 해군의 총공세.',
             distance: 1200, midAt: 550, finalAt: 1100,
-            enemy: { hp: 4.2, dps: 2.78, spawn: 1.85, max: 9, mix: { ...Z5_ALL } }, elite: 0.13,
+            enemy: { hp: 3.99, dps: 2.45, spawn: 1.85, max: 9, mix: { ...Z5_ALL } }, elite: 0.13,
             base: { mid: 10100, final: 18000 }, reward: { kill: 70, mid: 3700, final: 10200 }
         },
         {
             id: '5-10', timeLimit: 260, starTime: 172, name: '침몰하는 오만', desc: '요새의 마지막 방어선에서 벌어지는 대규모 난전.',
             distance: 1200, midAt: 550, finalAt: 1100,
-            enemy: { hp: 4.25, dps: 2.8, spawn: 1.55, max: 11, mix: { ...Z5_ALL } }, elite: 0.15,
+            enemy: { hp: 3.91, dps: 2.46, spawn: 1.8, max: 9, mix: { ...Z5_ALL } }, elite: 0.15,
             base: { mid: 10300, final: 18400 }, reward: { kill: 71, mid: 3750, final: 10400 }
         },
         {
@@ -475,7 +482,7 @@ CHAPTER5.stages.forEach((st, i) => { st.map = MAP11[i]; });
 // 6-B: 성배의 성역 앞 '기적의 성배 : 탐욕의 심장'(핏빛 파동·혈정석 쐐기·생명력 착취) + 기믹 강제 헌혈(20초마다 실험체 3명이 심장으로 끌려감 —
 //      닿으면 보스 회복 + 피의 방어막, enemyField.js tickDonors). 중간 요새(화형의 소각로)는 다가오면 화염을 뿜음.
 // 그림 2026-10-25 (stageArt_v2.js st6_*, 배경 ui_v2.css .v2-zone-6)
-const Z6_ALL = { orderly: 3, maidenshield: 1, holywater: 1, anesthetist: 1, bloodbagdrone: 0.8, bloated: 1, ambulance: 0.5, surgeon: 0.5 };
+const Z6_ALL = { orderly: 3, maidenshield: 1, holywater: 1, anesthetist: 1, bloodbagdrone: 0.8, bloated: 1, ambulance: 0.3, surgeon: 0.25 };
 export const CHAPTER6 = {
     id: 'ch6',
     zone: 6,
@@ -522,25 +529,25 @@ export const CHAPTER6 = {
         {
             id: '6-7', timeLimit: 251, starTime: 165, name: '죽음의 구급차', desc: '병력을 계속 뱉어 내는 구급 마차부터 부숴야 한다.',
             distance: 1150, midAt: 520, finalAt: 1050,
-            enemy: { hp: 4.38, dps: 2.82, spawn: 1.88, max: 9, mix: { orderly: 3, maidenshield: 1, holywater: 1, anesthetist: 1, bloodbagdrone: 1, bloated: 1, ambulance: 1 } }, elite: 0.12,
+            enemy: { hp: 4.38, dps: 2.82, spawn: 1.88, max: 9, mix: { orderly: 3, maidenshield: 1, holywater: 1, anesthetist: 1, bloodbagdrone: 1, bloated: 1, ambulance: 0.4 } }, elite: 0.12,
             base: { mid: 10200, final: 18200 }, reward: { kill: 76, mid: 4100, final: 10900 }
         },
         {
             id: '6-8', timeLimit: 255, starTime: 168, name: '해부학의 달인', desc: '전기톱 십자가를 든 처형의 군의관과의 근접전.',
             distance: 1150, midAt: 520, finalAt: 1050,
-            enemy: { hp: 4.44, dps: 2.85, spawn: 1.88, max: 9, mix: { orderly: 3, maidenshield: 1, holywater: 1, anesthetist: 1, bloodbagdrone: 0.8, bloated: 0.8, ambulance: 0.5, surgeon: 1 } }, elite: 0.12,
+            enemy: { hp: 4.44, dps: 2.51, spawn: 1.88, max: 9, mix: { orderly: 3, maidenshield: 1, holywater: 1, anesthetist: 1, bloodbagdrone: 0.8, bloated: 0.8, ambulance: 0.3, surgeon: 0.45 } }, elite: 0.12,
             base: { mid: 10400, final: 18500 }, reward: { kill: 77, mid: 4150, final: 11050 }
         },
         {
             id: '6-9', timeLimit: 259, starTime: 171, name: '성배를 향하여', desc: '최종 기지를 지키려는 기사단의 총력전.',
             distance: 1200, midAt: 550, finalAt: 1100,
-            enemy: { hp: 4.5, dps: 2.88, spawn: 1.85, max: 9, mix: { ...Z6_ALL } }, elite: 0.13,
+            enemy: { hp: 4.27, dps: 2.53, spawn: 1.85, max: 9, mix: { ...Z6_ALL } }, elite: 0.13,
             base: { mid: 10500, final: 18800 }, reward: { kill: 78, mid: 4200, final: 11200 }
         },
         {
             id: '6-10', timeLimit: 263, starTime: 175, name: '생명의 저울', desc: '사방에서 끝없이 쏟아지는 의료 기사단 웨이브.',
             distance: 1200, midAt: 550, finalAt: 1100,
-            enemy: { hp: 4.55, dps: 2.9, spawn: 1.55, max: 11, mix: { ...Z6_ALL } }, elite: 0.15,
+            enemy: { hp: 4.19, dps: 2.55, spawn: 1.8, max: 9, mix: { ...Z6_ALL } }, elite: 0.15,
             base: { mid: 10700, final: 19200 }, reward: { kill: 79, mid: 4250, final: 11400 }
         },
         {
@@ -563,7 +570,7 @@ CHAPTER6.stages.forEach((st, i) => { st.map = MAP11[i]; });
 // → 돌격 장교(호루라기: 주변 광폭화 + 보병 소환) → 지뢰 매설병(밟으면 기절) → 증기기관 전차, 7-9·7-10 혼합(7-10 물량).
 // 7-B: 전방 사령탑 앞 '심판의 구포 : 베헤모스'(철갑탄 직사·백린 소이탄·궤도 톱니 돌진) + 기믹 조명탄(20초마다 — 제때 못 부수면 전장 융단 포격,
 //      enemyField.js tickFlares). 중간 요새(강철 참호 벙커)는 다가오면 기관총을 쏨. 그림 2026-10-25 (stageArt_v2.js st7_*, 배경 ui_v2.css .v2-zone-7)
-const Z7_ALL = { trench: 3, wireshield: 1, grenadier: 1, gassoldier: 1, mgnest: 0.6, officer: 0.7, sapper: 1, steamtank: 0.5 };
+const Z7_ALL = { trench: 3, wireshield: 1, grenadier: 1, gassoldier: 1, mgnest: 0.6, officer: 0.7, sapper: 1, steamtank: 0.25 };
 export const CHAPTER7 = {
     id: 'ch7',
     zone: 7,
@@ -616,19 +623,19 @@ export const CHAPTER7 = {
         {
             id: '7-8', timeLimit: 257, starTime: 170, name: '쇳덩어리의 돌진', desc: '매연을 뿜는 증기기관 전차와의 힘 싸움.',
             distance: 1150, midAt: 520, finalAt: 1050,
-            enemy: { hp: 5.14, dps: 3.19, spawn: 1.88, max: 9, mix: { trench: 3, wireshield: 1, grenadier: 1, gassoldier: 1, mgnest: 0.5, officer: 0.6, sapper: 0.8, steamtank: 1 } }, elite: 0.12,
+            enemy: { hp: 5.14, dps: 2.81, spawn: 1.88, max: 9, mix: { trench: 3, wireshield: 1, grenadier: 1, gassoldier: 1, mgnest: 0.5, officer: 0.6, sapper: 0.8, steamtank: 0.45 } }, elite: 0.12,
             base: { mid: 11800, final: 20700 }, reward: { kill: 89, mid: 4750, final: 12850 }
         },
         {
             id: '7-9', timeLimit: 261, starTime: 173, name: '사령탑 진입로', desc: '지휘부를 지키려는 제국군의 총력전.',
             distance: 1200, midAt: 550, finalAt: 1100,
-            enemy: { hp: 5.2, dps: 3.22, spawn: 1.85, max: 9, mix: { ...Z7_ALL } }, elite: 0.13,
+            enemy: { hp: 4.94, dps: 2.83, spawn: 1.85, max: 9, mix: { ...Z7_ALL } }, elite: 0.13,
             base: { mid: 11900, final: 21000 }, reward: { kill: 90, mid: 4800, final: 13000 }
         },
         {
             id: '7-10', timeLimit: 265, starTime: 177, name: '재와 먼지', desc: '잿빛 폭풍 속에서 끝없이 쏟아지는 방어 웨이브.',
             distance: 1200, midAt: 550, finalAt: 1100,
-            enemy: { hp: 5.25, dps: 3.25, spawn: 1.55, max: 11, mix: { ...Z7_ALL } }, elite: 0.15,
+            enemy: { hp: 4.83, dps: 2.86, spawn: 1.8, max: 9, mix: { ...Z7_ALL } }, elite: 0.15,
             base: { mid: 12100, final: 21400 }, reward: { kill: 91, mid: 4850, final: 13200 }
         },
         {
@@ -650,7 +657,7 @@ CHAPTER7.stages.forEach((st, i) => { st.map = MAP11[i]; });
 // 8-B: 메인 화로석 제단 앞 블라디미르 국왕(화룡의 숨결·잿더미 유성우·온기 강탈) + 기믹 탐욕의 제단(20초마다 제단 3개 —
 //      서 있는 동안 열파동 지속 피해 + 국왕 공격력 상승, 모두 부수면 국왕 기절, enemyField.js tickAltars).
 // 중간 요새(용광로 성문)는 다가오면 바닥에서 불기둥을 솟게 함. 그림 2026-10-25 (stageArt_v2.js st8_*, 배경 ui_v2.css .v2-zone-8)
-const Z8_ALL = { torch: 3, furnaceshield: 1, oilthrower: 1, hunter: 1, heatshaman: 0.6, steambomber: 1, heatturret: 0.6, wolfknight: 0.5 };
+const Z8_ALL = { torch: 3, furnaceshield: 1, oilthrower: 1, hunter: 1, heatshaman: 0.6, steambomber: 1, heatturret: 0.6, wolfknight: 0.25 };
 export const CHAPTER8 = {
     id: 'ch8',
     zone: 8,
@@ -703,19 +710,19 @@ export const CHAPTER8 = {
         {
             id: '8-8', timeLimit: 259, starTime: 172, name: '타오르는 짐승', desc: '화염 늑대를 탄 정예 기사와의 돌격전.',
             distance: 1150, midAt: 520, finalAt: 1050,
-            enemy: { hp: 5.84, dps: 3.55, spawn: 1.88, max: 9, mix: { torch: 3, furnaceshield: 1, oilthrower: 1, hunter: 1, heatshaman: 0.5, steambomber: 0.8, heatturret: 0.6, wolfknight: 1 } }, elite: 0.12,
+            enemy: { hp: 5.84, dps: 3.12, spawn: 1.88, max: 9, mix: { torch: 3, furnaceshield: 1, oilthrower: 1, hunter: 1, heatshaman: 0.5, steambomber: 0.8, heatturret: 0.6, wolfknight: 0.45 } }, elite: 0.12,
             base: { mid: 13400, final: 23300 }, reward: { kill: 101, mid: 5350, final: 14650 }
         },
         {
             id: '8-9', timeLimit: 263, starTime: 175, name: '왕좌를 향하여', desc: '화로석 제단을 지키려는 근위대의 총력전.',
             distance: 1200, midAt: 550, finalAt: 1100,
-            enemy: { hp: 5.9, dps: 3.58, spawn: 1.85, max: 9, mix: { ...Z8_ALL } }, elite: 0.13,
+            enemy: { hp: 5.61, dps: 3.15, spawn: 1.85, max: 9, mix: { ...Z8_ALL } }, elite: 0.13,
             base: { mid: 13500, final: 23600 }, reward: { kill: 102, mid: 5400, final: 14800 }
         },
         {
             id: '8-10', timeLimit: 267, starTime: 179, name: '고요한 죽음', desc: '사방에서 쏟아지는 불길 속의 난전.',
             distance: 1200, midAt: 550, finalAt: 1100,
-            enemy: { hp: 5.95, dps: 3.6, spawn: 1.55, max: 11, mix: { ...Z8_ALL } }, elite: 0.15,
+            enemy: { hp: 5.47, dps: 3.17, spawn: 1.8, max: 9, mix: { ...Z8_ALL } }, elite: 0.15,
             base: { mid: 13700, final: 24000 }, reward: { kill: 103, mid: 5450, final: 15000 }
         },
         {
@@ -738,7 +745,7 @@ CHAPTER8.stages.forEach((st, i) => { st.map = MAP11[i]; });
 // 9-B: 메인 크레인 타워 앞 '탐욕의 파노프티콘'(철골 분쇄·H빔 투하·부실의 대가) + 기믹 폐자재 더미(20초마다 3개 — 서 있는 동안 보스 무적,
 //      15초 안에 못 부수면 폭발, enemyField.js tickScrap). 중간 요새(불법 톨게이트)는 다가오면 기관총을 쏨.
 // 그림 2026-10-25 (stageArt_v2.js st9_*, 배경 ui_v2.css .v2-zone-9)
-const Z9_ALL = { thug: 3, concretedrone: 1, cementsprayer: 1, rivetsniper: 1, welderwalker: 0.7, dynamite: 1, safetywarden: 0.7, wreckingcrane: 0.5 };
+const Z9_ALL = { thug: 3, concretedrone: 1, cementsprayer: 1, rivetsniper: 1, welderwalker: 0.7, dynamite: 1, safetywarden: 0.7, wreckingcrane: 0.25 };
 export const CHAPTER9 = {
     id: 'ch9',
     zone: 9,
@@ -791,19 +798,19 @@ export const CHAPTER9 = {
         {
             id: '9-8', timeLimit: 261, starTime: 174, name: '무너지는 철구', desc: '레킹볼 크레인과의 묵직한 힘 싸움.',
             distance: 1150, midAt: 520, finalAt: 1050,
-            enemy: { hp: 6.54, dps: 3.89, spawn: 1.88, max: 9, mix: { thug: 3, concretedrone: 1, cementsprayer: 1, rivetsniper: 1, welderwalker: 0.5, dynamite: 0.8, safetywarden: 0.6, wreckingcrane: 1 } }, elite: 0.12,
+            enemy: { hp: 6.54, dps: 3.42, spawn: 1.88, max: 9, mix: { thug: 3, concretedrone: 1, cementsprayer: 1, rivetsniper: 1, welderwalker: 0.5, dynamite: 0.8, safetywarden: 0.6, wreckingcrane: 0.45 } }, elite: 0.12,
             base: { mid: 15000, final: 25900 }, reward: { kill: 113, mid: 5950, final: 16450 }
         },
         {
             id: '9-9', timeLimit: 265, starTime: 177, name: '타워 하부', desc: '크레인 타워를 지키는 용역들의 총공세.',
             distance: 1200, midAt: 550, finalAt: 1100,
-            enemy: { hp: 6.6, dps: 3.92, spawn: 1.85, max: 9, mix: { ...Z9_ALL } }, elite: 0.13,
+            enemy: { hp: 6.27, dps: 3.45, spawn: 1.85, max: 9, mix: { ...Z9_ALL } }, elite: 0.13,
             base: { mid: 15100, final: 26200 }, reward: { kill: 114, mid: 6000, final: 16600 }
         },
         {
             id: '9-10', timeLimit: 269, starTime: 181, name: '탐욕의 잔해', desc: '쏟아지는 중장비 웨이브 속 난전.',
             distance: 1200, midAt: 550, finalAt: 1100,
-            enemy: { hp: 6.65, dps: 3.95, spawn: 1.55, max: 11, mix: { ...Z9_ALL } }, elite: 0.15,
+            enemy: { hp: 6.12, dps: 3.48, spawn: 1.8, max: 9, mix: { ...Z9_ALL } }, elite: 0.15,
             base: { mid: 15300, final: 26600 }, reward: { kill: 115, mid: 6050, final: 16800 }
         },
         {
@@ -825,7 +832,7 @@ CHAPTER9.stages.forEach((st, i) => { st.map = MAP11[i]; });
 // 10-B: 타워 최상층 코어 룸의 '절대 발언권 마더 보이스'(주파수 폭발·거짓의 메아리·통제 레이저) + 기믹 세뇌 방송국 가동
 //      (20초마다 보스 무적 + 세뇌 증폭 안테나 4개 — 10초 안에 못 부수면 소음 파동, enemyField.js tickAntennas).
 // 중간 요새(전파 차단 격벽)는 다가오면 레이저를 쏨. 그림 2026-10-25 (stageArt_v2.js st10_*, 배경 ui_v2.css .v2-zone-10)
-const Z10_ALL = { citizen: 3, sonicshield: 1, speakerdrone: 1, lasersniper: 1, jammer: 0.6, woofermech: 0.7, thug: 1, enforcer: 0.5 };
+const Z10_ALL = { citizen: 3, sonicshield: 1, speakerdrone: 1, lasersniper: 1, jammer: 0.6, woofermech: 0.5, thug: 1, enforcer: 0.25 };
 export const CHAPTER10 = {
     id: 'ch10',
     zone: 10,
@@ -866,7 +873,7 @@ export const CHAPTER10 = {
         {
             id: '10-6', timeLimit: 255, starTime: 170, name: '끊어진 전파', desc: '음파로 밀어내는 우퍼 메카가 나타난다.',
             distance: 1100, midAt: 500, finalAt: 1000,
-            enemy: { hp: 7.1, dps: 4.17, spawn: 1.9, max: 9, mix: { citizen: 3, sonicshield: 1, speakerdrone: 1, lasersniper: 1, jammer: 0.6, woofermech: 1.2 } }, elite: 0.11,
+            enemy: { hp: 7.1, dps: 4.17, spawn: 1.9, max: 9, mix: { citizen: 3, sonicshield: 1, speakerdrone: 1, lasersniper: 1, jammer: 0.6, woofermech: 0.8 } }, elite: 0.11,
             base: { mid: 16200, final: 27800 }, reward: { kill: 123, mid: 6450, final: 17950 }
         },
         {
@@ -878,19 +885,19 @@ export const CHAPTER10 = {
         {
             id: '10-8', timeLimit: 263, starTime: 176, name: '강제 진압', desc: '전기 진압봉을 든 사이보그 집행관과의 충돌.',
             distance: 1150, midAt: 520, finalAt: 1050,
-            enemy: { hp: 7.24, dps: 4.24, spawn: 1.88, max: 9, mix: { citizen: 3, sonicshield: 1, speakerdrone: 1, lasersniper: 1, jammer: 0.5, woofermech: 0.6, thug: 0.8, enforcer: 1 } }, elite: 0.12,
+            enemy: { hp: 7.24, dps: 3.73, spawn: 1.88, max: 9, mix: { citizen: 3, sonicshield: 1, speakerdrone: 1, lasersniper: 1, jammer: 0.5, woofermech: 0.6, thug: 0.8, enforcer: 0.45 } }, elite: 0.12,
             base: { mid: 16600, final: 28500 }, reward: { kill: 125, mid: 6550, final: 18250 }
         },
         {
             id: '10-9', timeLimit: 267, starTime: 179, name: '코어 룸 입구', desc: '최상층을 지키려는 방송국 병력의 총력전.',
             distance: 1200, midAt: 550, finalAt: 1100,
-            enemy: { hp: 7.3, dps: 4.27, spawn: 1.85, max: 9, mix: { ...Z10_ALL } }, elite: 0.13,
+            enemy: { hp: 6.93, dps: 3.76, spawn: 1.85, max: 9, mix: { ...Z10_ALL } }, elite: 0.13,
             base: { mid: 16700, final: 28800 }, reward: { kill: 126, mid: 6600, final: 18400 }
         },
         {
             id: '10-10', timeLimit: 271, starTime: 183, name: '영원한 침묵을 위하여', desc: '끝없이 몰려오는 사이버펑크 웨이브.',
             distance: 1200, midAt: 550, finalAt: 1100,
-            enemy: { hp: 7.35, dps: 4.3, spawn: 1.55, max: 11, mix: { ...Z10_ALL } }, elite: 0.15,
+            enemy: { hp: 6.76, dps: 3.78, spawn: 1.8, max: 9, mix: { ...Z10_ALL } }, elite: 0.15,
             base: { mid: 16900, final: 29200 }, reward: { kill: 127, mid: 6650, final: 18600 }
         },
         {

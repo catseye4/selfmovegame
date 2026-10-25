@@ -20,6 +20,11 @@ export const PlayerMethods = {
         if (this.blizzard) amount *= 1 - FROST.blizzardGuard;                         // 서리의 무희 '눈보라 춤' 동안
         if (this.pVulnT > 0) amount *= 1 + (this.pVulnMore || 0);   // 약화 (새 기획 구역 3 그리폰 기수 성수): 받는 피해 증가
         amount = this.setIncoming(amount, dt, src);   // A·B 세트: 회피·감소·되돌림 (battle/sets.js)
+        if (this.dmgTrace && amount > 0) {   // 밸런스 진단 (balance_sim --trace): 적 종류 · 피해를 준 코드 자리별 합계
+            const at = (new Error().stack.split('\n')[2] || '').match(/(\w+)\.js:(\d+)/);
+            const key = `${src?.type || this.dmgSrcType || '-'} ${at ? at[1] + ':' + at[2] : '?'}`;
+            this.dmgTrace[key] = (this.dmgTrace[key] || 0) + amount;
+        }
         if (this.shieldHp > 0) {
             const absorbed = Math.min(this.shieldHp, amount);
             this.shieldHp -= absorbed;

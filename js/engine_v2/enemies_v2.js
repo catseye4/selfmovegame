@@ -135,7 +135,7 @@ Object.assign(ENEMY_TYPES, {
         bite: { every: 3.2, ticks: 3, dmg: 10, slow: 1.6, label: '⛓ 가시 채찍 — 출혈' }
     },
     holyshield: {
-        name: '신성 방패병', hp: 640, dps: 22, speed: [44, 56], reward: 2, armor: 0.3, knockResist: true,
+        name: '신성 방패병', hp: 640, dps: 13, speed: [44, 56], reward: 2, armor: 0.3, knockResist: true,
         artAs: 'shield', tint: 'sepia(0.75) saturate(1.7) brightness(1.1)',
         barricade: { range: 300, every: 9, hp: 600, gap: 140, label: '🛡 방패 장벽!' }
     },
@@ -275,8 +275,10 @@ Object.assign(ENEMY_TYPES, {
         name: '화염방사병', hp: 330, dps: 0, speed: [62, 74], reward: 1.8,
         napalm: { range: 210, every: 5.2, sec: 5, width: 130, dps: 14 }   // 5초간 꺼지지 않는 네이팜 불길
     },
+    // 구역마다 8판의 중장갑(exo · excavator · executioner · fusionbeast · subwalker · surgeon · steamtank · wolfknight · wreckingcrane · enforcer):
+    // 밸런스 1차 (D-087) 체력 2100~3000 → 1800~2100 (스테이지 체력 배율과 겹쳐 두 번 오르던 것), 근접 50~56 → 36~40
     exo: {
-        name: '기계화 강화병', hp: 1700, dps: 46, speed: [40, 48], reward: 4, armor: 0.25, knockResist: true,
+        name: '기계화 강화병', hp: 1700, dps: 40, speed: [40, 48], reward: 4, armor: 0.25, knockResist: true,
         cleave: { every: 5.5, dmg: 0.045, label: '👊 외골격 강타', fx: 'chargeImpact' }
     },
     wmdalpha: {
@@ -287,10 +289,14 @@ Object.assign(ENEMY_TYPES, {
 });
 // ---- 새 기획 구역 2 · 에너지 코퍼레이션 중장비 방위군 (D-085, 스테이지 2) — 인간 3종 + 메카·차량 5종, 그림 2026-10-25 GPT ----
 // 새 행동: shove(배토판으로 밀어냄 — 주인공 뒤로 밀림), pile(보스 파일벙커: 일직선 땅이 솟구치는 충격파 + 기절)
+// 구역 2~10 방패형(dozer · holyshield · boneshield · hatchshield · maidenshield · wireshield · furnaceshield · concretedrone · sonicshield)은
+// 막는 역할이라 밸런스 1차 (D-087)에서 근접 22~26 → 12~16 (오래 붙어 있어 8~10판 받는 피해의 25~40%를 차지했음).
+// 9초마다 세우는 장벽 체력도 스테이지 체력 배율을 받아 구역 10에서 5700까지 올라 시간을 다 먹음 → 구역 5~10 장벽 기본 체력을
+// 실제 체력이 구역 3·4쯤(약 2300)이 되게 낮춤(520 · 500 · 450 · 400 · 370 · 340), 구역 7~10은 11초마다
 Object.assign(ENEMY_TYPES, {
     merc: { name: '코퍼레이션 용병', hp: 380, dps: 36, speed: [78, 100], reward: 1 },
     dozer: {
-        name: '불도저 드로이드', hp: 1150, dps: 20, speed: [40, 48], reward: 2.2, armor: 0.35, knockResist: true,
+        name: '불도저 드로이드', hp: 950, dps: 12, speed: [40, 48], reward: 2.2, armor: 0.35, knockResist: true,
         shove: { every: 6, push: 70, dmg: 0.02 }   // 배토판으로 밀어붙여 진격을 막음
     },
     harpoon: {
@@ -308,10 +314,10 @@ Object.assign(ENEMY_TYPES, {
     },
     spiderwalker: {
         name: '대물 포격 워커', hp: 700, dps: 0, speed: [46, 56], reward: 2.4,
-        rocket: { range: 460, every: 5.4, dmg: 78, apex: 220, dur: 1.35, color: '220, 200, 160' }   // 화면 밖에서 느린 공성 철갑탄
+        rocket: { range: 460, every: 5.4, dmg: 62, apex: 220, dur: 1.35, color: '220, 200, 160' }   // 화면 밖에서 느린 공성 철갑탄
     },
     excavator: {
-        name: '채굴용 엑스카베이터', hp: 2100, dps: 50, speed: [36, 44], reward: 4.5, armor: 0.35, knockResist: true,
+        name: '채굴용 엑스카베이터', hp: 1800, dps: 36, speed: [36, 44], reward: 4.5, armor: 0.35, knockResist: true,
         cleave: { every: 6, dmg: 0.05, label: '⛏ 유압 드릴', fx: 'chargeImpact' }
     },
     terraformer: {
@@ -342,7 +348,7 @@ Object.assign(ENEMY_TYPES, {
         bolt: { range: 560, every: 5.2, dmg: 46, push: 90 }   // 먼 거리 은제 쐐기 → 밀려남
     },
     executioner: {
-        name: '처형인 성기사', hp: 2200, dps: 52, speed: [38, 46], reward: 4.5, armor: 0.3, knockResist: true,
+        name: '처형인 성기사', hp: 1850, dps: 38, speed: [38, 46], reward: 4.5, armor: 0.3, knockResist: true,
         cleave: { every: 5.5, dmg: 0.055, label: '⚔ 처형의 대검', fx: 'axeCleave' }
     },
     benedict: {
@@ -358,7 +364,7 @@ Object.assign(ENEMY_TYPES, {
 Object.assign(ENEMY_TYPES, {
     mutant: { name: '진화의 광신도', hp: 360, dps: 36, speed: [80, 104], reward: 1 },
     boneshield: {
-        name: '생체 방패수', hp: 700, dps: 24, speed: [44, 56], reward: 2, armor: 0.3, knockResist: true,
+        name: '생체 방패수', hp: 700, dps: 14, speed: [44, 56], reward: 2, armor: 0.3, knockResist: true,
         barricade: { range: 300, every: 9, hp: 650, gap: 140, label: '🦴 뼈 방패 장벽!' }
     },
     leechfiend: { name: '심연 촉수귀', hp: 540, dps: 54, speed: [70, 88], reward: 1.8 },
@@ -377,7 +383,7 @@ Object.assign(ENEMY_TYPES, {
         eyebeam: { range: 500, every: 5, warn: 0.7, dmg: 36 }   // 보랏빛 안광 (조준선 → 광선)
     },
     fusionbeast: {
-        name: '광폭화 융합수', hp: 2300, dps: 50, speed: [36, 44], reward: 4.5, armor: 0.2, knockResist: true,
+        name: '광폭화 융합수', hp: 1900, dps: 36, speed: [36, 44], reward: 4.5, armor: 0.2, knockResist: true,
         deathAcid: { width: 170, sec: 5 }   // 쓰러지면 산성 혈액을 흩뿌림 (웅덩이 — 위에 있으면 감속)
     }
 });
@@ -386,8 +392,8 @@ Object.assign(ENEMY_TYPES, {
 Object.assign(ENEMY_TYPES, {
     marine: { name: '작살총 해병', hp: 380, dps: 38, speed: [78, 100], reward: 1 },
     hatchshield: {
-        name: '격벽 방패수', hp: 760, dps: 24, speed: [44, 54], reward: 2, armor: 0.35, knockResist: true,
-        barricade: { range: 300, every: 9, hp: 700, gap: 140, label: '🚪 강철 해치 장벽!' }
+        name: '격벽 방패수', hp: 760, dps: 14, speed: [44, 54], reward: 2, armor: 0.35, knockResist: true,
+        barricade: { range: 300, every: 9, hp: 520, gap: 140, label: '🚪 강철 해치 장벽!' }
     },
     netgunner: {
         name: '그물망 사수', hp: 300, dps: 0, speed: [70, 84], reward: 1.6,
@@ -410,7 +416,7 @@ Object.assign(ENEMY_TYPES, {
         bolt: { range: 560, every: 5, dmg: 54, push: 40, color: '255, 200, 120', fx: 'rocketBlast', label: '💥 철갑 유탄' }   // 일직선 철갑 유탄
     },
     subwalker: {
-        name: '심해 구축 워커', hp: 2400, dps: 50, speed: [36, 44], reward: 4.5, armor: 0.3, knockResist: true,
+        name: '심해 구축 워커', hp: 1900, dps: 36, speed: [36, 44], reward: 4.5, armor: 0.3, knockResist: true,
         cleave: { every: 6, dmg: 0.05, label: '⚓ 잠수함 강타', fx: 'chargeImpact' }
     },
     ironclad: {
@@ -425,8 +431,8 @@ Object.assign(ENEMY_TYPES, {
 Object.assign(ENEMY_TYPES, {
     orderly: { name: '부패한 간병 보병', hp: 380, dps: 38, speed: [78, 100], reward: 1 },
     maidenshield: {
-        name: '철의 처녀 방패수', hp: 780, dps: 24, speed: [44, 54], reward: 2, armor: 0.35, knockResist: true,
-        barricade: { range: 300, every: 9, hp: 720, gap: 140, label: '⚙ 철의 처녀 장벽!' }
+        name: '철의 처녀 방패수', hp: 780, dps: 14, speed: [44, 54], reward: 2, armor: 0.35, knockResist: true,
+        barricade: { range: 300, every: 9, hp: 500, gap: 140, label: '⚙ 철의 처녀 장벽!' }
     },
     holywater: {
         name: '오염된 성수 투척병', hp: 290, dps: 0, speed: [64, 78], reward: 1.7,
@@ -446,10 +452,10 @@ Object.assign(ENEMY_TYPES, {
     },
     ambulance: {
         name: '기계화 구급 마차', hp: 1500, dps: 0, speed: [40, 48], reward: 3, armor: 0.3, knockResist: true,
-        spawner: { every: 6, unit: 'orderly', max: 3 }   // 안에서 하급 사제를 계속 내보냄 (살아 있는 것 max까지)
+        spawner: { every: 8, unit: 'orderly', max: 2 }   // 안에서 하급 사제를 계속 내보냄 (살아 있는 것 max까지)
     },
     surgeon: {
-        name: '처형의 군의관', hp: 2400, dps: 54, speed: [38, 46], reward: 4.5, armor: 0.3, knockResist: true,
+        name: '처형의 군의관', hp: 1950, dps: 38, speed: [38, 46], reward: 4.5, armor: 0.3, knockResist: true,
         cleave: { every: 5.5, dmg: 0.055, label: '⚙ 전기톱 십자가', fx: 'axeCleave' }
     },
     pauper: {
@@ -470,8 +476,8 @@ Object.assign(ENEMY_TYPES, {
 Object.assign(ENEMY_TYPES, {
     trench: { name: '참호 징집병', hp: 400, dps: 40, speed: [78, 100], reward: 1 },
     wireshield: {
-        name: '철조망 방패병', hp: 800, dps: 24, speed: [44, 54], reward: 2, armor: 0.35, knockResist: true,
-        barricade: { range: 300, every: 9, hp: 760, gap: 140, label: '🪤 철조망 장벽!' }
+        name: '철조망 방패병', hp: 800, dps: 14, speed: [44, 54], reward: 2, armor: 0.35, knockResist: true,
+        barricade: { range: 300, every: 11, hp: 450, gap: 140, label: '🪤 철조망 장벽!' }
     },
     grenadier: {
         name: '유산탄 투척병', hp: 300, dps: 0, speed: [64, 78], reward: 1.7,
@@ -494,7 +500,7 @@ Object.assign(ENEMY_TYPES, {
         mine: { range: 280, every: 6.5, stun: 1.2, dmg: 26, sec: 14 }   // 앞길에 대전차 지뢰 → 밟으면 피해 + 기절
     },
     steamtank: {
-        name: '증기기관 전차', hp: 2600, dps: 52, speed: [34, 42], reward: 4.5, armor: 0.35, knockResist: true,
+        name: '증기기관 전차', hp: 2000, dps: 38, speed: [34, 42], reward: 4.5, armor: 0.35, knockResist: true,
         cleave: { every: 6, dmg: 0.05, label: '💥 전차 포격', fx: 'chargeImpact' }
     },
     behemoth: {
@@ -511,9 +517,9 @@ Object.assign(ENEMY_TYPES, {
 Object.assign(ENEMY_TYPES, {
     torch: { name: '횃불 징집병', hp: 420, dps: 42, speed: [78, 100], reward: 1 },
     furnaceshield: {
-        name: '화로 방패병', hp: 820, dps: 26, speed: [44, 54], reward: 2.2, armor: 0.35, knockResist: true,
+        name: '화로 방패병', hp: 820, dps: 16, speed: [44, 54], reward: 2.2, armor: 0.35, knockResist: true,
         thorns: { reflect: 0.1, cap: 0.008 },   // 공격하는 몬스터에게 근접 화상 (받은 피해의 10%, 최대 내구도 0.8%까지)
-        barricade: { range: 300, every: 9, hp: 780, gap: 140, label: '🔥 화로 방패 장벽!' }
+        barricade: { range: 300, every: 11, hp: 400, gap: 140, label: '🔥 화로 방패 장벽!' }
     },
     oilthrower: {
         name: '끓는 기름 투척병', hp: 320, dps: 0, speed: [64, 78], reward: 1.8,
@@ -537,7 +543,7 @@ Object.assign(ENEMY_TYPES, {
         emp: { range: 380, every: 6, cd: 1.6, dmg: 12, color: '255, 90, 50', label: '🔥 열광선 — 스킬 쿨다운 +', fx: 'napalmBurst' }
     },
     wolfknight: {
-        name: '화염 늑대 기사', hp: 2700, dps: 56, speed: [50, 60], reward: 4.8, armor: 0.3, knockResist: true,
+        name: '화염 늑대 기사', hp: 2000, dps: 40, speed: [50, 60], reward: 4.8, armor: 0.3, knockResist: true,
         cleave: { every: 5.5, dmg: 0.055, label: '🐺 화염 늑대 돌격', fx: 'chargeImpact' }
     },
     vladimir: {
@@ -553,8 +559,8 @@ Object.assign(ENEMY_TYPES, {
 Object.assign(ENEMY_TYPES, {
     thug: { name: '철거 용역 깡패', hp: 440, dps: 44, speed: [78, 100], reward: 1 },
     concretedrone: {
-        name: '콘크리트 방패 드론', hp: 900, dps: 22, speed: [40, 50], reward: 2.2, armor: 0.4, knockResist: true,
-        barricade: { range: 300, every: 9, hp: 820, gap: 140, label: '🧱 콘크리트 장벽!' }
+        name: '콘크리트 방패 드론', hp: 900, dps: 13, speed: [40, 50], reward: 2.2, armor: 0.4, knockResist: true,
+        barricade: { range: 300, every: 11, hp: 370, gap: 140, label: '🧱 콘크리트 장벽!' }
     },
     cementsprayer: {
         name: '시멘트 살수병', hp: 340, dps: 0, speed: [64, 78], reward: 1.8,
@@ -577,7 +583,7 @@ Object.assign(ENEMY_TYPES, {
         rally: { every: 9, range: 340, haste: { sec: 5, mul: 1.5 } }   // 확성기 사이렌: 주변 용역 광폭화
     },
     wreckingcrane: {
-        name: '레킹볼 크레인', hp: 2900, dps: 54, speed: [32, 40], reward: 5, armor: 0.35, knockResist: true,
+        name: '레킹볼 크레인', hp: 2100, dps: 38, speed: [32, 40], reward: 5, armor: 0.35, knockResist: true,
         cleave: { every: 6, dmg: 0.055, push: 90, label: '⚙ 레킹볼', fx: 'chargeImpact' }
     },
     panopticon: {
@@ -593,8 +599,8 @@ Object.assign(ENEMY_TYPES, {
 Object.assign(ENEMY_TYPES, {
     citizen: { name: '세뇌된 시민', hp: 440, dps: 44, speed: [84, 108], reward: 1 },
     sonicshield: {
-        name: '음파 방패 경비대', hp: 860, dps: 26, speed: [44, 54], reward: 2.2, armor: 0.35, knockResist: true,
-        barricade: { range: 300, every: 9, hp: 820, gap: 140, label: '🔊 소음 장막!' }
+        name: '음파 방패 경비대', hp: 860, dps: 16, speed: [44, 54], reward: 2.2, armor: 0.35, knockResist: true,
+        barricade: { range: 300, every: 11, hp: 340, gap: 140, label: '🔊 소음 장막!' }
     },
     speakerdrone: {
         name: '스피커 드론', hp: 300, dps: 0, speed: [72, 86], reward: 2, fly: 84,
@@ -610,11 +616,11 @@ Object.assign(ENEMY_TYPES, {
     },
     woofermech: {
         name: '우퍼 메카', hp: 1300, dps: 0, speed: [40, 48], reward: 2.8, armor: 0.25, knockResist: true,
-        bolt: { range: 360, every: 5, dmg: 30, push: 100, color: '255, 60, 200', fx: 'sonicRing', label: '🔊 음파 충격' }
+        bolt: { range: 360, every: 6.5, dmg: 30, push: 60, color: '255, 60, 200', fx: 'sonicRing', label: '🔊 음파 충격' }
     },
     enforcer: {
-        name: '통제국 집행관', hp: 3000, dps: 56, speed: [40, 48], reward: 5, armor: 0.3, knockResist: true,
-        shock: { every: 4.2, stun: 0.8 }   // 전기 진압봉: 주기적으로 기절
+        name: '통제국 집행관', hp: 2100, dps: 40, speed: [40, 48], reward: 5, armor: 0.3, knockResist: true,
+        shock: { every: 6, stun: 0.6 }   // 전기 진압봉: 주기적으로 기절
     },
     mothervoice: {
         name: '절대 발언권 마더 보이스', boss: true, hp: 8400, dps: 0, speed: [22, 22], reward: 120, armor: 0.3, knockResist: true, fly: 70,

@@ -80,7 +80,11 @@ export const EnemyMethods = {
                 return;   // 기절: 이동/공격 없음
             }
             if (this.kitEnemyHeld(enemy, dt)) return;   // 공포: 뒤로 물러남 (battle/kit.js)
-            if (!enemy.isBuilding && !enemy.isBarricade) updateEnemy(this, enemy, dt, frontX);   // 이동·공격·종류별 능력
+            if (!enemy.isBuilding && !enemy.isBarricade) {   // 이동·공격·종류별 능력
+                this.dmgSrcType = enemy.type;   // 밸런스 진단용 (player.js dmgTrace)
+                updateEnemy(this, enemy, dt, frontX);
+                this.dmgSrcType = null;
+            }
             this.kitWallHold(enemy);   // 강철 방벽 앞에서 멈춤 (battle/kit.js)
         });
         this.tickBaseDefense(dt, frontX);
@@ -836,7 +840,8 @@ export const EnemyMethods = {
     //      → warn초 뒤 쿵: 그 자리 주인공은 피해 + 기절, 떨어진 컨테이너는 sec초 동안 바리케이드(부숴야 지나감) ----
     tickContainers(dt) {
         const c = this.stage.boss && this.stage.boss.containers;
-        if (!c || this.finalBaseDestroyed) return;
+        // 보스(최종 기지)가 나온 뒤부터 — 처음부터 떨어지면 중간 요새 앞에서 장벽만 부수다 시간이 끝남 (밸런스 1차 D-087)
+        if (!c || !this.finalBaseSpawned || this.finalBaseDestroyed) return;
         this.containerTimer = (this.containerTimer || 0) + dt;
         this.enemies.filter(e => e.isBarricade && e.expireAt != null && this.stats.time >= e.expireAt).forEach(e => {
             this.fx.play(BATTLE_VFX.knockDust, e.x + e.size.w / 2, FOOT_B);
