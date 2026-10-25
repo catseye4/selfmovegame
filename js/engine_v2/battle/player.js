@@ -18,6 +18,7 @@ export const PlayerMethods = {
         if (this.overloadT > 0) return;   // 과부하(긴급 수리) 중에는 피해 없음
         if (this.equippedLegId === 'leg_hero_hover') amount *= 1 - LEG.hoverReduce;   // 다리 패시브 '반중력 부양'
         if (this.blizzard) amount *= 1 - FROST.blizzardGuard;                         // 서리의 무희 '눈보라 춤' 동안
+        if (this.pVulnT > 0) amount *= 1 + (this.pVulnMore || 0);   // 약화 (새 기획 구역 3 그리폰 기수 성수): 받는 피해 증가
         amount = this.setIncoming(amount, dt, src);   // A·B 세트: 회피·감소·되돌림 (battle/sets.js)
         if (this.shieldHp > 0) {
             const absorbed = Math.min(this.shieldHp, amount);
@@ -127,6 +128,24 @@ export const PlayerMethods = {
     },
 
     // ---- 주인공 상태 이상 (적 공격) ----
+    /** 약화: sec초 동안 받는 피해 +more (새 기획 구역 3 그리폰 기수 성수 — 방어력 약화). 냉기 저항 옵션 등 상태 이상 줄이기가 그대로 적용 */
+    applyPlayerVuln(sec, more) {
+        sec *= this.ccMul();
+        if (sec <= 0) return;
+        if (!(this.pVulnT > 0)) this.createDamagePopup(this.monsterX + 40, 205, `💧 약화 — 받는 피해 +${Math.round(more * 100)}%`, false);
+        this.pVulnT = Math.max(this.pVulnT || 0, sec);
+        this.pVulnMore = Math.max(this.pVulnT > sec ? this.pVulnMore || 0 : 0, more);
+    },
+
+    /** 공격력 감소: sec초 동안 적에게 주는 피해 -cut (새 기획 구역 10 스피커 드론 — battle/enemyField.js dealDamageToEnemy) */
+    applyPlayerWeak(sec, cut) {
+        sec *= this.ccMul();
+        if (sec <= 0) return;
+        if (!(this.pWeakT > 0)) this.createDamagePopup(this.monsterX + 40, 215, `🔇 소음 — 공격력 -${Math.round(cut * 100)}%`, false);
+        this.pWeakT = Math.max(this.pWeakT || 0, sec);
+        this.pWeakCut = cut;
+    },
+
     applyPlayerSlow(sec, quiet = false) {
         if (this.equippedLegId === 'leg_hero_hover' || this.kitFlag('slowImmune')) {   // 다리 패시브: 감속 무시 (2차 패시브 포함)
             if (!quiet) this.createDamagePopup(this.monsterX + 40, 190, '감속 무효', false);
@@ -234,6 +253,8 @@ export const PlayerMethods = {
         if (this.pSlowT > 0) this.pSlowT = Math.max(0, this.pSlowT - dt);
         if (this.pStunT > 0) this.pStunT = Math.max(0, this.pStunT - dt);
         if (this.pRootT > 0) this.pRootT = Math.max(0, this.pRootT - dt);
+        if (this.pVulnT > 0) this.pVulnT = Math.max(0, this.pVulnT - dt);
+        if (this.pWeakT > 0) this.pWeakT = Math.max(0, this.pWeakT - dt);
         this.updatePlayerStatus();
     },
 

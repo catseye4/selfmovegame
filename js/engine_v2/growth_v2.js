@@ -65,7 +65,7 @@ export const DROP = {
     craftCost: { rare: 30, unique: 80, legendary: 200 }
 };
 // 구역 상성 캐릭터 (추천안 — 구역 이야기와 맞춘 짝)
-export const AFFINITY = { 1: ['mech', 'frost'], 2: ['kaiju', 'doll'], 3: ['hero', 'saint'], 4: ['chimera', 'diver'], 6: ['saint'] };   // 구역 6 = 성녀의 구역 (D-078)
+export const AFFINITY = { 1: ['mech', 'frost'], 2: ['kaiju', 'doll'], 3: ['hero', 'saint'], 4: ['chimera', 'diver'], 5: ['diver'], 6: ['saint'], 7: ['doll'], 8: ['frost'], 9: ['architect'], 10: ['broadcaster'] };   // 구역 6 = 성녀의 구역 (D-078), 구역 5 = 길잡이의 구역 (새 기획 D-085)
 
 // ---- 2-2 스킬 강화 ----
 export const SKILL_LEVEL = {

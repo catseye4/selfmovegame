@@ -85,6 +85,6 @@ def run(ctx):
          "b.midBaseSpawned = true; b.midBaseDestroyed = true; b.distanceTraveled = b.stage.finalAt - 0.5;")
     g.wait(900)
     st = g.js("""const c = document.querySelector('.v2-bosscard'); return { text: c && c.innerText, boss: !!b.boss };""")
-    ctx.check(st['text'] and '정의의 수호자' in st['text'] and 'BOSS' in st['text'] and '결계' in st['text'] and st['boss'],
+    ctx.check(st['text'] and 'WMD-알파' in st['text'] and 'BOSS' in st['text'] and '플라스마 레이저' in st['text'] and st['boss'],
               '보스 등장 카드: BOSS · 이름 · 주요 기술 (최종 기지와 함께)', str(st))
     g.shot('firstplay_boss', '#screen-battle-v2')

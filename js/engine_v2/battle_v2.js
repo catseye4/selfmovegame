@@ -157,12 +157,12 @@ export class BattleEngine {
         this.difficulty = difficultyUnlocked(progress.difficulty, progress) ? progress.difficulty : DEFAULT_DIFFICULTY;
         this.stage = this.growthStage(stageFor(stageById(progress.selectedStage || defaultStage(progress).id), this.difficulty));   // + 계정 연구 DM (growth.js)
         predecodeStageArt(this.stage);   // 이 스테이지 적 그림을 미리 풂 (enemies_v2.js — 처음 나올 때 멈칫하지 않게)
-        // 구역 배경 (ui_v2.css .v2-zone-2 ~ 4 · 6), 보스전은 경보 조명·불길 판 (.v2-stage-boss)
+        // 구역 배경 (ui_v2.css .v2-zone-1 ~ 4 · 6), 보스전은 경보 조명·불길 판 (.v2-stage-boss)
         // .v2-boss-rage(구역 4 보스 2페이즈)·.v2-crimson(구역 3 악마기사 소환 점멸)은 전투 중에 붙음
         const screen = document.getElementById('screen-battle-v2');
         screen?.classList.toggle('v2-stage-boss', !!this.stage.boss);
         if (screen) screen.dataset.difficulty = this.difficulty;   // HUD 난이도 표시 색 (ui_v2.css [data-difficulty])
-        [2, 3, 4, 6].forEach(z => screen?.classList.toggle(`v2-zone-${z}`, this.stage.zone === z));
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].forEach(z => screen?.classList.toggle(`v2-zone-${z}`, this.stage.zone === z));
         screen?.classList.remove('v2-boss-rage', 'v2-crimson');
         this.maxDistance = this.stage.distance;
         this.spawnInterval = this.stage.enemy.spawn;
@@ -170,6 +170,7 @@ export class BattleEngine {
         this.pSlowT = 0;
         this.pStunT = 0;
         this.pRootT = 0;
+        this.pVulnT = 0;          // 약화 (새 기획 구역 3 그리폰 기수 성수 — battle/player.js applyPlayerVuln)
         this.hazards = [];        // 늪 장판 (구역 2)
         this.gasTimer = 0;
         this.gasWarned = false;
@@ -178,6 +179,16 @@ export class BattleEngine {
         this.timeUp = false;
         this.timeWarned = false;
         this.artTimer = 0;
+        this.orbitalTimer = 0;   // 새 기획 구역 1 보스전 궤도 폭격 (enemyField.js tickOrbital)
+        this.containerTimer = 0; // 새 기획 구역 2 보스전 폐기물 컨테이너 투하 (enemyField.js tickContainers)
+        this.geyserTimer = 0;    // 새 기획 구역 5 보스전 해저 화산 간헐천 (enemyField.js tickGeysers)
+        this.donorTimer = 0;     // 새 기획 구역 6 보스전 강제 헌혈 (enemyField.js tickDonors)
+        this.flareTimer = 0;     // 새 기획 구역 7 보스전 조명탄 (enemyField.js tickFlares)
+        this.altarTimer = 0;     // 새 기획 구역 8 보스전 탐욕의 제단 (enemyField.js tickAltars)
+        this.altarsUp = false;
+        this.bossShieldTimer = 0; // 새 기획 구역 9·10 보스전 폐자재 더미·세뇌 안테나 (enemyField.js tickBossShields)
+        this.shieldFuseAt = 0;
+        this.pWeakT = 0;          // 소음 공격력 감소 (새 기획 구역 10 스피커 드론 — battle/player.js applyPlayerWeak)
         this.artWarned = false;
         this.boss = null;
         this.bossPhase = false;   // 구역 3: 정문을 부숴 보스전에 들어감 (enemyField.js openBossGate)

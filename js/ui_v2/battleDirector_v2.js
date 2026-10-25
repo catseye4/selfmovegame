@@ -73,7 +73,17 @@ const BOSS_SKILLS = {
     scrapking: '자석 끌어당기기 · 고철 낙하',
     archbishop: '천상의 심판 · 악마병 소환 · 심연의 문',
     oculus: '심연의 파동 · 유전자 붕괴 · 극한의 변이',
-    orbian: '단죄의 빛 · 생명의 저울 · 파문의 종'
+    orbian: '단죄의 빛 · 생명의 저울 · 파문의 종',
+    // 새 기획 (D-085)
+    wmdalpha: '플라스마 레이저 · 집게 팔 내려치기',
+    terraformer: '대지 분쇄 (파일벙커) · 집게 크레인',
+    benedict: '신성한 심판 · 숨겨진 마성 · 지옥문',
+    ironclad: '심해 압축포 · 폭뢰 융단폭격',
+    grailheart: '핏빛 파동 · 혈정석 쐐기 · 생명력 착취',
+    behemoth: '철갑탄 직사 · 백린 소이탄 · 궤도 톱니 돌진',
+    vladimir: '화룡의 숨결 · 잿더미 유성우 · 온기 강탈',
+    panopticon: '철골 분쇄 · H빔 투하 · 부실의 대가',
+    mothervoice: '주파수 폭발 · 거짓의 메아리 · 통제 레이저'
 };
 const INTRO_MS = { card: 150, sortie: 1750, reveal: 2150, end: 2700 };
 const FB = 58;   // 지면 높이 (bottom px)

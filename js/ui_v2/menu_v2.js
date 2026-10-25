@@ -148,8 +148,9 @@ export class MenuController {
         const curCh = chapterOf(cur);
         box.innerHTML = CHAPTERS.map(ch => {
             const open = chapterUnlocked(ch, progress);
-            return `<button class="v2-zonetab${ch === curCh ? ' is-on' : ''}${open ? '' : ' is-locked'}" data-zone="${ch.id}" title="${ch.name}">`
-                + `${open ? '' : icon('lock', 11)}구역 ${ch.zone}</button>`;
+            // 구역이 10개라 번호만 (이름은 title·aria-label) — 레이더 머리 폭 안에 들어가게 (새 기획 D-086)
+            return `<button class="v2-zonetab${ch === curCh ? ' is-on' : ''}${open ? '' : ' is-locked'}" data-zone="${ch.id}" title="${ch.name}" aria-label="구역 ${ch.zone}">`
+                + `${open ? '' : icon('lock', 10)}${ch.zone}</button>`;
         }).join('');
         box.querySelectorAll('.v2-zonetab').forEach(b => b.addEventListener('click', () => this.selectZone(b.dataset.zone)));
     }
