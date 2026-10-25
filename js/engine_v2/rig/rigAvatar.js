@@ -213,7 +213,11 @@ const CANNON_ATTACKS = new Set(['laser', 'missile', 'rail']);
 // 거대로봇 무기 팔은 A(레일건)가 캐논 팔 armR_cannon_a, B(파일벙커)가 주먹 팔 armR_fist_b만 있음
 // 합성괴인 'dragon' = 세트 밖 추가 머리 화룡 머리 (head_dragon, tools/rig/cut_chimera_dragon.py, D-054)
 // 2차 세트 (D-071): 거대괴수·합성괴인·거대로봇·타락 히어로 u·c·d·v·w·l·m (tools/rig/cut_<캐릭터>_sets.py u c d v w l m — 로봇 무기 팔은 세트 rigArm 쪽만 있음)
-export const RIG_SET_ART = { kaiju: ['a', 'b', 'u', 'c', 'd', 'v', 'w', 'l', 'm'], mech: ['a', 'b', 'u', 'c', 'd', 'v', 'w', 'l', 'm'], hero: ['a', 'b', 'u', 'c', 'd', 'v', 'w', 'l', 'm'], chimera: ['a', 'b', 'dragon', 'u', 'c', 'd', 'v', 'w', 'l', 'm'] };
+export const RIG_SET_ART = { kaiju: ['a', 'b', 'u', 'c', 'd', 'v', 'w', 'l', 'm'], mech: ['a', 'b', 'u', 'c', 'd', 'v', 'w', 'l', 'm'], hero: ['a', 'b', 'u', 'c', 'd', 'v', 'w', 'l', 'm'], chimera: ['a', 'b', 'dragon', 'u', 'c', 'd', 'v', 'w', 'l', 'm'],
+    // 새 캐릭터 세트 그림 (tools/rig/cut_newchar_sets.py, 2026-10-25~) — 그림이 생긴 세트 글자만
+    diver: ['a', 'b', 'u', 'c', 'd', 'v', 'w', 'l', 'm'], doll: ['a', 'b', 'u', 'c', 'd', 'v', 'w', 'l', 'm'],
+    saint: ['a', 'b', 'u', 'c', 'd', 'v', 'w', 'l', 'm'], frost: ['a', 'b', 'u', 'c', 'd', 'v', 'w', 'l', 'm'],
+    architect: ['a', 'b', 'u', 'c', 'd', 'v', 'w', 'l', 'm'], broadcaster: ['a', 'b', 'u', 'c', 'd', 'v', 'w', 'l', 'm'] };
 export const SET_TINT = {
     mech: { a: 'sepia(0.35) hue-rotate(-50deg) saturate(1.5) brightness(1.05)', b: 'hue-rotate(-95deg) saturate(1.35) brightness(1.1)' },
     kaiju: { a: 'sepia(0.3) saturate(0.8) brightness(1.15)', b: 'hue-rotate(25deg) saturate(1.6)' },
@@ -234,7 +238,8 @@ export function variantsFor(partsObj, character) {
 /** 연구소 카드 그림: 세트 그림이 있으면 그 파일, 없으면 기본 그림 + 세트 색 { file, filter } */
 export function variantThumb(character, file, variant) {
     if (!variant) return { file, filter: null };
-    if ((RIG_SET_ART[character] || []).includes(variant)) return { file: file.replace(/\.png$/, `_${variant}.png`), filter: null };
+    // 새 캐릭터 세트 파츠는 강화 카드 그림(<부위>_up.png)을 고르지만 세트 그림은 <부위>_<글자>.png 하나
+    if ((RIG_SET_ART[character] || []).includes(variant)) return { file: file.replace(/(_up)?\.png$/, `_${variant}.png`), filter: null };
     return { file, filter: (SET_TINT[character] || {})[variant] || null };
 }
 
@@ -281,7 +286,9 @@ export function variantAlias(character, layout, variants) {
     const tint = {};
     for (const [slot, v] of Object.entries(variants || {})) {
         for (const key of slots[slot] || []) {
-            if (layout.parts[`${key}_${v}`]) alias[key] = `${key}_${v}`;
+            // 새 캐릭터 세트 파츠는 강화 뼈 그림(<부위>_up)을 쓰므로 세트 그림 <부위>_<글자>(tools/rig/cut_newchar_sets.py)로 바꿈
+            const set = [`${key}_${v}`, `${key.replace(/_up$/, '')}_${v}`].find(k => layout.parts[k]);
+            if (set) alias[key] = set;
             else if (SET_TINT[character] && SET_TINT[character][v]) tint[key] = SET_TINT[character][v];
         }
     }

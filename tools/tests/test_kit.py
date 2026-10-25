@@ -60,7 +60,7 @@ def run(ctx):
         c, l = sid.split('_')
         parts = tuple(f'{s}_{c}_{l}' for s in ('head', 'body', 'arm', 'leg'))
         for attempt in range(2):   # 긴 검사 중 가끔 한 판이 통째로 멈춤(창 포커스 일시정지 추정) → 피해가 하나도 없으면 한 번 다시
-            g.js("progress.selectStage('2-2');")
+            g.js("progress.selectStage('2-1');")   # 새 기획 2-2는 장갑 불도저가 섞여 피해가 판마다 들쭉날쭉 → 용병만 나오는 2-1
             g.battle(parts, wait_ms=1500)
             g.place_enemies(n=5, gap=45, first=110, hp=9000, speed=8, dps=8)
             g.wait(1600)
