@@ -10,8 +10,8 @@ export function supportPortrait(id) {
 
 export function supportSummary() {
     const id = progress.supportCharacter;
-    if (id && progress.supportReason(id)) return `${rosterOf(id).faction} · ${progress.supportReason(id)} — 다시 편성`;
-    if (id) return `${progress.supportRandom ? '랜덤 편성 · ' : ''}${rosterOf(id).faction} · ${progress.supportAuto ? '자동 호출' : '수동 Q'}`;
+    if (id && progress.supportReason(id)) return `${rosterOf(id)?.faction || id} · ${progress.supportReason(id)} — 다시 편성`;
+    if (id) return `${progress.supportRandom ? '랜덤 편성 · ' : ''}${rosterOf(id)?.faction || id} · ${progress.supportAuto ? '자동 호출' : '수동 Q'}`;
     return progress.supportCandidates().length ? `지원 캐릭터를 편성하세요 · ${SUPPORT.cooldown}초 재충전` : '다른 캐릭터를 해금하고 파츠 4부위를 준비하세요';
 }
 
@@ -19,7 +19,7 @@ export function supportHtml() {
     const selected = progress.supportCharacter;
     const candidates = progress.supportCandidates();
     const invalid = selected && progress.supportReason(selected);
-    const cards = ROSTER.map(c => {
+    const cards = ROSTER.filter(c => SUPPORT_UNITS[c.id]).map(c => {
         const reason = progress.supportReason(c.id);
         const def = SUPPORT_UNITS[c.id];
         const on = selected === c.id;
