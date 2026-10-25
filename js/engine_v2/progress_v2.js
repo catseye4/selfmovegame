@@ -25,6 +25,7 @@ import { DIFFICULTIES, DEFAULT_DIFFICULTY, difficultyOf, difficultyUnlocked, hig
 import { GrowthMethods, emptyGrowth } from './progressGrowth_v2.js';
 import { gradeOf } from './growth_v2.js';
 import { isDropOnly, dropGroupOf } from './sets_v2.js';
+import { SupportProgressMethods } from './support_v2.js';
 
 const KEY = 'mo_v2_save';
 export const MAX_LEVEL = 5;           // 노말 강화 한도 — 높은 난이도를 열면 올라감 (progress.maxLevel(), D-063)
@@ -50,6 +51,10 @@ class Progress {
         this.character = DEFAULT_CHARACTER;   // 선택창에서 고른 캐릭터 (저장)
         this.loadouts = {};                   // 캐릭터별 마지막 장착 (저장)
         this.tips = new Set();                // 본 첫 출격 안내 id (저장, coach_v2.js)
+        this.supportCharacter = null;
+        this.supportAuto = false;
+        this.supportRandom = false;
+        this.supportHelpSeen = false;
         Object.assign(this, emptyGrowth());   // 파츠 등급·조각·코어·스킬 레벨·모듈·연구·별 사용·파견 (저장)
         this.loaded = false;
         this.saveTimer = null;
@@ -81,6 +86,10 @@ class Progress {
             if (data.difficulty && difficultyUnlocked(data.difficulty, this)) this.difficulty = difficultyOf(data.difficulty).id;
             this.loadouts = { ...(data.loadouts || {}) };
             (data.tips || []).forEach(t => this.tips.add(t));
+            this.supportCharacter = rosterOf(data.supportCharacter) ? data.supportCharacter : null;
+            this.supportAuto = data.supportAuto === true;
+            this.supportRandom = data.supportRandom === true;
+            this.supportHelpSeen = data.supportHelpSeen === true;
             this.loadGrowth(data);
         }
         SLOTS.forEach(slot => this.owned.add(gameState.equippedParts[slot]));   // 장착 중인 파츠는 보유
@@ -127,6 +136,10 @@ class Progress {
             character: this.character,
             loadouts: this.loadouts,
             tips: [...this.tips],
+            supportCharacter: this.supportCharacter,
+            supportAuto: this.supportAuto,
+            supportRandom: this.supportRandom,
+            supportHelpSeen: this.supportHelpSeen,
             ...this.growthData()
         };
         try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* 저장 불가 환경: 이번 실행에서만 유지 */ }
@@ -355,5 +368,6 @@ class Progress {
 }
 
 Object.assign(Progress.prototype, GrowthMethods);
+Object.assign(Progress.prototype, SupportProgressMethods);
 
 export const progress = new Progress();

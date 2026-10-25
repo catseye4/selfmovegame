@@ -188,7 +188,7 @@ export class BattleFx {
             x: o.from.x, b: o.from.b, state: 'launch', t: -(o.index * 0.08 + (o.delay || 0)),
             sx: o.from.x, sb: o.from.b,
             hx: o.from.x - 30 + side * 34, hb: o.from.b + 80 + (1 - Math.abs(side)) * 26,
-            getTarget: o.getTarget, onHit: o.onHit, spin: Math.random() * 6, trail: []
+            getTarget: o.getTarget, onHit: o.onHit, spin: Math.random() * 6, trail: [], owner: o.owner
         });
     }
 

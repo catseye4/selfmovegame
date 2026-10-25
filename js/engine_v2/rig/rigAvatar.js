@@ -656,7 +656,7 @@ export class RigAvatar {
         const walk = this.mode === 'walk' ? this.walkScale ?? 1 : 1;   // 걷기 동작은 실제 진격 속도에 맞춤 (Q2)
         const raw = Math.max(0, Math.min(0.1, (now - this.last) / 1000));   // 음수 막기 (Android WebView 첫 프레임)
         const real = raw * gameTime.scale(now);   // 히트스톱·일시정지만 (반응 동작용)
-        const dt = real * (this.timeScale ?? 1) * walk;
+        const dt = real * (this.timeScale ?? 1) * walk * (this.mode === 'attack' ? this.supportAttackSpeed ?? 1 : 1);
         this.last = now;
         if (this.animator) {
             const reacting = this.reacts && this.reacts.length;

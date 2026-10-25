@@ -17,6 +17,10 @@ import { sound } from '../engine_v2/audio/sound_v2.js';
 import { openSettings } from './settingsPanel_v2.js';
 import { coach } from './coach_v2.js';
 import { difficultyOf, difficultyOfStage } from '../engine_v2/difficulty_v2.js';
+import { SUPPORT, SUPPORT_UNITS } from '../engine_v2/support_v2.js';
+import { rosterOf } from '../engine_v2/roster_v2.js';
+import { supportPortrait } from './supportUi_v2.js';
+import { progress } from '../engine_v2/progress_v2.js';
 
 const FACTION_COLOR = { mech: '#3ee6ff', kaiju: '#a0ff32', hero: '#c86eff', chimera: '#ff9628', diver: '#3fe0c8', saint: '#ff4d6d', frost: '#7fd4ff', doll: '#5ae6f0', architect: '#ff9a2e', broadcaster: '#ff50aa' };
 // 진행도 표시: 스테이지 거리와 요새·최종 기지 위치 (stages_v2.js)
@@ -27,6 +31,9 @@ export class BattleHud {
         this.b = engine;
         this.bound = false;
         this.onKey = this.onKey.bind(this);
+        this.onSupportOutside = e => {
+            if (!this.supportBox?.contains(e.target)) this.setSupportDetails(false);
+        };
         this.last = {};
     }
 
@@ -76,6 +83,7 @@ export class BattleHud {
         this.buildMarks();
         this.setPortrait(equipped);
         this.buildDock();
+        this.buildSupport();
         this.bindOnce();
         this.setPaused(false);
         this.renderSpeed();
@@ -83,6 +91,11 @@ export class BattleHud {
     }
 
     teardown() {
+        this.setSupportDetails(false);
+        this.supportBox?.remove();
+        this.supportBox = null;
+        this.supportEls = null;
+        this.clearSupportNotice();
         document.removeEventListener('keydown', this.onKey);
         this.setPaused(false);
         if (this.screen) this.screen.style.setProperty('--v2-speed', 1);
@@ -179,6 +192,7 @@ export class BattleHud {
     // ------------------------------------------------------------------
     update() {
         const b = this.b;
+        this.updateSupport();
         this.set('speedVal', gameTime.speed, () => this.renderSpeed());
         // 체력 / 실드
         const hpPct = Math.max(0, Math.min(1, b.playerHp / b.maxPlayerHp));
@@ -191,7 +205,8 @@ export class BattleHud {
         });
         this.set('hpText', `${Math.max(0, Math.round(b.playerHp)).toLocaleString()} / ${Math.round(b.maxPlayerHp).toLocaleString()}`,
             v => { this.el.hpText.textContent = v; });
-        const shieldPct = b.shieldHp > 0 ? Math.min(1, b.shieldHp / b.maxPlayerHp) : 0;
+        const totalShield = (b.shieldHp || 0) + (b.supportShield || 0);
+        const shieldPct = totalShield > 0 ? Math.min(1, totalShield / b.maxPlayerHp) : 0;
         this.set('shield', Math.round(shieldPct * 1000), v => { this.el.shield.style.width = `${v / 10}%`; });
         this.set('shieldCyan', b.shieldTimer !== Infinity, v => this.el.shield.classList.toggle('is-cyan', v));
         this.set('phase', b.phase2, v => { this.el.phase.hidden = !v; });
@@ -337,7 +352,9 @@ export class BattleHud {
         if (!this.b.isActive || this.b.cinematic || e.repeat) return;
         const k = e.key.toLowerCase();
         if (document.querySelector('.v2-settings')) return;   // 설정 창이 열려 있으면 그쪽이 키 입력 처리
-        if (k === 'p' || k === 'escape') {
+        if (k === 'escape' && this.supportEls?.info.getAttribute('aria-expanded') === 'true') {
+            this.setSupportDetails(false, true);
+        } else if (k === 'p' || k === 'escape') {
             this.togglePause();
         } else if (gameTime.paused) {
             return;
@@ -352,9 +369,124 @@ export class BattleHud {
             this.trySkill(k === '4' ? 'mod1' : 'mod2');   // 전술 모듈
         } else if (k === 'a') {
             this.toggleAuto();
+        } else if (k === 'q') {
+            this.trySupport();
         } else {
             return;
         }
         e.preventDefault();
+    }
+
+    buildSupport() {
+        this.setSupportDetails(false);
+        this.supportBox?.remove();
+        this.supportEls = null;
+        const snap = this.b.support?.snapshot;
+        const box = document.createElement('div');
+        box.className = 'v2-support-hud';
+        if (snap) {
+            const c = rosterOf(snap.id), def = SUPPORT_UNITS[snap.id];
+            box.style.setProperty('--support', c.color);
+            box.style.setProperty('--sk', c.color);
+            box.innerHTML = `<button class="v2-skill v2-support-call" aria-label="${c.faction} 협력 호출" aria-describedby="v2-support-state v2-support-brief">
+                <span class="v2-skill__icon"><img src="${supportPortrait(snap.id)}" alt=""></span>
+                <span class="v2-skill__cd v2-support-gauge" role="progressbar" aria-label="지원 충전" aria-valuemin="0" aria-valuemax="100"></span>
+                <span class="v2-skill__num"></span><kbd>Q</kbd></button>
+                <div class="v2-support-summary"><div class="v2-support-heading"><span class="v2-support-label">협력</span><b>${c.faction}</b>
+                <span class="v2-support-state" id="v2-support-state"></span></div>
+                <p class="v2-support-preview" id="v2-support-brief">${def.brief}</p>
+                <div class="v2-support-actions"><button class="v2-support-info" aria-expanded="false" aria-controls="v2-support-detail">효과 상세 <span aria-hidden="true">ⓘ</span></button>
+                <button class="v2-support-auto" aria-pressed="${this.b.support.auto}"></button></div></div>
+                <section class="v2-support-detail" id="v2-support-detail" aria-label="지원 효과 상세" hidden>
+                <button class="v2-support-close" aria-label="지원 효과 상세 닫기">×</button>
+                <small>${c.faction} · ${def.role}</small><h3>${icon(def.icon, 18)} ${def.ult}</h3>
+                <p class="v2-support-brief">${def.brief}</p><p>${def.effect}</p>
+                <p class="v2-support-rule">${SUPPORT.duration}초 출격 · 시너지는 출격 중에만 적용<br>첫 호출 ${SUPPORT.cooldown}초 충전 · 사용 후 ${SUPPORT.cooldown}초 재충전</p></section>`;
+            this.supportEls = {
+                call: box.querySelector('.v2-support-call'), gauge: box.querySelector('.v2-support-gauge'),
+                num: box.querySelector('.v2-skill__num'), state: box.querySelector('.v2-support-state'),
+                auto: box.querySelector('.v2-support-auto'), info: box.querySelector('.v2-support-info'),
+                detail: box.querySelector('.v2-support-detail')
+            };
+            for (const key of Object.keys(this.last)) if (key.startsWith('support_')) delete this.last[key];
+            box.querySelector('.v2-support-call').addEventListener('click', () => this.trySupport());
+            this.supportEls.info.addEventListener('click', () => this.setSupportDetails(this.supportEls.detail.hidden));
+            box.querySelector('.v2-support-close').addEventListener('click', () => this.setSupportDetails(false, true));
+            box.querySelector('.v2-support-auto').addEventListener('click', () => {
+                this.b.support.auto = !this.b.support.auto;
+                progress.setSupportAuto(this.b.support.auto);
+                this.updateSupport();
+            });
+        } else {
+            box.classList.add('is-empty');
+            box.textContent = '협력 출격 · 지원 없음';
+        }
+        this.screen?.querySelector('#battle-hud-v2')?.appendChild(box);
+        this.supportBox = box;
+        this.updateSupport();
+    }
+
+    setSupportDetails(on, restoreFocus = false) {
+        document.removeEventListener('pointerdown', this.onSupportOutside);
+        if (!this.supportEls) return;
+        this.supportBox?.classList.toggle('is-detail-open', on);
+        this.supportEls.detail.hidden = !on;
+        this.supportEls.info.setAttribute('aria-expanded', String(on));
+        if (on) {
+            document.addEventListener('pointerdown', this.onSupportOutside);
+            this.supportEls.detail.querySelector('.v2-support-close').focus({ preventScroll: true });
+        }
+        else if (restoreFocus) this.supportEls.info.focus();
+    }
+
+    updateSupport() {
+        const box = this.supportBox;
+        if (!box || !this.supportEls || !this.b.support?.snapshot) return;
+        const st = this.b.supportStatus();
+        const { call, gauge, num, state, auto } = this.supportEls;
+        const stBlocked = !st.ready || !st.hasTarget || this.b.cinematic || gameTime.paused;
+        const seconds = Math.ceil(st.cooldown);
+        const charging = this.b.stats.supportCalls ? '재충전' : '첫 충전';
+        this.set('support_disabled', stBlocked, v => { call.disabled = v; });
+        this.set('support_status', `${st.ready}${stBlocked}${st.time > 0}`, () => {
+            box.classList.toggle('is-active', st.time > 0);
+            call.classList.toggle('is-ready', st.ready && !stBlocked);
+            call.classList.toggle('is-blocked', st.ready && stBlocked);
+            call.classList.toggle('is-cooling', !st.ready);
+        });
+        this.set('support_text', st.time > 0 ? '지원 중'
+            : st.cooldown > 0 ? charging : st.hasTarget ? '호출 가능' : '대상 대기', v => { state.textContent = v; });
+        this.set('support_charge', Math.round(st.charge * 1000), v => {
+            call.style.setProperty('--cd', 1 - v / 1000);
+            gauge.setAttribute('aria-valuenow', String(Math.round(v / 10)));
+        });
+        this.set('support_countdown', seconds, v => {
+            num.textContent = v > 0 ? `${v}` : '';
+            gauge.setAttribute('aria-valuetext', v > 0 ? `${charging} ${v}초` : '충전 완료');
+        });
+        this.set('support_auto', this.b.support.auto, v => {
+            auto.textContent = `지원 자동 ${v ? 'ON' : 'OFF'}`;
+            auto.setAttribute('aria-pressed', String(v));
+        });
+    }
+
+    trySupport() {
+        if (!this.b.callSupport()) sound.play('ui_error', { vol: 0.5 });
+        this.updateSupport();
+    }
+
+    supportNotice(name, skill) {
+        this.clearSupportNotice();
+        const notice = document.createElement('div');
+        notice.className = 'v2-support-notice';
+        notice.setAttribute('role', 'status');
+        notice.textContent = `협력 출격 · ${name} / ${skill}`;
+        this.screen?.appendChild(notice);
+        this.supportNoticeEl = notice;
+    }
+
+    clearSupportNotice() {
+        this.supportNoticeEl?.remove();
+        this.supportNoticeEl = null;
     }
 }

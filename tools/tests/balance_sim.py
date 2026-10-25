@@ -7,6 +7,7 @@
   --stages=1-1,4-B   스테이지만 골라서 / --diff=hard|hell|nightmare  난이도 (D-063, 결과 파일 _<난이도>, 표에는 안 넣음)
   강화 외 성장 (Q-006): --grade=rare  네 파츠 등급 / --opts=elite,siege,…  옵션(팔·머리·몸통·다리 차례로 하나씩 돌려 붙임)
                        --skill=3  스킬 레벨 / --mods=orbital,repair  전술 모듈 / --tag=geared  결과 파일 이름 끝에 붙임
+                       --support=frost  보유 기본 장비 지원(주인공과 같은 강화·등급·스킬 레벨, 자동 호출) / --seed=69 고정 난수
 
 ※ 한 번에 Chrome을 많이 띄우면 느려져 시작에 실패할 수 있다 → batch는 동시 실행 수를 제한하고,
   실패·시간 초과도 결과 파일(error)로 남겨 기다림이 끝나지 않는 일이 없게 한다.
@@ -117,8 +118,23 @@ def _sim(build, level, speed, results, stages, diff='normal'):
                 progress.modules.owned = {GEAR.get('mods', [])}; progress.modules.equipped = {GEAR.get('mods', [])};
                 ['{head}','{body}','{arm}','{leg}'].forEach(id => {{ progress.owned.add(id); progress.levels[id] = {level}; }});
                 gameState.equippedParts = {{ head: '{head}', body: '{body}', arm: '{arm}', leg: '{leg}' }};
-                progress.selectStage('{sid}');
-                window.madOverlordGameV2.switchScreen('battle');""")
+                progress.selectStage('{sid}');""")
+            support = GEAR.get('support')
+            g.js('progress.supportCharacter = null; progress.supportAuto = false;')
+            if support and support != 'none':
+                support_build = {'mech': 'mech_missile', 'chimera': 'chimera_free'}.get(support, support)
+                eq = dict(zip(('head', 'body', 'arm', 'leg'), BUILDS[support_build]))
+                g.js(f"""const eq = {json.dumps(eq)};
+                    progress.unlockedChars.push('{support}'); progress.dispatch = [];
+                    progress.loadouts['{support}'] = eq;
+                    const {{ PART_SKILL }} = await import('/js/engine_v2/skills_v2.js');
+                    Object.values(eq).forEach(id => {{ progress.owned.add(id); progress.levels[id] = {level};
+                        if ('{GEAR.get('grade', '')}') progress.grades[id] = '{GEAR.get('grade', '')}';
+                        if (PART_SKILL[id]) progress.skillLevels[PART_SKILL[id]] = {GEAR.get('skill', 1)}; }});
+                    progress.supportCharacter = '{support}'; progress.supportAuto = true;""")
+            if 'seed' in GEAR:
+                g.js(f"let seed = {int(GEAR['seed'])}; Math.random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);")
+            g.js("window.madOverlordGameV2.switchScreen('battle');")
             g.wait(300)
             g.js(f"b.setAutoSkills(true); gameTime.speed = {speed};")
             t0 = time.time()
@@ -128,7 +144,8 @@ def _sim(build, level, speed, results, stages, diff='normal'):
                 st = g.js("""const r = document.querySelector('.v2-result');
                     return { done: !!r, win: !!document.querySelector('.v2-result.is-win'), t: b.stats.time, active: b.isActive,
                              hp: b.playerHp / b.maxPlayerHp, flags: b.starFlags, dist: b.distanceTraveled, kills: b.stats.kills,
-                             over: b.stats.overloads || 0, limit: b.stage.timeLimit };""")
+                             over: b.stats.overloads || 0, limit: b.stage.timeLimit,
+                             supportCalls: b.stats.supportCalls || 0, supportDamage: Math.round(b.stats.supportDamage || 0) };""")
                 if st['done'] or st['t'] >= LIMIT:
                     res = st
                     break
@@ -137,6 +154,7 @@ def _sim(build, level, speed, results, stages, diff='normal'):
             results.append({'stage': sid, 'win': res['win'], 'time': round(res['t']), 'hp': round(max(0, res['hp']) * 100),
                             'over': res.get('over', 0), 'limit': res.get('limit'),
                             'stars': sum(bool(f) for f in res['flags']), 'dist': round(res['dist']), 'kills': res['kills'],
+                            'supportCalls': res['supportCalls'], 'supportDamage': res['supportDamage'],
                             'timeout': not res['done']})
             print(build, level, diff, results[-1], flush=True)
             g.js("b.stopBattle(); window.madOverlordGameV2.switchScreen('menu');")
@@ -238,6 +256,8 @@ if __name__ == '__main__':
             if a.startswith('--skill='): GEAR['skill'] = int(a.split('=')[1])
             if a.startswith('--mods='): GEAR['mods'] = [x for x in a.split('=')[1].split(',') if x]
             if a.startswith('--tag='): GEAR['tag'] = a.split('=')[1]
+            if a.startswith('--support='): GEAR['support'] = a.split('=')[1]
+            if a.startswith('--seed='): GEAR['seed'] = int(a.split('=')[1])
         stg = next((a.split('=')[1].split(',') for a in sys.argv[1:] if a.startswith('--stages=')), None)
         dif = next((a.split('=')[1] for a in sys.argv[1:] if a.startswith('--diff=')), 'normal')
         pos = [a for a in sys.argv[1:] if not a.startswith('--')]

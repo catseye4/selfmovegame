@@ -184,8 +184,8 @@ export const GrowthBattleMethods = {
     },
 
     /** 옵션·변이를 반영한 적 피해 배율 (dealDamageToEnemy) */
-    gearDamageMul(enemy) {
-        const g = this.gear || {};
+    gearDamageMul(enemy, gear = this.gear) {
+        const g = gear || {};
         let k = 1;
         if (enemy.elite) k *= 1 + (g.eliteDmg || 0);
         if (enemy.boss) k *= 1 + (g.bossDmg || 0);
