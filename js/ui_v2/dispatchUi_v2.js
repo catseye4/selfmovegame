@@ -395,19 +395,19 @@ function newHtml() {
     const zones = progress.dispatchZones();
     const slots = progress.dispatchSlots();
     const free = slots - progress.dispatch.length;
-    const cands = ROSTER.filter(c => c.id !== progress.character && progress.isCharacterUnlocked(c.id) && !progress.isDispatched(c.id));
+    const cands = ROSTER.filter(c => !progress.dispatchReason(c.id));
     if (!zones.includes(pickedZone)) pickedZone = zones[zones.length - 1] ?? null;
     if (!cands.some(c => c.id === pickedChar)) pickedChar = cands[0]?.id ?? null;
     const hours = progress.dispatchMs() / 3600000;
     const zoneCards = CHAPTERS.map(ch => {
         const z = DISPATCH_ZONES[ch.zone], open = zones.includes(ch.zone);
         // 썸네일: 전투 먼 배경(색조) 위에 파견 일러스트 (일러스트가 없으면 아래 것이 보임)
-        return `<button class="v2-dsp-zone${open ? '' : ' is-lock'}${ch.zone === pickedZone ? ' is-pick' : ''}" data-act="dspZone" data-zone="${ch.zone}" ${open ? '' : 'disabled'}>
-            <i style="background-image:url('${z.far[0]}');filter:${z.far[1]}"></i>${z.trek ? `<i style="background-image:url('${z.trek}')"></i>` : ''}<b>구역 ${ch.zone}</b><small>${open ? esc(shortZone(ch.zone)) : '보스전(노말)을 깨면 열림'}</small></button>`;
+        return `<button class="v2-dsp-zone${open ? '' : ' is-lock'}${ch.zone === pickedZone ? ' is-pick' : ''}" data-act="dspZone" data-zone="${ch.zone}" aria-pressed="${ch.zone === pickedZone}" ${open ? '' : 'disabled'}>
+            <i style="background-image:url('${z.far[0]}');filter:${z.far[1]}"></i>${z.trek ? `<i style="background-image:url('${z.trek}')"></i>` : ''}<b>구역 ${ch.zone}</b><small>${open ? esc(shortZone(ch.zone)) : '보스전(노말)을 깨면 열림'}</small><span class="v2-dsp-choice" aria-hidden="true">✓ 선택</span></button>`;
     }).join('');
-    const chars = !cands.length ? '<p class="v2-growth__hint">보낼 캐릭터가 없어요 — 출전 중이 아닌 열린 캐릭터만 보낼 수 있어요.</p>'
-        : cands.map(c => `<button class="v2-dsp-char${c.id === pickedChar ? ' is-pick' : ''}" data-act="dspChar" data-char="${c.id}" style="--sk:${c.color}">
-            <img data-head="${c.id}" alt=""><b>${esc(c.faction)}</b></button>`).join('');
+    const chars = !cands.length ? '<p class="v2-growth__hint">보낼 캐릭터가 없어요 — 해금하고 파츠 4부위를 보유한 캐릭터 중 출전·파견 중이 아닌 캐릭터만 보낼 수 있어요.</p>'
+        : cands.map(c => `<button class="v2-dsp-char${c.id === pickedChar ? ' is-pick' : ''}" data-act="dspChar" data-char="${c.id}" aria-pressed="${c.id === pickedChar}" style="--sk:${c.color}">
+            <img data-head="${c.id}" alt=""><b>${esc(c.faction)}</b><span class="v2-dsp-choice" aria-hidden="true">✓ 선택</span></button>`).join('');
     const ex = pickedZone ? DISPATCH.reward(pickedZone) : null;
     const can = free > 0 && pickedZone && pickedChar;
     return `<section class="v2-dsp-new">

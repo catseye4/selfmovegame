@@ -261,6 +261,8 @@ def run(ctx):
     g.js("b.stopBattle(); window.madOverlordGameV2.switchScreen('menu');")
     g.wait(300)
     st = g.js("""progress.selectCharacter('mech');
+        const { SLOTS, partsOfCharacter } = await import('/js/engine_v2/roster_v2.js');
+        SLOTS.forEach(s => progress.owned.add(partsOfCharacter('kaiju', s)[0].id));
         const self = progress.startDispatch('mech', 1, 1000);
         const lock = progress.startDispatch('doll', 1, 1000);
         const ok = progress.startDispatch('kaiju', 2, 1000);

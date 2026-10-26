@@ -1387,19 +1387,22 @@
 .v2-dsp-new h3 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; font-size: 14px; color: var(--v2-amber); }
 .v2-dsp-new h3 small { font-size: 11px; font-weight: 400; color: var(--v2-dim); }
 .v2-dsp-zones { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-.v2-growth button.v2-dsp-zone { position: relative; display: flex; flex-direction: column; justify-content: flex-end; height: 72px; padding: 6px 8px; overflow: hidden;
+.v2-growth .v2-dsp-new button.v2-dsp-zone[data-act] { position: relative; display: flex; flex-direction: column; justify-content: flex-end; height: 72px; padding: 6px 8px; overflow: hidden;
     text-align: left; color: #fff; background: #0b0d12; border: 1px solid rgba(255, 255, 255, 0.15); }
 .v2-dsp-zone i { position: absolute; inset: 0; background-size: cover; background-position: center; }
 .v2-dsp-zone::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0, 0, 0, 0.8), transparent 70%); }
 .v2-dsp-zone b, .v2-dsp-zone small { position: relative; z-index: 1; text-shadow: 0 1px 0 #000; }
 .v2-dsp-zone b { font: 800 12px var(--v2-font-num); color: var(--v2-amber); }
 .v2-dsp-zone small { overflow: hidden; font-size: 11px; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; }
-.v2-growth button.v2-dsp-zone.is-pick { border-color: var(--v2-amber); box-shadow: 0 0 0 1px var(--v2-amber), 0 0 12px rgba(255, 176, 32, 0.35); }
+.v2-growth .v2-dsp-new button.v2-dsp-zone[data-act].is-pick { border-color: var(--v2-amber); box-shadow: 0 0 0 2px var(--v2-amber), 0 0 12px rgba(255, 176, 32, 0.35); }
+.v2-dsp-new .v2-dsp-choice { visibility: hidden; flex: none; padding: 2px 5px; border-radius: 3px; background: var(--v2-amber); color: #16120a; font-size: 11px; font-weight: 900; line-height: 16px; white-space: nowrap; }
+.v2-dsp-new .is-pick .v2-dsp-choice { visibility: visible; }
+.v2-dsp-zone .v2-dsp-choice { position: absolute; top: 5px; right: 5px; z-index: 2; }
 .v2-dsp-chars { display: flex; flex-wrap: wrap; gap: 6px; }
-.v2-growth button.v2-dsp-char { display: flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; color: #fff; background: rgba(255, 255, 255, 0.05);
+.v2-growth .v2-dsp-new button.v2-dsp-char[data-act] { display: flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; color: #fff; background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.15); border-left: 3px solid var(--sk); }
 .v2-dsp-char img { width: 30px; height: 30px; object-fit: contain; background: rgba(0, 0, 0, 0.35); border-radius: 3px; }
-.v2-growth button.v2-dsp-char.is-pick { background: color-mix(in srgb, var(--sk) 28%, transparent); border-color: var(--sk); box-shadow: 0 0 10px color-mix(in srgb, var(--sk) 45%, transparent); }
+.v2-growth .v2-dsp-new button.v2-dsp-char[data-act].is-pick { background: rgba(255, 176, 32, 0.18); border-color: var(--v2-amber); box-shadow: 0 0 0 1px var(--v2-amber), inset 0 0 12px rgba(255, 176, 32, 0.12); }
 .v2-dsp-go { display: flex; align-items: center; gap: 10px; }
 .v2-dsp-go > span { font-size: 11px; color: var(--v2-dim); }
 .v2-dsp-go .v2-dsp__reward { flex: 0 1 320px; }
@@ -2006,6 +2009,14 @@ div.v2-settings__row > span { flex: 1; }
 .v2-compare .is-down { color: #ff5a6e; }
 
 /* 스킬 구성 */
+.v2-lab__info { min-height: 0; }
+.v2-lab__info > .v2-lab__title, .v2-lab__info > .v2-compare { flex: none; }
+.v2-lab__skills { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; scrollbar-color: var(--v2-amber) rgba(255, 255, 255, 0.06); }
+.v2-lab__skills::-webkit-scrollbar { width: 6px; }
+.v2-lab__skills::-webkit-scrollbar-thumb { background: var(--v2-amber); border-radius: 3px; }
+.v2-lab__skills:focus-visible { outline: 1px solid var(--v2-amber); outline-offset: 2px; }
+.v2-lab__scroll-hint { flex: none; color: var(--v2-amber); font-size: 11px; line-height: 16px; text-align: center; }
+.v2-lab__scroll-hint[hidden] { display: none; }
 .v2-loadout { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
 .v2-loadout li {
     display: grid;
