@@ -47,6 +47,7 @@ import { SaintMethods } from './battle/saint.js';
 import { FrostMethods } from './battle/frost.js';
 import { DollMethods } from './battle/doll.js';
 import { GrowthBattleMethods } from './battle/growth.js';
+import { PetBattleMethods } from './battle/pets.js';
 import { predecodeStageArt } from './enemies_v2.js';
 import { runReport } from './battle/runReport.js';
 import { track } from './analytics_v2.js';
@@ -262,6 +263,8 @@ export class BattleEngine {
         // 몬스터 비주얼 렌더링 및 위치 리셋
         monsterControllerV2.renderVisuals(equippedObjs);
         track('stage_start', { stageId: this.stage.id, zone: this.stage.zone, difficulty: this.difficulty, character: monsterControllerV2.getCharacterId() });
+        progress.tutorialBattleStart(this.stage.id, this.difficulty);
+        if (this.autoSkills) progress.tutorialDone('combat');
         monsterControllerV2.updateHpBar(this.playerHp, this.maxPlayerHp);
         monsterControllerV2.setMonsterPosition(this.monsterX);
         monsterControllerV2.setState('walking');
@@ -278,6 +281,7 @@ export class BattleEngine {
         if (this.domEnemies) this.domEnemies.innerHTML = '';
         if (this.domProjectiles) this.domProjectiles.innerHTML = '';
         if (this.domDamage) this.domDamage.innerHTML = '';
+        this.setupPet();
 
         if (this.domTargetLabel) this.domTargetLabel.textContent = '적 수비대 거점 HP (탐색 중)';
         this.updateHud();
@@ -298,6 +302,7 @@ export class BattleEngine {
     // 전투 정지 및 퇴각
     stopBattle() {
         this.isActive = false;
+        this.clearPet();
         this.pSlowT = 0;
         this.pStunT = 0;
         this.pRootT = 0;
@@ -434,6 +439,7 @@ export class BattleEngine {
             prevStars,
             newStars: record.newStars,
             bonus: record.bonus,
+            pets: record.pets,
             next,
             timeUp: !victory && this.timeUp,
             overloads: this.stats.overloads || 0,
@@ -446,6 +452,7 @@ export class BattleEngine {
         this.stopBattle();
         setTimeout(() => { if (!this.isActive) sound.playBgm('menu', 2.5); }, 1200);
         track('stage_end', { stageId: result.stage.id, result: result.victory ? 'victory' : 'defeat', time: result.time, stars: result.starFlags.filter(Boolean).length, dm: result.dm });
+        progress.tutorialBattleResult(result.stage.id, diff, victory);
         this.director.showResult(result, act => {
             if (act === 'next' && next) progress.selectStage(next.id);
             if (this.onNavigate) this.onNavigate(act === 'retry' || act === 'next' ? 'battle' : act);
@@ -504,12 +511,14 @@ export class BattleEngine {
         // 스킬: 예약 실행, 쿨다운/게이지/자동 사용, HUD
         this.tickTimers(dt);             // attacks.js
         this.tickSkills(dt);             // attacks.js
+        if (this.autoSkills || this.skillCd.arm > 0 || this.skillCd.body > 0) progress.tutorialDone('combat');
         this.hud.update(dt);
         this.checkPhase2();              // player.js
 
         // 진격·공격, 아군, 적
         this.tickAdvance(dt, frontX);
         this.tickAllies(dt);             // allies.js
+        this.tickPet(dt);                // pets.js (추종·작은 자동 공격)
         this.tickEnemies(dt, frontX);    // enemyField.js
 
         this.loopId = requestAnimationFrame((t) => this.loop(t));
@@ -606,7 +615,8 @@ attachMethods(BattleEngine.prototype, {
     'battle/saint.js': SaintMethods,
     'battle/frost.js': FrostMethods,
     'battle/doll.js': DollMethods,
-    'battle/growth.js': GrowthBattleMethods
+    'battle/growth.js': GrowthBattleMethods,
+    'battle/pets.js': PetBattleMethods
 });
 
 export const battleEngineV2 = new BattleEngine();

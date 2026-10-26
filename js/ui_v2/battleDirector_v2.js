@@ -26,6 +26,7 @@ import { chapterOf } from '../engine_v2/stages_v2.js';
 import { difficultyOf, difficultyOfStage } from '../engine_v2/difficulty_v2.js';
 import { gradeOf, OPTIONS, MUTATORS } from '../engine_v2/growth_v2.js';
 import { setOf, setLabelOf } from '../engine_v2/sets_v2.js';
+import { petOf } from '../engine_v2/pets_v2.js';
 
 // 별 3개 조건 (D-029): 요새 / 최종 기지 / 목표 시간 안에 클리어
 const starLabels = stage => ['중간 요새', '최종 기지', `${stage.starTime}초 안에`];
@@ -496,6 +497,7 @@ export class BattleDirector {
                     <div class="is-reward"><dt>${icon('gem', 16)} 획득 DM</dt><dd><strong data-count="${r.dm}">+0</strong></dd></div>
                 </dl>
                 ${lootHtml(r.loot)}
+                ${(r.pets || []).map(id => `<p class="v2-result__pet">펫 획득 · ${petOf(id).name} — 작전 지원에서 장착할 수 있어요</p>`).join('')}
                 ${r.unlocked ? `<p class="v2-result__unlock" style="--diff:${r.unlocked.color}">${icon('star', 16)} <b>${r.unlocked.name}</b> 난이도가 열렸습니다 · 파츠 강화 한도 Lv${r.unlocked.maxLevel}</p>` : ''}
                 ${r.victory ? '' : reportHtml(r.report)}
                 <div class="v2-result__actions">

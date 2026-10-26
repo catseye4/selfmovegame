@@ -11,16 +11,19 @@ export const COACH = {
     battle_skills: { text: '캐릭터는 알아서 걷고 싸웁니다<br>스킬은 <kbd>1</kbd> <kbd>2</kbd> 키나 단추로 — <b>AUTO</b>를 켜면 자동', sec: 7 },
     battle_ult: { text: '필살기 준비 완료! <kbd>3</kbd> 키나 단추<br>요새·기지·보스 앞에서 쓰면 좋아요', sec: 6 },
     battle_base: { text: '요새를 부수면 별 1개, 최종 기지를 부수면 승리<br>이 시계가 <b>제한 시간</b>입니다', sec: 7, side: 'bottom' },
-    menu_lab: { text: '얻은 <b>DM</b>으로 연구소에서<br>파츠를 사고 강화하세요', sec: 9 }
+    menu_lab: { text: '얻은 <b>DM</b>으로 연구소에서<br>파츠를 사고 강화하세요', sec: 9 },
+    offline_intro: { text: '접속하지 않아도 DM이 쌓여요<br><b>방치 보상</b>에서 직접 받으세요', sec: 7, side: 'bottom' },
+    pet_intro: { text: '펫을 처음 얻었어요!<br><b>작전 지원 → 펫</b>에서 장착하세요', sec: 7, side: 'bottom' },
+    shop_intro: { text: '<b>상점</b>에서 상품과 확률 정보를 확인할 수 있어요', sec: 7, side: 'bottom' }
 };
 
 /** 안내 id를 아직 안 봤으면 anchor(요소 또는 선택자) 옆에 말풍선. 돌려주는 값: 말풍선 요소 또는 null */
-export function coach(id, anchor) {
+export function coach(id, anchor, { remember = true } = {}) {
     const c = COACH[id];
-    if (!c || progress.hasTip(id)) return null;
+    if (!c || (remember && progress.hasTip(id))) return null;
     const a = typeof anchor === 'string' ? document.querySelector(anchor) : anchor;
     if (!a || !a.getClientRects().length) return null;
-    progress.markTip(id);
+    if (remember) progress.markTip(id);
     const host = a.closest('.screen-v2') || document.body;
     const el = document.createElement('div');
     const side = c.side || 'top';

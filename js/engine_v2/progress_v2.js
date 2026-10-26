@@ -23,6 +23,10 @@ import { PARTS_DB } from '../data/parts.js';
 import { SLOTS, DEFAULT_CHARACTER, rosterOf, characterOfPart, partsOfCharacter } from './roster_v2.js';
 import { DIFFICULTIES, DEFAULT_DIFFICULTY, difficultyOf, difficultyUnlocked, highestDifficulty } from './difficulty_v2.js';
 import { GrowthMethods, emptyGrowth } from './progressGrowth_v2.js';
+import { CommerceMethods, emptyCommerce } from './progressCommerce_v2.js';
+import { PetMethods } from './progressPets_v2.js';
+import { OfflineMethods, emptyOffline } from './offlineReward_v2.js';
+import { TutorialMethods, emptyTutorial } from './tutorial_v2.js';
 import { track } from './analytics_v2.js';
 import { gradeOf } from './growth_v2.js';
 import { isDropOnly, dropGroupOf } from './sets_v2.js';
@@ -54,6 +58,9 @@ class Progress {
         this.loadouts = {};                   // 캐릭터별 마지막 장착 (저장)
         this.tips = new Set();                // 본 첫 출격 안내 id (저장, coach_v2.js)
         Object.assign(this, emptyGrowth());   // 파츠 등급·조각·코어·스킬 레벨·모듈·연구·별 사용·파견 (저장)
+        this.commerce = emptyCommerce();
+        this.offline = emptyOffline();
+        this.tutorial = emptyTutorial();
         this.loaded = false;
         this.saveTimer = null;
         this.saveId = null;
@@ -88,6 +95,10 @@ class Progress {
             (data.tips || []).forEach(t => this.tips.add(t));
             this.loadGrowth(data);
         }
+        this.loadTutorial(data);
+        this.loadCommerce(data);
+        this.loadPets(data);
+        this.loadOffline(data);   // 펫 지급 등의 즉시 저장보다 먼저, 원래 savedAt으로 정산
         SLOTS.forEach(slot => this.owned.add(gameState.equippedParts[slot]));   // 장착 중인 파츠는 보유
         // 고른 캐릭터: 저장에 있으면 그것, v1 저장이면 몸통 캐릭터
         const saved = data && rosterOf(data.character) ? data.character : null;
@@ -95,6 +106,8 @@ class Progress {
         this.fixMixed(!saved);
         this.rememberLoadout();
         gameState.cartParts = { ...gameState.equippedParts };
+        this.checkPetRewards('migration');
+        this.resolvePendingCommercePets();
         gameState.subscribe(() => this.saveSoon());
         this.save();
     }
@@ -136,9 +149,19 @@ class Progress {
             character: this.character,
             loadouts: this.loadouts,
             tips: [...this.tips],
+            commerce: this.commerce,
+            offline: this.offline,
+            tutorial: this.tutorial,
             ...this.growthData()
         };
-        saveStore.save(KEY, JSON.stringify(data));
+        const text = JSON.stringify(data);
+        saveStore.save(KEY, text);
+        this._offlineSavedText = text;
+    }
+
+    /** 가져오기·다른 탭이 바꾼 저장을 생명주기 저장으로 덮어쓰지 않는다. */
+    offlineStorageCurrent() {
+        return this._offlineSavedText === undefined || saveStore.load(KEY) === this._offlineSavedText;
     }
 
     /** 처음부터 다시 (설정 창의 진행 초기화) */
@@ -255,6 +278,7 @@ class Progress {
         this.rememberLoadout();
         gameState.notify();
         if (partIds.length) track('part_purchase', { partIds, cost });
+        if (partIds.length) this.tutorialGrowth(partIds[0]);
         return { success: true, cost };
     }
 
@@ -362,11 +386,16 @@ class Progress {
         const bonus = Math.round(newStars * STAR_BONUS_DM * difficultyOf(diff).reward);
         if (bonus) gameState.darkMatter += bonus;
         gameState.notify();
-        return { newStars, bonus };
+        const pets = this.checkPetRewards();
+        return { newStars, bonus, pets };
     }
 }
 
 Object.assign(Progress.prototype, GrowthMethods);
+Object.assign(Progress.prototype, CommerceMethods);
+Object.assign(Progress.prototype, PetMethods);
+Object.assign(Progress.prototype, OfflineMethods);
+Object.assign(Progress.prototype, TutorialMethods);
 
 export const progress = new Progress();
 

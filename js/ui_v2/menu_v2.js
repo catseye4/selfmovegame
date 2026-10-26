@@ -22,6 +22,8 @@ import { openSettings } from './settingsPanel_v2.js';
 import { TacticalRadar } from './radar_v2.js';
 import { resChipHtml, openGrowthPanel } from './growthUi_v2.js';
 import { MUTATORS } from '../engine_v2/growth_v2.js';
+import { openShop } from './shop_v2.js';
+import { createOfflineRewardButton, updateOfflineRewardButton } from './offlineRewardUi_v2.js';
 
 const $ = id => document.getElementById(id);
 const SLOTS = [
@@ -42,6 +44,18 @@ export class MenuController {
         fillIcons(this.root);
         const chip = this.root && this.root.querySelector('.v2-chip--dm');
         if (chip) chip.insertAdjacentHTML('afterbegin', icon('gem', 18));
+        const shop = document.createElement('button');
+        shop.className = 'v2-supportbtn';
+        shop.id = 'btn-menu-shop-v2';
+        shop.innerHTML = '상점<i id="menu-shop-badge-v2"></i>';
+        $('btn-menu-support-v2')?.before(shop);
+        shop.addEventListener('click', () => openShop('menu', () => this.updateDisplay()));
+        this.offlineButton = createOfflineRewardButton(shop, () => this.updateDisplay());
+        const updateBadge = () => {
+            $('menu-shop-badge-v2').textContent = progress.canClaimPass() ? '●' : '';
+        };
+        gameState.subscribe(updateBadge);
+        setInterval(updateBadge, 15000);
         this.initEvents();
     }
 
@@ -212,6 +226,9 @@ export class MenuController {
 
     /** 메인 화면이 보일 때마다: 장착 상태로 캐릭터/설명/능력치/상태 줄 갱신, 레이더 시작 */
     updateDisplay() {
+        this.updateOfflineReward();
+        window.madOverlordGameV2?.tutorialUi?.update();
+        if ($('menu-shop-badge-v2')) $('menu-shop-badge-v2').textContent = progress.canClaimPass() ? '●' : '';
         if (this.domDmCount) this.domDmCount.textContent = gameState.darkMatter.toLocaleString();
         const res = $('menu-res-v2');
         if (res) res.innerHTML = resChipHtml();   // 별·조각·코어 (Q-006)
@@ -237,6 +254,10 @@ export class MenuController {
         this.renderStatusBar(equipped);
         if (this.map === 'story') this.renderStages();
         if (gameState.currentScreen === 'menu' || !gameState.currentScreen) this.radar.start();
+    }
+
+    updateOfflineReward() {
+        updateOfflineRewardButton(this.offlineButton, gameState.currentScreen === 'menu' && !document.hidden);
     }
 
     renderCallouts(equipped) {

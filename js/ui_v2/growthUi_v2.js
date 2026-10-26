@@ -11,6 +11,7 @@ import { MODULES, MODULE_MAX_LEVEL, RESEARCH, gradeOf, OPTIONS } from '../engine
 import { sound } from '../engine_v2/audio/sound_v2.js';
 import { icon } from './icons.js';
 import { mountDispatch, tickDispatch, unmountDispatch, dispatchAct, showReturn } from './dispatchUi_v2.js';
+import { petsHtml, petAct } from './petsUi_v2.js';
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -82,6 +83,7 @@ function act(name, d) {
     if (name === 'tab') { if (tab === 'dispatch' && d.tab !== 'dispatch') unmountDispatch(); tab = d.tab; sound.play('ui_tab'); return render(); }
     if (name.startsWith('dsp')) return dispatchAct(name, d) ? render() : null;   // 파견 탭: 구역·캐릭터 고르기, 귀환 장면 닫기
     if (name === 'close') return closeGrowthPanel();
+    if (name === 'equipPet' || name === 'upPet') r = petAct(name, d);
     if (name === 'buyModule') r = progress.buyModule(d.id);
     if (name === 'equipModule') { progress.equipModule(Number(d.slot), d.id || null); sound.play('ui_tab'); return render(); }
     if (name === 'upModule') r = progress.upgradeModule(d.id);
@@ -100,8 +102,10 @@ function act(name, d) {
 
 function render() {
     if (!panel) return;
-    const tabs = [['modules', '전술 모듈'], ['dispatch', '파견'], ['research', '계정 연구']];
-    const body = tab === 'dispatch' ? '' : tab === 'research' ? researchHtml() : modulesHtml();
+    const petUnlocked = progress.stage('1-1', 'normal').cleared || progress.pets.owned.some(id => progress.canUsePet(id));
+    const tabs = [['modules', '전술 모듈'], ['dispatch', '파견'], ['research', '계정 연구'], ['pets', '펫']];
+    const body = tab === 'dispatch' ? '' : tab === 'research' ? researchHtml() : tab === 'pets'
+        ? petUnlocked ? petsHtml() : '<p class="v2-growth__hint">노말 1-1을 클리어하면 펫이 열립니다.</p>' : modulesHtml();
     panel.innerHTML = `<div class="v2-growth__box v2-panel">
         <div class="v2-growth__head">
             <h2>작전 지원</h2>
@@ -109,7 +113,7 @@ function render() {
             <div class="v2-chip v2-chip--dm">${icon('gem', 16)}<strong>${gameState.darkMatter.toLocaleString()}</strong><small>DM</small></div>
             <button class="v2-iconbtn" data-act="close" aria-label="닫기">✕</button>
         </div>
-        <nav class="v2-growth__tabs">${tabs.map(([id, label]) => `<button data-act="tab" data-tab="${id}" class="${tab === id ? 'is-on' : ''}">${label}</button>`).join('')}</nav>
+        <nav class="v2-growth__tabs">${tabs.map(([id, label]) => `<button data-act="tab" data-tab="${id}" class="${tab === id ? 'is-on' : ''}" ${id === 'pets' && !petUnlocked ? 'disabled title="노말 1-1 클리어 후 해금"' : ''}>${label}${id === 'pets' && !petUnlocked ? ' 🔒' : ''}</button>`).join('')}</nav>
         <div class="v2-growth__body${tab === 'dispatch' ? ' is-dispatch' : ''}">${body}</div>
     </div>`;
     if (tab === 'dispatch') mountDispatch(panel.querySelector('.v2-growth__body'));   // 파견 중 장면 (dispatchUi_v2.js)

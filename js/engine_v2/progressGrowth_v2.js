@@ -17,6 +17,7 @@ import { STAGES, CHAPTERS } from './stages_v2.js';
 import { isZoneReleased, isCharacterReleased, releaseDateOf } from './contentSchedule_v2.js';
 import { minGradeOf, dropGroupOf, setOf } from './sets_v2.js';
 import { DIFFICULTIES, highestDifficulty, difficultyOf } from './difficulty_v2.js';
+import { emptyPets } from './pets_v2.js';
 import {
     GRADES, gradeOf, gradeIndex, OPTIONS, OPTION_CAPS, DROP, AFFINITY, SKILL_LEVEL, CORES,
     MODULES, MODULE_SLOTS, MODULE_MAX_LEVEL, MODULE_LEVEL_COST, DISPATCH, CHARACTER_STARS, RESEARCH, pickWeighted
@@ -27,7 +28,7 @@ const partById = id => SLOTS.map(s => (PARTS_DB[s] || []).find(p => p.id === id)
 export function emptyGrowth() {
     return {
         grades: {}, options: {}, shards: 0, cores: 0, skillLevels: {},
-        modules: { owned: [], equipped: [], levels: {} }, research: {}, spentStars: 0, unlockedChars: [], dispatch: []
+        modules: { owned: [], equipped: [], levels: {} }, research: {}, spentStars: 0, unlockedChars: [], dispatch: [], pets: emptyPets()
     };
 }
 export const GROWTH_KEYS = Object.keys(emptyGrowth());

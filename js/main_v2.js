@@ -18,6 +18,8 @@ import { applyVfxChoices, readVfxChoices, readVfxStyle } from './engine_v2/vfx/v
 import { preloadVfxSheets } from './engine_v2/vfx/vfxPlayer.js';
 import { setFitScale } from './engine_v2/displayRes.js';
 import { initAnalytics, track } from './engine_v2/analytics_v2.js';
+import { initCommerceDev } from './engine_v2/commerceDev_v2.js';
+import { TutorialUi } from './ui_v2/tutorialUi_v2.js';
 
 class GameRouterV2 {
     constructor() {
@@ -25,6 +27,7 @@ class GameRouterV2 {
         // v2 전용 추가 파츠(괴수 팔 등)를 등록한 뒤, 저장된 진행(DM, 장착, 보유 파츠, 강화, 스테이지)을 적용
         registerAllSets2();   // 2차 세트 (파츠 확장 2차, D-071) — 파츠 표에 먼저 더함
         registerV2Parts();
+        initCommerceDev();
         progress.init();
         
         // 라우터 바인딩된 화면 전환 함수 (v2)
@@ -33,6 +36,7 @@ class GameRouterV2 {
         this.menuController = new MenuController(switchFn);
         this.labController = new LabController(switchFn);
         this.selectController = new SelectController(switchFn);
+        this.tutorialUi = new TutorialUi(this);
 
         this.init();
     }
@@ -90,6 +94,30 @@ class GameRouterV2 {
         });
 
         // 초기 화면 설정
+        if (!progress._offlineLifecycleBound) {
+            progress._offlineLifecycleBound = true;
+            const refresh = () => window.madOverlordGameV2?.menuController.updateOfflineReward();
+            const away = () => {
+                if (window.madOverlordGameMode !== 'v2') return;
+                progress.offlineAway();
+                if (battleEngineV2.isActive) battleEngineV2.hud.setPaused(true);
+            };
+            const back = () => {
+                if (window.madOverlordGameMode !== 'v2') return;
+                progress.offlineReturn();
+                refresh();
+            };
+            document.addEventListener('visibilitychange', () => document.hidden ? away() : back());
+            window.addEventListener('pagehide', away);
+            window.addEventListener('pageshow', () => { if (!document.hidden) back(); });
+            setInterval(() => {
+                if (window.madOverlordGameMode === 'v2' && !document.hidden) {
+                    progress.offlineActivity();
+                    refresh();
+                }
+            }, 60000);
+            if (document.hidden) away();
+        }
         this.switchScreen('menu');
         console.log('🔥 PROJECT: MAD OVERLORD ENGINE V2 ONLINE 🔥');
     }
@@ -130,11 +158,13 @@ class GameRouterV2 {
         } else if (screenName === 'select') {
             this.selectController.render();
         } else if (screenName === 'lab') {
+            progress.tutorialDone('lab');
             this.labController.renderPartsGrid();
             this.labController.updateMvvmFeedback();
         } else if (screenName === 'battle') {
             battleEngineV2.startBattle();
         }
+        this.tutorialUi.update();
     }
 }
 

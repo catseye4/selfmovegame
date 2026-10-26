@@ -2634,3 +2634,73 @@ body.v2-fit .v2-growth__box { width: 940px; max-height: 655px; }
 .v2-charcard__foot .v2-release-date { color: #e5bc79; }
 .v2-dsp-zone.is-coming-soon { border-style: dashed; border-color: #aa9063; }
 .v2-dsp-zone.is-coming-soon small { color: #e5bc79; }
+
+/* 상점·확률 정보 창 (v2) */
+.v2-commerce {
+    position: fixed; inset: 0; z-index: 22000; background: #000b;
+    display: grid; place-items: center; padding: 16px; color: #e2e8f0;
+}
+.v2-commerce__panel {
+    width: min(880px, 100%); max-height: calc(100dvh - 32px); overflow: auto;
+    padding: 20px; background: #151d29; border: 1px solid #46536a; border-radius: 8px;
+    font-size: 14px; line-height: 1.6; box-sizing: border-box;
+}
+.v2-commerce__panel > header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.v2-commerce__panel h2, .v2-commerce__panel h3 { margin: 0; }
+.v2-commerce__panel p { margin: 8px 0; }
+.v2-commerce__panel table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 12px; }
+.v2-commerce__panel th, .v2-commerce__panel td { padding: 8px; text-align: left; border: 1px solid #46536a; }
+.v2-commerce__panel select { color: #e2e8f0; background: #222f42; padding: 6px; margin: 8px; }
+.v2-commerce__panel button:disabled { opacity: .55; cursor: default; }
+.v2-commerce__actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.v2-shop__product { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid #46536a; }
+.v2-shop__product > div { flex: 1; }
+.v2-shop__product button { flex-shrink: 0; }
+.v2-prob-info { z-index: 22001; }
+#menu-shop-badge-v2 { color: #ff665c; font-size: 10px; }
+@media (max-width: 640px) {
+    .v2-commerce { padding: 8px; }
+    .v2-commerce__panel { padding: 12px; max-height: calc(100dvh - 16px); }
+    .v2-shop__product { align-items: flex-start; gap: 8px; }
+    .v2-commerce__panel th, .v2-commerce__panel td { padding: 4px; overflow-wrap: anywhere; }
+}
+
+/* 펫 (v2): 임시 도형. art 경로가 지정되면 같은 크기의 그림으로 교체한다. */
+.v2-petgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.v2-petcard { padding: 14px; border: 1px solid #485064; border-radius: 8px; background: #161d2a; }
+.v2-petcard.is-equipped { border-color: var(--pet-color); box-shadow: inset 0 0 14px #a986ff18; }
+.v2-petcard__head { display: flex; align-items: center; gap: 12px; }
+.v2-petcard__head small { display: block; margin-top: 5px; }
+.v2-petcard p { margin: 12px 0 6px; color: #e5def3; font-size: 13px; }
+.v2-petcard small { color: #b5bdcc; line-height: 1.6; }
+.v2-petcard__acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.v2-petcard__acts button { background: #28324a; color: #eee8fa; border: 1px solid #606b86; padding: 7px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+.v2-petcard__acts button:disabled, .v2-growth__tabs button:disabled { opacity: .45; cursor: default; }
+.v2-pet { position: relative; display: inline-block; flex-shrink: 0; width: 40px; height: 40px; box-sizing: border-box; pointer-events: none; }
+.v2-pet img { width: 100%; height: 100%; object-fit: contain; }
+.v2-pet[data-shape]::before { content: ''; position: absolute; inset: 7px 3px; background: #303445; border: 2px solid var(--pet-color); border-radius: 45%; box-shadow: 0 0 8px #b79aff55; }
+.v2-pet[data-shape]::after { content: ''; position: absolute; left: 16px; top: 16px; width: 9px; height: 9px; background: var(--pet-color); border-radius: 50%; box-shadow: 0 0 8px var(--pet-color); }
+.v2-pet[data-shape="drone"]::before { border-radius: 8px; border-bottom-width: 7px; transform: rotate(-8deg); }
+.v2-pet[data-shape="larva"]::before { inset: 13px 1px 3px; border-radius: 45% 70% 25% 30%; border-bottom-width: 6px; }
+.v2-pet[data-shape="eye"]::before { inset: 1px 5px 4px; border-radius: 50%; background: #56366d; }
+.v2-pet[data-shape="lantern"]::before { inset: 2px 7px 8px; border-radius: 50% 50% 15% 15%; border-bottom-width: 8px; }
+.v2-pet[data-shape="keeper"]::before { inset: 3px 8px 9px; border-radius: 0 0 45% 45%; border-top: 12px double var(--pet-color); }
+.v2-pet--battle { position: absolute; z-index: 6; }
+.v2-result__pet { margin: 8px 0; color: #d5b1ff; font-size: 13px; }
+@media (max-width: 640px) {
+    .v2-petgrid { grid-template-columns: 1fr; }
+}
+
+/* 방치 보상 (v2): 메뉴 표시와 직접 여는 수령 창. */
+.v2-offlinebtn[hidden] { display: none; }
+.v2-offlinebtn.is-ready { color: var(--v2-green); border-color: var(--v2-green); }
+.v2-offline [data-summary] { white-space: pre-line; line-height: 1.9; padding: 12px; background: #161d2a; border-radius: 6px; }
+.v2-offline [data-result] { min-height: 1.5em; color: var(--v2-green); }
+
+/* 첫 성장 안내 (v2): 화면의 여유 공간에 놓는 비차단 진행 줄. */
+.v2-tutorial { position: absolute; z-index: 25; left: 18px; right: 18px; bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 12px; pointer-events: none; font-size: 12px; color: #cdd8e6; }
+.v2-tutorial[hidden], .v2-tutorial button[hidden] { display: none; }
+.v2-tutorial span { padding: 3px 10px; background: #111926e8; border-radius: 4px; }
+.v2-tutorial button { pointer-events: auto; border: 1px solid #63768b; border-radius: 4px; background: #172334; color: #e4ecf5; padding: 2px 9px; font: inherit; cursor: pointer; }
+.v2-tutorial [data-tutorial="claim"] { color: var(--v2-green); border-color: var(--v2-green); }
+#screen-battle-v2 .v2-tutorial { top: 80px; bottom: auto; }

@@ -1,4 +1,11 @@
 /* v2 동기 저장 통로. 저장을 막은 환경에서는 이번 실행의 메모리로 대체한다. */
+import { isMockCommerce } from './commerceDev_v2.js';
+import { productOf, CATALOG_VERSION, PASS_HOURS, AD_LIMITS } from './shopCatalog_v2.js';
+import { kstDayKey, kstWeekKey } from './kstTime_v2.js';
+import { validatePets } from './pets_v2.js';
+import { validateOffline } from './offlineReward_v2.js';
+import { validateTutorial } from './tutorial_v2.js';
+
 const memory = new Map();
 const listeners = new Set();
 const knownKeys = new Set(['mo_v2_save', 'mo_v2_settings', 'mo_v2_auto_skill']);
@@ -64,6 +71,9 @@ function checksum(text) {
 }
 
 export function exportSave() {
+    if (isMockCommerce()) throw new Error('시험 중에는 백업을 내보낼 수 없습니다. 새로고침하면 일반 진행으로 돌아갑니다.');
+    const progress = JSON.parse(load('mo_v2_save') || 'null');
+    if (progress?.commerce) validateCommerce(progress.commerce, false);
     const entries = {};
     backupKeys().forEach(key => {
         const value = load(key);
@@ -77,6 +87,62 @@ export function exportSave() {
 }
 
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+
+/** 선택 commerce 필드의 직접 로드·백업 공통 검사. 영수증·토큰 등 미지 필드도 거부한다. */
+export function validateCommerce(c, allowMock = isMockCommerce()) {
+    const fail = () => { throw new Error('상점 저장 데이터가 올바르지 않거나 시험 저장입니다.'); };
+    const uint = n => Number.isSafeInteger(n) && n >= 0;
+    const str = s => typeof s === 'string' && s.length > 0 && s.length <= 200 && !['__proto__', 'constructor', 'prototype'].includes(s);
+    const shape = (v, keys) => object(v) && Object.keys(v).length === keys.length && keys.every(k => Object.hasOwn(v, k));
+    const day = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s)
+        && Number.isFinite(Date.parse(s)) && new Date(s).toISOString().slice(0, 10) === s;
+    if (!object(c) || !shape(c, ['schema', 'permanents', 'weeklyPass', 'orders', 'dailyAds', 'weeklyPurchases', 'rewardClaims', 'lastSeenAt', 'mockSession',
+        ...(Object.hasOwn(c, 'pendingPets') ? ['pendingPets'] : [])])
+        || c.schema !== 1 || typeof c.mockSession !== 'boolean' || (!allowMock && c.mockSession)
+        || !uint(c.lastSeenAt) || !object(c.permanents) || !Array.isArray(c.orders) || !object(c.rewardClaims)
+        || (c.pendingPets !== undefined && !Array.isArray(c.pendingPets))) fail();
+    const ids = new Set();
+    for (const o of c.orders) {
+        if (!shape(o, ['requestId', 'orderId', 'productId', 'provider', 'environment', 'status', 'purchasedAt', 'appliedAt', 'catalogVersion', 'grant'])
+            || !str(o.requestId) || !str(o.orderId) || ids.has(o.orderId) || !productOf(o.productId)
+            || o.provider !== 'mock' || !allowMock || !c.mockSession || !['local', 'app-dev'].includes(o.environment)
+            || !['success', 'cancelled', 'failed', 'pending'].includes(o.status) || !uint(o.purchasedAt)
+            || !(o.appliedAt === null || uint(o.appliedAt)) || (o.appliedAt !== null && o.status !== 'success')
+            || o.catalogVersion !== CATALOG_VERSION || !object(o.grant)
+            || JSON.stringify(o.grant) !== JSON.stringify(productOf(o.productId).grant)) fail();
+        ids.add(o.orderId);
+    }
+    const source = (productId, provider, orderId) => c.orders.find(o => o.productId === productId && o.provider === provider
+        && o.orderId === orderId && o.status === 'success' && o.appliedAt !== null);
+    for (const [key, v] of Object.entries(c.permanents)) {
+        if (productOf(key)?.type !== 'permanent' || !shape(v, ['provider', 'orderId', 'purchasedAt'])
+            || !uint(v.purchasedAt) || !source(key, v.provider, v.orderId)) fail();
+    }
+    const p = c.weeklyPass;
+    if (p !== null && (!shape(p, ['productId', 'provider', 'orderId', 'startsAt', 'expiresAt', 'lastClaimDay', 'claimCount'])
+        || p.productId !== 'weekly_pass_7d' || !source(p.productId, p.provider, p.orderId)
+        || !uint(p.startsAt) || !uint(p.expiresAt) || p.expiresAt - p.startsAt !== PASS_HOURS * 3600000
+        || !uint(p.claimCount) || p.claimCount > 7 || (p.lastClaimDay !== null && !day(p.lastClaimDay))
+        || (p.claimCount === 0) !== (p.lastClaimDay === null))) fail();
+    for (const [key, value] of Object.entries(c.rewardClaims)) if (!str(key) || value !== true) fail();
+    for (const v of c.pendingPets || []) {
+        if (!shape(v, ['id', 'source', 'duplicateShards']) || v.id !== 'clockwork_keeper' || !str(v.source)
+            || ![0, 1].includes(v.duplicateShards)
+            || !c.orders.some(o => o.status === 'success' && o.appliedAt !== null
+                && ((o.productId === 'pet_clockwork_keeper' && v.source === o.orderId && v.duplicateShards === 0)
+                    || (o.productId === 'weekly_pass_7d' && v.source === `pass:${o.orderId}:7` && c.rewardClaims[v.source] && v.duplicateShards === 1)))) fail();
+    }
+    for (const [field, dateField, allowed, max] of [['dailyAds', 'dayKey', Object.keys(AD_LIMITS), 2],
+        ['weeklyPurchases', 'weekKey', ['supply_small', 'supply_medium'], 1]]) {
+        const v = c[field];
+        if (!shape(v, [dateField, 'counts']) || !object(v.counts) || !(v[dateField] === null || day(v[dateField]))
+            || (v[dateField] === null && Object.keys(v.counts).length)
+            || Object.entries(v.counts).some(([k, n]) => !allowed.includes(k) || !uint(n) || n > max)) fail();
+        if (field === 'weeklyPurchases' && v.weekKey && kstWeekKey(Date.parse(v.weekKey)) !== v.weekKey) fail();
+    }
+    if (c.dailyAds.dayKey && kstDayKey(c.lastSeenAt) < c.dailyAds.dayKey) fail();
+    return true;
+}
 
 function validate(entries) {
     if (!object(entries) || Object.entries(entries).some(([k, v]) => !k.startsWith('mo_v2_') || typeof v !== 'string')) {
@@ -97,6 +163,10 @@ function validate(entries) {
         }
     }
     if (data.v !== undefined && ![1, 2, 3].includes(data.v)) throw new Error('지원하지 않는 진행 저장 버전입니다.');
+    if (data.commerce !== undefined) validateCommerce(data.commerce);
+    if (data.pets !== undefined) validatePets(data.pets);
+    if (data.offline !== undefined) validateOffline(data.offline);
+    if (data.tutorial !== undefined) validateTutorial(data.tutorial);
     if (data.savedAt !== undefined && !Number.isFinite(data.savedAt)) throw new Error('저장 시간이 올바르지 않습니다.');
     if (data.saveId !== undefined && (typeof data.saveId !== 'string' || !data.saveId)) throw new Error('저장 식별자가 올바르지 않습니다.');
     for (const key of ['shards', 'cores', 'spentStars']) {

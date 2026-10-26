@@ -10,6 +10,7 @@ import { sound } from '../engine_v2/audio/sound_v2.js';
 import { progress, exportSave, importSave } from '../engine_v2/progress_v2.js';
 import { VERSION, BUILD } from '../version_v2.js';
 import { isApp, checkForUpdate } from './appUpdate_v2.js';
+import { commerceEnvironment, initCommerceDev, isMockCommerce } from '../engine_v2/commerceDev_v2.js';
 
 const SLIDERS = [
     { key: 'master', label: '전체 음량', preview: 'ui_click' },
@@ -49,6 +50,13 @@ export function openSettings() {
             </section>
             <section>
                 <h3>진행 데이터</h3>
+                <div class="v2-settings__row">
+                    <span>첫 성장 안내<small>진행과 보상 기록을 유지하며 안내를 볼 수 있어요</small></span>
+                    <div class="v2-settings__actions">
+                        <button class="v2-btn v2-btn--ghost" data-act="tutorial-replay">첫 성장 안내 다시 보기</button>
+                        <button class="v2-btn v2-btn--ghost" data-act="tutorial-resume">이어보기</button>
+                    </div>
+                </div>
                 <div class="v2-settings__row" data-row="backup">
                     <span>저장 백업<small data-out="backup" role="status">다른 기기로 옮길 코드를 보관하세요</small>
                         <textarea data-code="backup" aria-label="저장 백업 코드" rows="2" cols="16" readonly hidden></textarea>
@@ -82,6 +90,27 @@ export function openSettings() {
             </div>
         </div>`;
     document.body.appendChild(el);
+    if (commerceEnvironment().appDev) {
+        const section = document.createElement('section');
+        section.innerHTML = `<h3>개발판 시험</h3><div class="v2-settings__row"><span>결제·광고 시험<small>현재 진행을 메모리로 복사합니다. 새로고침하면 시험분은 사라집니다. 시험 중 백업 내보내기 불가.</small></span>
+            <button class="v2-switch ${isMockCommerce() ? 'is-on' : ''}" data-commerce-test role="switch" aria-checked="${isMockCommerce()}"><i></i></button></div>`;
+        el.querySelector('.v2-settings__panel').appendChild(section);
+        section.querySelector('[data-commerce-test]').addEventListener('click', e => {
+            if (isMockCommerce()) {
+                const url = new URL(location.href);
+                url.searchParams.delete('mockCommerce');
+                location.replace(url.href);
+                return;
+            }
+            progress.save();
+            if (!initCommerceDev({ explicit: true })) return;
+            progress.commerce.mockSession = true;
+            progress.save();
+            const btn = e.currentTarget;
+            btn.classList.add('is-on');
+            btn.setAttribute('aria-checked', 'true');
+        });
+    }
 
     const render = () => {
         el.querySelectorAll('input[data-key]').forEach(inp => {
@@ -131,6 +160,8 @@ export function openSettings() {
     };
     document.addEventListener('keydown', onKey, true);
     el.querySelector('[data-act="close"]').addEventListener('click', close);
+    el.querySelector('[data-act="tutorial-replay"]').addEventListener('click', () => { progress.replayTutorial(); close(); });
+    el.querySelector('[data-act="tutorial-resume"]').addEventListener('click', () => { progress.resumeTutorial(); close(); });
     el.querySelector('[data-act="copy-save"]').addEventListener('click', async () => {
         const out = el.querySelector('[data-out="backup"]');
         try {

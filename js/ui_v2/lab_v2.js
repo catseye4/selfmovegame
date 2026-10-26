@@ -23,6 +23,7 @@ import { rosterOf, characterOfPart, partsOfCharacter, partSetLabel } from '../en
 import { sound } from '../engine_v2/audio/sound_v2.js';
 import { icon, fillIcons } from './icons.js';
 import { openSettings } from './settingsPanel_v2.js';
+import { openProbInfo } from './probInfo_v2.js';
 import { gradeOf, SKILL_LEVEL } from '../engine_v2/growth_v2.js';
 import { gradeTag, optionText, resChipHtml } from './growthUi_v2.js';
 import { setOf, setIdOf, setCounts, setLabelOf, setBonusList, isDropOnly, SETS, SET_TIERS } from '../engine_v2/sets_v2.js';
@@ -86,6 +87,12 @@ export class LabController {
         fillIcons(this.root);
         const chip = this.root && this.root.querySelector('.v2-chip--dm');
         if (chip) chip.insertAdjacentHTML('afterbegin', icon('gem', 18));
+        const probability = document.createElement('button');
+        probability.id = 'btn-lab-prob-info-v2';
+        probability.className = 'v2-btn v2-btn--ghost';
+        probability.textContent = '확률 정보';
+        probability.addEventListener('click', openProbInfo);
+        $('btn-lab-settings-v2')?.before(probability);
         this.initEvents();
     }
 
@@ -110,9 +117,11 @@ export class LabController {
         });
 
         this.btnEquip?.addEventListener('click', () => {
+            const changed = Object.keys(gameState.cartParts).filter(slot => gameState.cartParts[slot] !== gameState.equippedParts[slot]);
             const res = progress.confirmCart();
             sound.play(res.success ? 'ui_equip' : 'ui_error');
             if (res.success) {
+                if (!res.cost && changed.length) progress.tutorialGrowth(gameState.equippedParts[changed[0]], true);
                 this.showNotification(res.cost ? `개조 완료! (구매 -${res.cost.toLocaleString()} DM)` : '개조 완료!', 'success');
                 this.refresh();
             } else {
@@ -150,6 +159,7 @@ export class LabController {
             const res = progress.upgrade(id);
             sound.play(res.success ? 'ui_equip' : 'ui_error');
             if (res.success) {
+                progress.tutorialGrowth(id, true);
                 this.showNotification(`강화 성공! Lv${res.level} (-${res.cost.toLocaleString()} DM)`, 'success');
                 const box = $('lab-upgrade-v2');
                 box.classList.remove('is-flash');
@@ -245,6 +255,7 @@ export class LabController {
                 </div>`;
             card.addEventListener('click', () => {
                 gameState.selectCartPart(slot, part.id);
+                progress.tutorialCompare(part.id);
                 const sid = setIdOf(part);
                 if (sid) this.lastSet = sid;
                 this.renderPartsGrid();
@@ -292,13 +303,16 @@ export class LabController {
                 <div class="v2-setrow__parts">${cells}</div>
                 <ul class="v2-setrow__bonus">${bonus}</ul>`;
             row.querySelector('.v2-setrow__take').addEventListener('click', () => {
-                parts.forEach((p, i) => { if (p) gameState.selectCartPart(SLOTS4[i], p.id); });
+                parts.forEach((p, i) => {
+                    if (p) { gameState.selectCartPart(SLOTS4[i], p.id); progress.tutorialCompare(p.id); }
+                });
                 this.lastSet = sid;
                 sound.play('ui_click');
                 this.refresh();
             });
             row.querySelectorAll('.v2-setrow__part[data-id]').forEach(b => b.addEventListener('click', () => {
                 gameState.selectCartPart(b.dataset.slot, b.dataset.id);
+                progress.tutorialCompare(b.dataset.id);
                 this.lastSet = sid;
                 sound.play('ui_click');
                 this.refresh();
