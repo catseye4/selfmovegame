@@ -101,7 +101,7 @@ export class VfxPlayer {
         const s = opts.scale || 1;
         for (const layer of def.layers) {
             this.items.push({ ...layer, t: -(layer.at || 0), x, y, s, follow: opts.follow || null,
-                to: opts.to || null, started: false });
+                to: opts.to || null, started: false, owner: opts.owner });
         }
         if (def.sfx && this.onSfx) this.onSfx(def.sfx);
     }
@@ -113,6 +113,12 @@ export class VfxPlayer {
         }
         this.persistent.set(key, { ...layer, follow, s: scale, t: 0, pulse: 0, open: 0, emit: 0,
             targets: opts.targets || null, targetList: [], grips: new Map() });
+    }
+
+    removeOwner(owner) {
+        this.items = this.items.filter(it => it.owner !== owner);
+        this.parts = this.parts.filter(p => p.owner !== owner);
+        this.projectiles = this.projectiles.filter(pr => pr.owner !== owner);
     }
 
     pulse(key) {
@@ -163,7 +169,9 @@ export class VfxPlayer {
             it.t += dt;
             if (!it.started && it.t >= 0) {
                 it.started = true;
+                const first = this.parts.length;
                 this._burst(it);
+                if (it.owner) for (let i = first; i < this.parts.length; i++) this.parts[i].owner = it.owner;
             }
         }
         this.items = this.items.filter(it => it.t < (it.dur || 0) || !it.started);
@@ -205,7 +213,7 @@ export class VfxPlayer {
                     for (let i = 0; i < 2 && this.parts.length < MAX_PARTS; i++) {
                         this.parts.push({ kind: 'goo', x: p.x, y: p.y - p.r * 0.3, floor: p.floor,
                             vx: (i ? 1 : -1) * (25 + this.rand() * 35) * p.s, vy: -(40 + this.rand() * 45) * p.s,
-                            g: 650 * p.s, drag: 1.8, t: 0, dur: 0.3, r: p.r * 0.28, s: p.s, color: p.color, splat: false });
+                            g: 650 * p.s, drag: 1.8, t: 0, dur: 0.3, r: p.r * 0.28, s: p.s, color: p.color, splat: false, owner: p.owner });
                     }
                 } else p.t = p.dur;
             }
@@ -213,7 +221,16 @@ export class VfxPlayer {
         this.parts = this.parts.filter(p => p.t < p.dur);
         if (this.parts.length > MAX_PARTS) this.parts.splice(0, this.parts.length - MAX_PARTS);
 
-        for (const pr of this.projectiles) this._updateProjectile(pr, dt);
+        for (const pr of this.projectiles) {
+            if (pr.owner && !this.projectiles.includes(pr)) continue;
+            const first = this.parts.length;
+            this._updateProjectile(pr, dt);
+            if (pr.owner) {
+                for (let i = first; i < this.parts.length; i++) this.parts[i].owner = pr.owner;
+                // 적중 처리 중 철수/승리가 시작됐다면 방금 생긴 꼬리 입자도 제거한다.
+                if (!this.projectiles.includes(pr)) this.removeOwner(pr.owner);
+            }
+        }
         this.projectiles = this.projectiles.filter(pr => !pr.done);
         if (this.parts.length > MAX_PARTS) this.parts.splice(0, this.parts.length - MAX_PARTS);
     }
@@ -422,7 +439,7 @@ export class VfxPlayer {
                 this.play({ layers: [
                     { type: 'flash', at: 0, dur: 0.15, r: 26, color: pr.color },
                     { type: 'smoke', at: 0, count: 5, spread: 12, spreadY: pr.h * 0.4, size: 16, life: [0.4, 0.7], color: pr.mist || '60, 15, 95' }
-                ] }, pr.x, pr.y, { scale: pr.scale });
+                ] }, pr.x, pr.y, { scale: pr.scale, owner: pr.owner });
                 if (pr.onEnd) pr.onEnd();
             }
         } else if (pr.kind === 'orb') {

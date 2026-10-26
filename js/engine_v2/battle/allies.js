@@ -1,3 +1,4 @@
+import { SUPPORT } from '../support_v2.js';
 /* ==========================================================================
    PROJECT: MAD OVERLORD // 전투 — 아군 (v2)
    소환·징집되는 아군 미니언: 세뇌 보병(타락 히어로), 새끼 괴수(거대괴수 산란), 졸개(합성괴인 몸통).
@@ -118,7 +119,7 @@ export const AllyMethods = {
                 ally.dom.classList.toggle('is-attacking', fighting);
             }
             if (fighting) {
-                if (!ally.supportOwner || this.support?.active?.elapsed < 4.5) {
+                if (!ally.supportOwner || this.support?.active?.elapsed < SUPPORT.exitAt) {
                     const mul = ally.supportOwner ? 1 : this.allyDmgMul() * this.supportAttackMul();
                     this.dealDamageToEnemy(closestEnemyToAlly, ally.dps * mul * dt, false,
                         { dot: true, source: ally.supportOwner ? 'support' : 'ally', supportGear: ally.supportGear });

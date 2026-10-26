@@ -266,7 +266,7 @@ export class BattleFx {
 
     _explode(d) {
         d.done = true;
-        this.play(MECH_VFX.droneBlast, d.x, d.b);
+        this.play(MECH_VFX.droneBlast, d.x, d.b, { owner: d.owner });
         if (d.onHit) d.onHit({ x: d.x, b: d.b });
     }
 

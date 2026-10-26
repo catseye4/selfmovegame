@@ -486,7 +486,7 @@ export class BattleEngine {
         this.tickGrowth(dt);             // growth.js (방벽 발생기 면역 시간)
         this.tickArtillery(dt);          // enemyField.js
         this.tickSpawning(dt);           // enemyField.js
-        this.tickSupport(dt);            // 독립 시전자, 5초 게임 시간, 자동 호출
+        this.tickSupport(dt);            // 독립 시전자, 10초 게임 시간·궁극기 2회, 자동 호출
 
         const frontX = this.frontX();    // 이번 프레임의 주인공 앞면 (진격으로 움직이기 전 값을 끝까지 씀)
         this.tickFactionPassives(dt, frontX);   // player.js

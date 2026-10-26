@@ -1,12 +1,15 @@
 // D-069: 내 캐릭터 협력 출격. 편성/저장 규칙은 전투·화면이 함께 사용한다.
 import { PARTS_DB } from '../data/parts.js';
-import { ROSTER, SLOTS, characterOfPart } from './roster_v2.js';
-import { skillsForParts } from './skills_v2.js';
+import { ROSTER, SLOTS, characterOfPart, rosterOf, partsOfCharacter } from './roster_v2.js';
+import { skillsForParts, SKILLS, PART_SKILL } from './skills_v2.js';
+import { RIG_CHARACTERS } from './rig/characters.js';
 
 export const SUPPORT = Object.freeze({
-    cooldown: 30, // D-075: 첫 충전과 반복 재충전 시간.
+    cooldown: 40, // 첫 충전·재충전. 계정 연구로 최대 9초 단축.
     actorFront: 60, meleeGap: 80, dashSec: 0.22, dashRange: 260,
-    duration: 5, enter: 0.4, attackAt: 1.5, exitAt: 4.5, attacksEvery: 0.65,
+    duration: 10, enter: 0.4, ultimateTimes: [0.4, 5.4], castDuration: 1.5,
+    attackAt: 1.9, exitAt: 9.5, attacksEvery: 0.65,
+    basicFxScale: 1.5, // 일반 공격 가독성만 확대. 피해·주기·사거리에는 적용하지 않는다.
     damage: 0.55, ultimate: 1.6, baseDamage: 0.65, synergy: 0.15,
     shield: 0.08, bossShield: 0.12, shieldCap: 0.12, shatter: 0.45,
     range: 520, maxTargets: 6, autoHealth: 0.4, autoCrowd: 4
@@ -35,12 +38,39 @@ export const SUPPORT_UNITS = {
         effect: '일반 적을 1.5초 빙결 후 파쇄. 주인공 첫 타격에 추가 파쇄 1회. 보스·거점에는 추가 피해 표식.', partners: ['kaiju', 'chimera'] },
     doll: { role: '교란 · 방어 약화', ult: '인형 실', skill: 'puppetStrings', clip: 'strings', icon: 'puppet',
         brief: '적 조종 · 방어 25% 무시',
-        effect: '일반 적 최대 4기를 3초 조종. 표식 대상에게 주인공 공격이 방어 25% 무시. 보스·거점에는 방어 약화.', partners: ['mech', 'hero'] }
+        effect: '일반 적 최대 4기를 3초 조종. 표식 대상에게 주인공 공격이 방어 25% 무시. 보스·거점에는 방어 약화.', partners: ['mech', 'hero'] },
+    architect: { role: '거점 철거', ult: '철거 명령', skill: 'arDemolish', clip: 'cast', icon: 'hammer',
+        brief: '철구 3연타 · 거점 피해 3배',
+        effect: '크레인 철구를 세 번 내리쳐 최대 6명을 공격. 거점에 주는 지원 궁극기 피해 3배.',
+        partners: [], volley: 3, buildingMul: 3 },
+    broadcaster: { role: '침묵 · 광역 화력', ult: '긴급 방송', skill: 'bcEmergency', clip: 'cast', icon: 'speaker',
+        brief: '음파 3연타 · 기술 침묵',
+        effect: '음파 폭발 세 번으로 최대 6명을 공격. 일반 적은 4초, 보스는 2초 침묵. 거점에는 피해만 적용.',
+        partners: [], volley: 3, silence: 4 }
 };
+
+/** ROSTER가 목록의 원천. 새 캐릭터는 머리의 기본 기술에서 협력 화력·연출을 자동 구성한다.
+ * 특화 효과는 선택 사항이며, 별도 협력 정의가 없다는 이유로 캐릭터를 숨기지 않는다. */
+export function supportUnitOf(id) {
+    const character = rosterOf(id);
+    if (!character) return null;
+    const head = partsOfCharacter(id, 'head')[0];
+    const skillId = SUPPORT_UNITS[id]?.skill || PART_SKILL[head?.id];
+    const skill = SKILLS[skillId];
+    const visuals = skill?.steps?.filter(step => step.vfx?.layers) || [];
+    const vfx = visuals.find(step => step.dmg > 0 && step.vfx.layers.some(layer => layer.type === 'sprite'))?.vfx
+        || visuals.find(step => step.vfx.layers.some(layer => layer.type === 'sprite'))?.vfx || visuals[0]?.vfx;
+    return { role: '협력 화력', ult: skill?.name || '협력 강타', skill: skillId,
+        clip: skill?.clip || 'attack', icon: skill?.icon || 'fist', partners: [],
+        brief: '대표 기술 연출 · 광역 지원 공격',
+        effect: '대표 기술의 연출로 최대 6명에게 협력 강타. 지원 전용 위력을 사용하며 출격 중 두 번 발동합니다.',
+        volley: SUPPORT_UNITS[id] ? 0 : 1, ...SUPPORT_UNITS[id], ...character.support, vfx: character.support?.vfx || vfx };
+}
 
 export const SupportProgressMethods = {
     supportReason(id, main = this.character) {
-        if (!SUPPORT_UNITS[id]) return '없는 캐릭터';
+        if (!rosterOf(id)) return '없는 캐릭터';
+        if (!RIG_CHARACTERS[id]) return '캐릭터 리그 준비 필요';
         if (id === main) return '현재 출전 캐릭터';
         if (!this.isCharacterUnlocked(id)) return '캐릭터 해금 필요';
         if (this.isDispatched(id)) return '파견 중';
@@ -61,6 +91,12 @@ export const SupportProgressMethods = {
         this.save();
         return true;
     },
+    clearSupportIfMain() {
+        if (!this.supportCharacter || this.supportCharacter !== this.character) return false;
+        this.supportCharacter = null;
+        this.supportRandom = false;
+        return true;
+    },
     randomSupport(random = Math.random) {
         const list = this.supportCandidates();
         if (!list.length) return false;
@@ -74,6 +110,9 @@ export const SupportProgressMethods = {
         this.supportAuto = !!on;
         this.save();
     },
+    supportCooldown() {
+        return SUPPORT.cooldown - Math.min(9, Math.max(0, this.researchBonus('supportCooldown')));
+    },
     supportSnapshot(main = this.character) {
         const id = this.supportCharacter;
         if (!id || this.supportReason(id, main)) return null;
@@ -81,14 +120,14 @@ export const SupportProgressMethods = {
         // 출격 시점의 독립 복사본. 주인공의 장착/스킬은 바꾸지 않는다.
         const parts = Object.fromEntries(SLOTS.map(s => [s, structuredClone(PARTS_DB[s].find(p => p.id === ids[s]))]));
         const sk = skillsForParts(parts).head;
-        const skillLevel = this.skillLevel(sk?.id || SUPPORT_UNITS[id].skill);
+        const skillLevel = this.skillLevel(sk?.id || supportUnitOf(id).skill);
         return { id, parts, stats: { ...this.statsFor(parts) }, gear: { ...this.gearTotals(parts) },
-            skillLevel, auto: !!this.supportAuto, random: !!this.supportRandom };
+            skillLevel, cooldown: this.supportCooldown(), auto: !!this.supportAuto, random: !!this.supportRandom };
     }
 };
 
 export function supportPairText(id, main) {
-    const unit = SUPPORT_UNITS[id];
+    const unit = supportUnitOf(id);
     if (!unit) return '지원 캐릭터를 편성하세요';
     return `${unit.partners.includes(main) ? '추천 연계 · ' : ''}${unit.effect}`;
 }

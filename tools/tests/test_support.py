@@ -5,6 +5,7 @@ const { ROSTER } = await import('/js/engine_v2/roster_v2.js');
 progress.unlockedChars = ROSTER.map(c => c.id);
 for (const list of Object.values(PARTS_DB)) for (const p of list) progress.owned.add(p.id);
 progress.dispatch = [];
+progress.research.supportCooldown = 0;
 """
 
 
@@ -53,7 +54,7 @@ def run(ctx):
     g.reload_v2()
     ctx.check(g.js("return progress.supportCharacter !== null && progress.supportAuto && progress.supportRandom;"), '새로고침 후 지원 편성·자동·랜덤 결과 유지')
     g.page.click('#btn-menu-coop-v2')
-    ctx.check(g.page.locator('.v2-coop-card').count() == 8, '편성 창: 8종 역할·필살기·시너지 카드')
+    ctx.check(g.page.locator('.v2-coop-card').count() == 10, '편성 창: 10종 역할·필살기·시너지 카드')
     g.shot('support_selection')
     g.page.click('[data-act="selectSupport"][data-id="diver"]')
     g.page.click('[data-act="close"]')
@@ -89,13 +90,13 @@ def run(ctx):
     g.wait(250)
     g.shot('support_battle', '#screen-battle-v2')
     st = g.js("""b.tickSupport(0); const elapsed = b.support.active.elapsed;
-        b.tickSupport(3.9); const alive = !!b.support.active;
+        b.tickSupport(8.9); const alive = !!b.support.active;
         b.tickSupport(0.61);
         return { elapsed, alive, gone: !b.support.active, marks: document.querySelectorAll('.v2-support-mark').length,
             actors: document.querySelectorAll('.v2-support-actor').length, ready: b.supportStatus().ready };
     """)
     ctx.check(st['elapsed'] == 0.5 and st['alive'] and st['gone'] and not st['marks'] and not st['actors'] and not st['ready'],
-              '5초 철수: 효과·외형 제거, 재충전 중 호출 불가', str(st))
+              '10초 철수: 효과·외형 제거, 재충전 중 호출 불가', str(st))
 
     for unit in ('mech', 'kaiju', 'hero', 'chimera', 'diver', 'saint', 'frost', 'doll'):
         setup(g, unit, main='hero' if unit == 'mech' else 'mech')
@@ -136,7 +137,7 @@ def run(ctx):
     st = g.js("""b.support.auto = true; b.stats.time = 10; b.tickSupport(0.1); const saved = b.support.cooldown;
         b.enemies[0].boss = true; b.tickSupport(0.1); return { saved, called: !!b.support.active, cooldown: b.support.cooldown };
     """)
-    ctx.check(st['saved'] == 0 and st['called'] and st['cooldown'] == 30, '지원 AUTO: 일반 적 1명에는 보존, 보스 때 호출')
+    ctx.check(st['saved'] == 0 and st['called'] and st['cooldown'] == 40, '지원 AUTO: 일반 적 1명에는 보존, 보스 때 호출')
     st = g.js("""b.stopBattle(); return { actors: document.querySelectorAll('.v2-support-actor').length,
         marks: document.querySelectorAll('.v2-support-mark').length, active: b.support.active, shield: b.supportShield };
     """)
@@ -149,9 +150,9 @@ def run(ctx):
     setup(g, 'chimera', enemies=1)
     st = g.js("""b.callSupport(); b.tickSupport(0.5); b.timeUp = true; b.clearSupport();
         b.startBattle(); cancelAnimationFrame(b.loopId); b.director.clear();
-        return b.support.cooldown === 30 && !b.support.active && m.rigBattle.supportAttackSpeed === 1;
+        return b.support.cooldown === 40 && !b.support.active && m.rigBattle.supportAttackSpeed === 1;
     """)
-    ctx.check(st, '재시작: 첫 충전 30초·공격속도·남은 효과 초기화')
+    ctx.check(st, '재시작: 첫 충전 40초·공격속도·남은 효과 초기화')
     setup(g, 'diver', enemies=1)
     st = g.js("""progress.dispatch = [{ character: 'diver' }]; b.startBattle();
         cancelAnimationFrame(b.loopId); b.director.clear();
@@ -223,7 +224,7 @@ def run(ctx):
     g.wait(700)
     ctx.check(g.js('return b.support.active && b.support.active.elapsed > 1.8;'), '실제 2배속: 게임 시간 기준으로 지원 진행')
     g.shot('support_live', '#screen-battle-v2')
-    g.wait(1800)
+    g.wait(4300)
     ctx.check(g.js("return !b.support.active && b.support.cooldown > 0 && !document.querySelector('.v2-support-actor');"),
-              '실제 루프: 2배속 약 2.5초 출격 후 철수')
+              '실제 루프: 2배속 약 5초 출격 후 철수')
     g.js('b.stopBattle();')

@@ -1,4 +1,4 @@
-"""D-070·D-075: 30초 반복 충전, 근접 배치, 반복 소유 수명."""
+"""D-070·D-075: 40초 반복 충전, 근접 배치, 반복 소유 수명."""
 from test_support import setup
 
 
@@ -9,8 +9,8 @@ def run(ctx):
     st = g.js("""const initial = b.supportStatus(); b.callSupport(); const first = b.support.active;
         const used = b.supportStatus(); b.tickSupport(.5); b.supportHit(first, b.enemies[0], 1000);
         const firstDamage = b.stats.supportDamage;
-        b.tickSupport(4.5); const afterExit = b.supportStatus();
-        b.tickSupport(24.9); const early = b.callSupport();
+        b.tickSupport(9.5); const afterExit = b.supportStatus();
+        b.tickSupport(29.9); const early = b.callSupport();
         const almost = b.supportStatus(); b.tickSupport(.1); const full = b.supportStatus();
         const again = b.callSupport(); const second = b.support.active;
         const hp = b.enemies[0].hp; b.supportHit(first, b.enemies[0], 10000);
@@ -22,13 +22,13 @@ def run(ctx):
             accumulated: firstDamage > 0 && totalBefore >= firstDamage && b.stats.supportDamage > totalBefore && hp2 > b.enemies[0].hp,
             actors: document.querySelectorAll('.v2-support-actor').length };
     """)
-    ctx.check(st['initial']['ready'] and st['initial']['charge'] == 1 and st['used']['cooldown'] == 30 and st['used']['charge'] == 0,
-              '충전 완료 후 호출 즉시 소진·30초 재충전', str(st))
-    ctx.check(st['afterExit']['cooldown'] == 25 and not st['early'] and not st['almost']['ready'] and st['full']['ready'] and st['full']['time'] == 0,
-              '출격 중 충전, 29.9초 거부·30초 재호출 준비', str(st))
+    ctx.check(st['initial']['ready'] and st['initial']['charge'] == 1 and st['used']['cooldown'] == 40 and st['used']['charge'] == 0,
+              '충전 완료 후 호출 즉시 소진·40초 재충전', str(st))
+    ctx.check(st['afterExit']['cooldown'] == 30 and not st['early'] and not st['almost']['ready'] and st['full']['ready'] and st['full']['time'] == 0,
+              '출격 중 충전, 39.9초 거부·40초 재호출 준비', str(st))
     ctx.check(st['again'] and st['different'] and st['stale'] and st['calls'] == 2 and st['accumulated'] and st['actors'] == 1,
               '반복 호출: 서로 다른 효과 소유자·과거 공격 무효·누적 피해 유지·본체 1명', str(st))
-    st = g.js("""b.tickSupport(5); b.tickSupport(400);
+    st = g.js("""b.tickSupport(10); b.tickSupport(400);
         const full = b.supportStatus(); const first = b.callSupport(), second = b.callSupport();
         return { full, first, second, charge: b.supportStatus().charge };
     """)
@@ -38,7 +38,7 @@ def run(ctx):
     setup(g, 'diver', enemies=1)
     st = g.js("""const e = b.enemies[0]; e.boss = true; b.support.auto = true; b.stats.time = 10;
         b.tickSupport(.1); const first = b.support.active.owner;
-        b.tickSupport(5); b.tickSupport(24.9); const early = b.stats.supportCalls;
+        b.tickSupport(10); b.tickSupport(29.9); const early = b.stats.supportCalls;
         b.tickSupport(.1);
         return { early, again: !!b.support.active, different: b.support.active?.owner !== first, calls: b.stats.supportCalls };
     """)
@@ -50,7 +50,7 @@ def run(ctx):
         setup(g, char, main=main, enemies=1)
         st = g.js("""const e = b.enemies[0]; e.x = b.frontX() + 480; e.dom.style.left = e.x + 'px'; e.boss = true;
             b.callSupport(); const a = b.support.active; const near = b.supportInRange(a, e), x = a.x;
-            b.tickSupport(.5); const hp = e.hp; b.tickSupport(1.01);
+            b.tickSupport(.5); const hp = e.hp; b.tickSupport(1.51);
             return { melee: a.melee, near, x, main: b.monsterX, basic: e.hp < hp, elapsed: a.elapsed };
         """)
         ctx.check(st['melee'] and st['near'] and st['x'] > st['main'] + 180 and st['basic'],
@@ -71,7 +71,7 @@ def run(ctx):
         b.spawnMinion('guard', { x: wall.x + 100, elite: false });
         b.callSupport(); const a = b.support.active;
         const front = a.x + 60, near = b.supportInRange(a, wall);
-        b.tickSupport(.5); const hp = wall.hp; b.tickSupport(1.01);
+        b.tickSupport(.5); const hp = wall.hp; b.tickSupport(1.51);
         return { front, wall: wall.x, near, basic: wall.hp < hp };
     """)
     ctx.check(st['front'] < st['wall'] and st['near'] and st['basic'], '거점 앞에서 소환·공격, 뒤쪽 적에게 방벽 넘어 소환하지 않음', str(st))
@@ -103,7 +103,7 @@ def run(ctx):
     setup(g, 'mech', main='hero', enemies=1)
     st = g.js("""b.callSupport(); const first = b.support.active; b.tickSupport(.5);
         const owner = first.owner, made = b.fx.drones.filter(d => d.owner === owner).length;
-        b.tickSupport(4.5); const left = b.fx.drones.filter(d => d.owner === owner).length;
+        b.tickSupport(9.5); const left = b.fx.drones.filter(d => d.owner === owner).length;
         b.tickSupport(40); const again = b.callSupport(); b.tickSupport(.5);
         return { made, left, again, onlyNew: b.fx.drones.every(d => d.owner === b.support.active.owner) };
     """)
@@ -113,7 +113,7 @@ def run(ctx):
     setup(g, 'saint', enemies=3)
     st = g.js("""b.spawnAllyMinion(b.monsterX, 'chimera'); const own = b.allies[b.allies.length - 1];
         b.callSupport(); b.tickSupport(.5); const first = b.support.active.owner;
-        b.tickSupport(4.5); const cleaned = b.allies.includes(own) && !own.supportShield && !b.allies.some(a => a.supportOwner);
+        b.tickSupport(9.5); const cleaned = b.allies.includes(own) && !own.supportShield && !b.allies.some(a => a.supportOwner);
         b.tickSupport(40); b.spawnMinion('guard', { x: b.monsterX + 180, elite: false });
         b.callSupport(); b.tickSupport(.5);
         return { cleaned, shield: b.supportShield, different: b.support.active.owner !== first,
@@ -144,5 +144,5 @@ def run(ctx):
               '충전 완료 시 게이지·남은 시간·호출 버튼 표시 갱신', str(st))
     g.key('q')
     g.wait(100)
-    ctx.check(g.js('return !!b.support.active && b.support.cooldown > 29;'), '재충전 후 실제 Q 키로 호출')
+    ctx.check(g.js('return !!b.support.active && b.support.cooldown > 39;'), '재충전 후 실제 Q 키로 호출')
     g.js('b.stopBattle();')

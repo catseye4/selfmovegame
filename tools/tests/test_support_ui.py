@@ -20,14 +20,14 @@ def run(ctx):
     g.enter_v2()
     setup(g, 'frost', enemies=1, charged=False)
     st = hud(g)
-    ctx.check(st['cooldown'] == 30 and st['charge'] == 0 and st['disabled'] and st['pct'] == 0 and st['num'] == '30',
-              '전투 시작: 첫 호출 30초 충전·빈 게이지·버튼 사용 불가', str(st))
+    ctx.check(st['cooldown'] == 40 and st['charge'] == 0 and st['disabled'] and st['pct'] == 0 and st['num'] == '40',
+              '전투 시작: 첫 호출 40초 충전·빈 게이지·버튼 사용 불가', str(st))
     ctx.check(g.page.locator('#v2-support-brief').is_visible()
               and g.page.locator('.v2-support-summary').is_visible()
               and g.page.locator('.v2-support-auto').is_visible(),
               '평상시 초상화·이름·충전·자동 상태와 효과 한 줄 표시')
     g.key('q')
-    ctx.check(g.js('return b.stats.supportCalls === 0 && !b.support.active && b.support.cooldown === 30;'),
+    ctx.check(g.js('return b.stats.supportCalls === 0 && !b.support.active && b.support.cooldown === 40;'),
               '전투 시작 직후 Q로도 호출할 수 없음')
     g.shot('support_ui_initial', '#screen-battle-v2')
 
@@ -35,7 +35,7 @@ def run(ctx):
     st = hud(g)
     detail = g.page.locator('.v2-support-detail').inner_text()
     ctx.check(not st['hidden'] and st['expanded'] == 'true' and '영원한 안식' in detail and '보스·거점' in detail
-              and '첫 호출 30초 충전' in detail and st['calls'] == 0 and st['cooldown'] == 30,
+              and '첫 호출 40초 충전' in detail and st['calls'] == 0 and st['cooldown'] == 40,
               '충전 중에도 효과 상세 열기: 필살기·시너지·보스 예외·충전 규칙 표시, 호출하지 않음', detail)
     ctx.check(g.page.locator('.v2-support-detail .v2-support-brief').is_visible()
               and not g.page.locator('.v2-support-summary').is_visible()
@@ -53,40 +53,40 @@ def run(ctx):
     g.page.locator('#screen-battle-v2').click(position={'x': 620, 'y': 400})
     ctx.check(hud(g)['hidden'], '전장 바깥 클릭 입력으로 효과 상세 닫기')
 
-    g.js('b.tickSupport(15);')
+    g.js('b.tickSupport(20);')
     st = hud(g)
-    ctx.check(st['disabled'] and st['pct'] == 50 and st['cd'] == .5 and st['num'] == '15',
-              '첫 충전 절반: 부채꼴 게이지 50%·남은 15초 표시', str(st))
-    ctx.check(st['text'] == '첫 충전' and '15초' in st['label'],
+    ctx.check(st['disabled'] and st['pct'] == 50 and st['cd'] == .5 and st['num'] == '20',
+              '첫 충전 절반: 부채꼴 게이지 50%·남은 20초 표시', str(st))
+    ctx.check(st['text'] == '첫 충전' and '20초' in st['label'],
               '초 카운트는 버튼에만 표시, 상태는 간략 문구·접근성 설명은 남은 시간 유지', str(st))
     g.shot('support_ui_half', '#screen-battle-v2')
     g.js('gameTime.paused = true; b.tickSupport(10);')
-    ctx.check(hud(g)['cooldown'] == 15, '첫 충전도 일시정지 중에는 흐르지 않음')
-    g.js('gameTime.paused = false; b.tickSupport(14.9);')
+    ctx.check(hud(g)['cooldown'] == 20, '첫 충전도 일시정지 중에는 흐르지 않음')
+    g.js('gameTime.paused = false; b.tickSupport(19.9);')
     g.key('q')
-    ctx.check(hud(g)['disabled'] and hud(g)['calls'] == 0, '첫 충전 29.9초에는 호출 거부')
+    ctx.check(hud(g)['disabled'] and hud(g)['calls'] == 0, '첫 충전 39.9초에는 호출 거부')
     g.js('b.tickSupport(.1);')
     st = hud(g)
     ctx.check(st['ready'] and not st['disabled'] and st['pct'] == 100 and st['cd'] == 0 and st['num'] == '',
-              '첫 충전 30초: 남은 시간 제거·게이지 완료·호출 활성화', str(st))
+              '첫 충전 40초: 남은 시간 제거·게이지 완료·호출 활성화', str(st))
     g.shot('support_ui_ready', '#screen-battle-v2')
     g.page.click('.v2-support-call')
     st = hud(g)
-    ctx.check(st['time'] == 5 and st['calls'] == 1 and st['disabled'] and st['pct'] == 0 and st['num'] == '30'
+    ctx.check(st['time'] == 10 and st['calls'] == 1 and st['disabled'] and st['pct'] == 0 and st['num'] == '40'
               and '지원 중' in st['text'], '충전 후 초상화 클릭: 실제 출격·지원 시간·재충전 동시 표시', str(st))
     g.shot('support_ui_active', '#screen-battle-v2')
-    g.js('b.tickSupport(5);')
-    ctx.check(hud(g)['text'] == '재충전' and hud(g)['num'] == '25', '5초 철수 후 재충전 25초 남음, 초는 버튼 안에 표시')
+    g.js('b.tickSupport(10);')
+    ctx.check(hud(g)['text'] == '재충전' and hud(g)['num'] == '30', '10초 철수 후 재충전 30초 남음, 초는 버튼 안에 표시')
 
     setup(g, 'diver', enemies=1, charged=False)
     st = g.js("""b.support.auto = true; b.enemies[0].boss = true; b.stats.time = 30;
-        b.tickSupport(29.9); const early = b.stats.supportCalls;
+        b.tickSupport(39.9); const early = b.stats.supportCalls;
         b.tickSupport(.1); return { early, calls: b.stats.supportCalls, active: !!b.support.active };
     """)
     ctx.check(st['early'] == 0 and st['calls'] == 1 and st['active'],
               '지원 AUTO도 첫 충전 완료까지 기다리고, 완료 후 보스를 보고 호출', str(st))
 
-    for char in ('mech', 'kaiju', 'hero', 'chimera', 'diver', 'saint', 'frost', 'doll'):
+    for char in ('mech', 'kaiju', 'hero', 'chimera', 'diver', 'saint', 'frost', 'doll', 'architect', 'broadcaster'):
         setup(g, char, main='hero' if char == 'mech' else 'mech', enemies=1, charged=False)
         st = g.js("""const brief = document.querySelector('.v2-support-preview');
             const { SUPPORT_UNITS } = await import('/js/engine_v2/support_v2.js');
@@ -110,7 +110,7 @@ def run(ctx):
     # 정보창을 열어둔 상태에서 전투 종료/재시작해도 이전 창·입력이 남지 않는다.
     g.js('b.stopBattle(); b.startBattle(); cancelAnimationFrame(b.loopId); b.director.clear(); b.cinematic = false;')
     st = hud(g)
-    ctx.check(st['hidden'] and st['expanded'] == 'false' and st['cooldown'] == 30 and st['pct'] == 0
+    ctx.check(st['hidden'] and st['expanded'] == 'false' and st['cooldown'] == 40 and st['pct'] == 0
               and g.page.locator('.v2-support-hud').count() == 1, '재시작: 빈 게이지·상세창 닫힘·HUD 1개', str(st))
     g.key('Escape')
     ctx.check(g.js('return gameTime.paused;'), '상세창이 닫힌 뒤 Escape 일시정지 유지')

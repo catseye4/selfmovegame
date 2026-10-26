@@ -450,7 +450,7 @@ export function updateEnemy(b, e, dt, frontX) {
     const slowMul = e.slowT > 0 ? 0.5 : 1;
     const dist = e.x - frontX;
     // 침묵 (침묵의 방송자, battle/kit.js kitStatus): 원거리·치유·바리케이드·특수 공격·보스 기술을 못 씀 — 걷고 근접으로 때리기만
-    const silenced = e.kitSilenceT > 0;
+    const silenced = e.kitSilenceT > 0 || b.supportSilenced?.(e);
 
     // 수호의 결계: 거리·아군과의 교전 여부와 상관없이 주기마다 금빛 방벽
     if (t.barrier && !silenced) {

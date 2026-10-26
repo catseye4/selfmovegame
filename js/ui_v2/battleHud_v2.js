@@ -17,7 +17,7 @@ import { sound } from '../engine_v2/audio/sound_v2.js';
 import { openSettings } from './settingsPanel_v2.js';
 import { coach } from './coach_v2.js';
 import { difficultyOf, difficultyOfStage } from '../engine_v2/difficulty_v2.js';
-import { SUPPORT, SUPPORT_UNITS } from '../engine_v2/support_v2.js';
+import { SUPPORT, supportUnitOf } from '../engine_v2/support_v2.js';
 import { rosterOf } from '../engine_v2/roster_v2.js';
 import { supportPortrait } from './supportUi_v2.js';
 import { progress } from '../engine_v2/progress_v2.js';
@@ -385,7 +385,7 @@ export class BattleHud {
         const box = document.createElement('div');
         box.className = 'v2-support-hud';
         if (snap) {
-            const c = rosterOf(snap.id), def = SUPPORT_UNITS[snap.id];
+            const c = rosterOf(snap.id), def = supportUnitOf(snap.id);
             box.style.setProperty('--support', c.color);
             box.style.setProperty('--sk', c.color);
             box.innerHTML = `<button class="v2-skill v2-support-call" aria-label="${c.faction} 협력 호출" aria-describedby="v2-support-state v2-support-brief">
@@ -401,7 +401,7 @@ export class BattleHud {
                 <button class="v2-support-close" aria-label="지원 효과 상세 닫기">×</button>
                 <small>${c.faction} · ${def.role}</small><h3>${icon(def.icon, 18)} ${def.ult}</h3>
                 <p class="v2-support-brief">${def.brief}</p><p>${def.effect}</p>
-                <p class="v2-support-rule">${SUPPORT.duration}초 출격 · 시너지는 출격 중에만 적용<br>첫 호출 ${SUPPORT.cooldown}초 충전 · 사용 후 ${SUPPORT.cooldown}초 재충전</p></section>`;
+                <p class="v2-support-rule">${SUPPORT.duration}초 출격 · 궁극기 ${SUPPORT.ultimateTimes.length}회 · 시너지는 출격 중에만 적용<br>첫 호출 ${this.b.support.interval}초 충전 · 사용 후 ${this.b.support.interval}초 재충전</p></section>`;
             this.supportEls = {
                 call: box.querySelector('.v2-support-call'), gauge: box.querySelector('.v2-support-gauge'),
                 num: box.querySelector('.v2-skill__num'), state: box.querySelector('.v2-support-state'),

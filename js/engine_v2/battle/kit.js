@@ -368,7 +368,7 @@ export const KitMethods = {
     /** 상태 아이콘 이름 (updateEnemyFilter) */
     kitStates(e) {
         return [e.kitFearT > 0 && 'fear', e.kitSleepT > 0 && 'sleep', e.kitDots?.burn?.t > 0 && 'burn', e.kitDots?.poison?.t > 0 && 'poison',
-            e.kitVulnT > 0 && 'vuln', e.kitWeakT > 0 && 'weak', e.kitThreadT > 0 && 'thread', e.kitSilenceT > 0 && 'silence'].filter(Boolean);
+            e.kitVulnT > 0 && 'vuln', e.kitWeakT > 0 && 'weak', e.kitThreadT > 0 && 'thread', (e.kitSilenceT > 0 || this.supportSilenced?.(e)) && 'silence'].filter(Boolean);
     },
 
     // ---- 장판 ----

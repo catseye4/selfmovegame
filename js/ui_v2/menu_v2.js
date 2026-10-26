@@ -21,7 +21,7 @@ import { openSettings } from './settingsPanel_v2.js';
 import { TacticalRadar } from './radar_v2.js';
 import { resChipHtml, openGrowthPanel } from './growthUi_v2.js';
 import { MUTATORS } from '../engine_v2/growth_v2.js';
-import { supportSummary } from './supportUi_v2.js';
+import { updateSupportMenu } from './supportUi_v2.js';
 
 const $ = id => document.getElementById(id);
 const SLOTS = [
@@ -202,13 +202,7 @@ export class MenuController {
         if (badge) badge.textContent = progress.dispatch.some(d => d.end <= Date.now()) ? ' ' : '';
         const equipped = gameState.getEquippedObjects();
         const coop = $('btn-menu-coop-v2');
-        if (coop) {
-            const first = !progress.supportHelpSeen && progress.supportCandidates().length > 0;
-            coop.querySelector('strong').textContent = first ? '협력 출격이 열렸어요!' : '협력 출격';
-            coop.querySelector('small').textContent = supportSummary();
-            coop.classList.toggle('is-new', first);
-            coop.classList.toggle('is-warn', !!progress.supportCharacter && !!progress.supportReason(progress.supportCharacter));
-        }
+        if (coop) updateSupportMenu(coop);
         monsterControllerV2.renderVisuals(equipped, progress.character);
 
         // 캐릭터 이름/팩션 (캐릭터는 선택창에서 고름 — 몸통을 아직 안 샀으면 흐린 모습)

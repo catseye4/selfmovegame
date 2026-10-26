@@ -1,13 +1,13 @@
 // 협력 출격 전용 시전자/타이머/표식. 주인공 스킬의 전역 monster 참조를 사용하지 않는다.
 import { progress } from '../progress_v2.js';
-import { SUPPORT as T, SUPPORT_UNITS } from '../support_v2.js';
+import { SUPPORT as T, supportUnitOf } from '../support_v2.js';
 import { rosterOf } from '../roster_v2.js';
 import { RigAvatar, rigConfigFor } from '../rig/rigAvatar.js';
 import { monsterControllerV2 as monster } from '../monster_v2.js';
 import { gameTime } from '../gameTime.js';
 import { aimAt } from '../bases_v2.js';
 import { sound } from '../audio/sound_v2.js';
-import { MECH_VFX, KAIJU_VFX, HERO_VFX, CHIMERA_VFX, DIVER_VFX, SAINT_VFX, FROST_VFX, DOLL_VFX } from '../vfx/vfxDefs.js';
+import { MECH_VFX, KAIJU_VFX, HERO_VFX, CHIMERA_VFX, DIVER_VFX, SAINT_VFX, FROST_VFX, DOLL_VFX, meleeHitVfx } from '../vfx/vfxDefs.js';
 
 const VFX = { mech: MECH_VFX.droneBlast, kaiju: KAIJU_VFX.roarBurst, hero: HERO_VFX.mindConvert,
     chimera: CHIMERA_VFX.slam, diver: DIVER_VFX.hands, saint: SAINT_VFX.corpseRise,
@@ -23,9 +23,13 @@ export const SupportMethods = {
     setupSupport() {
         this.clearSupport();
         const main = monster.getCharacterId() || progress.character;
-        this.support = { snapshot: progress.supportSnapshot(main), cooldown: T.cooldown, serial: 0, active: null, auto: !!progress.supportAuto };
+        const snapshot = progress.supportSnapshot(main);
+        const interval = snapshot?.cooldown ?? progress.supportCooldown();
+        this.support = { snapshot, interval, cooldown: interval, serial: 0, active: null, auto: !!progress.supportAuto };
         this.supportShield = 0;
         this.stats.supportCalls = 0;
+        this.stats.supportUltimates = 0;
+        this.stats.supportBasicAttacks = 0;
         this.stats.supportDamage = 0;
     },
     supportTargets() {
@@ -41,7 +45,7 @@ export const SupportMethods = {
         const cooldown = s?.cooldown || 0;
         return { ready: !!s?.snapshot && cooldown === 0 && !active,
             hasTarget: targets.length > 0 || defensive, cooldown,
-            charge: s?.snapshot ? Math.max(0, Math.min(1, 1 - cooldown / T.cooldown)) : 0,
+            charge: s?.snapshot ? Math.max(0, Math.min(1, 1 - cooldown / s.interval)) : 0,
             time: active ? Math.max(0, T.duration - active.elapsed) : 0 };
     },
     callSupport() {
@@ -51,12 +55,12 @@ export const SupportMethods = {
             document.querySelector('.v2-settings') || !status.ready || !status.hasTarget) return false;
         const s = this.support, snap = s.snapshot;
         const target = this.supportTargets()[0];
-        const active = { owner: `support-${this.runId}-${++s.serial}`, elapsed: 0, cast: false, nextAttack: T.attackAt,
+        const active = { owner: `support-${this.runId}-${++s.serial}`, elapsed: 0, cast: false, casts: 0, castUntil: 0, basicAttacks: 0, nextAttack: T.attackAt,
             marks: new Map(), tasks: [], snapshot: snap, x: this.monsterX - 45, shieldAllies: new Set(),
-            melee: MELEE.has(snap.parts.arm?.attackType || 'melee'), target, dash: null, dashUsed: false };
+            melee: MELEE.has(snap.parts.arm?.attackType || 'melee') || snap.parts.arm?.kitAttack?.kind === 'melee', target, dash: null, dashUsed: false };
         active.x = this.supportPositionX(active.melee && target ? this.supportCombatX(active, target) : active.x);
         s.active = active;
-        s.cooldown = T.cooldown;
+        s.cooldown = s.interval;
         this.stats.supportCalls = (this.stats.supportCalls || 0) + 1;
         const el = document.createElement('div');
         el.className = 'v2-support-actor';
@@ -77,11 +81,12 @@ export const SupportMethods = {
         avatar.ready.then(() => {
             if (this.support?.active !== active || !this.isActive) return;
             avatar.setMode('idle');
+            if (active.elapsed < active.castUntil) avatar.playSkillAnim(supportUnitOf(snap.id).clip);
             avatar.start();
         });
         this.positionSupport(active);
         sound.play('ui_equip');
-        this.hud.supportNotice?.(rosterOf(snap.id).faction, SUPPORT_UNITS[snap.id].ult);
+        this.hud.supportNotice?.(rosterOf(snap.id).faction, `${T.duration}초 지원 · 궁극기 ${T.ultimateTimes.length}회`);
         return true;
     },
     // 몸의 앞면을 건물/바리케이드보다 왼쪽에 둔다. 먼 적 앞으로 소환해도 방벽을 건너뛰지 않는다.
@@ -100,8 +105,8 @@ export const SupportMethods = {
         const target = this.supportTargets()[0];
         const reach = Math.max(70, a.snapshot.stats.range);
         const desired = this.supportPositionX(a.melee ? (target ? this.supportCombatX(a, target) : a.x)
-            : Math.min(this.monsterX + 180, a.elapsed >= T.attackAt && target
-                ? Math.max(this.monsterX - 45, target.x - reach - 50) : this.monsterX - 45));
+            : a.elapsed >= T.attackAt && target
+                ? Math.max(this.monsterX - 45, target.x - reach - T.actorFront) : this.monsterX - 45);
         if (a.melee && a.elapsed < T.exitAt && target && a.target &&
             !this.enemies.includes(a.target) && !a.dashUsed && !this.supportInRange(a, target) && Math.abs(desired - a.x) <= T.dashRange) {
             a.dash = { from: a.x, to: desired, at: a.elapsed };
@@ -151,10 +156,17 @@ export const SupportMethods = {
         a.elapsed += dt;
         if (a.elapsed >= T.duration) { this.clearSupport(); return; }
         this.positionSupport(a, dt);
-        if (!a.cast && a.elapsed >= T.enter) {
+        if (a.casts < T.ultimateTimes.length && a.elapsed >= T.ultimateTimes[a.casts] && a.elapsed < T.exitAt) {
             a.cast = true;
-            const def = SUPPORT_UNITS[a.snapshot.id];
-            if (!a.avatar?.playOnce(def.clip)) a.avatar?.setMode('attack');
+            a.casts++;
+            this.stats.supportUltimates++;
+            a.castUntil = a.elapsed + T.castDuration;
+            a.nextAttack = Math.max(a.nextAttack, a.castUntil);
+            const def = supportUnitOf(a.snapshot.id);
+            a.avatar?.playSkillAnim(def.clip);
+            a.dom.querySelector('span').textContent = `${def.ult} · ${a.casts}/${T.ultimateTimes.length}`;
+            this.hud.supportNotice?.(rosterOf(a.snapshot.id).faction, `${def.ult} ${a.casts}/${T.ultimateTimes.length}`);
+            this.supportCastFx(a, def);
             this.supportUltimate(a);
         }
         if (this.support?.active !== a) return;
@@ -168,16 +180,15 @@ export const SupportMethods = {
         for (const [e, m] of a.marks) {
             if (!this.enemies.includes(e)) { e.dom?.classList.remove('v2-support-mark'); a.marks.delete(e); continue; }
             if (m.holdUntil <= a.elapsed) e.dom?.classList.remove('is-support-held');
+            if (m.silenceUntil && m.silenceUntil <= a.elapsed) { m.silenceUntil = 0; this.updateEnemyFilter(e); }
             if (m.kind === 'diver') this.supportHit(a, e, a.snapshot.stats.dps * 0.12 * dt, { dot: true });
         }
-        if (!a.dash && a.elapsed >= a.nextAttack && a.elapsed < T.exitAt) {
+        if (!a.dash && a.elapsed >= a.castUntil && a.elapsed >= a.nextAttack && a.elapsed < T.exitAt) {
             a.nextAttack += T.attacksEvery;
             const target = this.supportTargets().find(e => this.supportInRange(a, e));
             a.avatar?.setMode(target ? 'attack' : a.moving ? 'walk' : 'idle');
             if (target) {
-                const aim = aimAt(target);
-                this.fx.play(HIT[a.snapshot.id] || CHIMERA_VFX.punchHit, aim.x, aim.b, { scale: 0.75 });
-                this.supportHit(a, target, a.snapshot.stats.dps * T.attacksEvery * T.damage);
+                this.supportBasicAttack(a, target);
             }
             if (a.snapshot.id === 'doll') {
                 for (const [e, m] of a.marks) {
@@ -190,6 +201,68 @@ export const SupportMethods = {
         if (a.elapsed >= T.exitAt) a.avatar?.setMode('idle');
     },
     supportLater(a, delay, fn) { a.tasks.push({ at: a.elapsed + delay, fn }); },
+    supportBasicAttack(a, target) {
+        if (this.support?.active !== a || !this.isActive || a.elapsed < a.castUntil || a.elapsed >= T.exitAt) return;
+        const arm = a.snapshot.parts.arm;
+        const type = arm?.attackType || 'melee';
+        const visualScale = T.basicFxScale;
+        const point = a.avatar?.muzzlePoint();
+        // 협력 리그 캔버스(360×300, left=x-160, bottom=25)의 소켓을 전장 좌표로 변환.
+        const from = point ? { x: a.x - 160 + point[0], bottom: 325 - point[1] }
+            : { x: a.x + T.actorFront, bottom: 130 };
+        const color = rosterOf(a.snapshot.id).color.slice(1).match(/../g).map(c => parseInt(c, 16)).join(',');
+        const hitFx = arm?.kitAttack?.hitVfx || (a.melee
+            ? arm?.kitAttack?.vfx || (a.snapshot.id === 'doll' ? DOLL_VFX.snipHit : meleeHitVfx(a.snapshot.id, arm?.id))
+            : HIT[a.snapshot.id]) || CHIMERA_VFX.punchHit;
+        let aim = aimAt(target), hit = false;
+        const destination = () => {
+            if (this.enemies.includes(target) && target.hp > 0) aim = aimAt(target);
+            return aim;
+        };
+        const impact = () => {
+            if (hit || this.support?.active !== a || !this.isActive || a.elapsed >= T.exitAt) return;
+            hit = true;
+            const p = destination();
+            this.supportPlayFx(a, hitFx, p.x, p.b, { scale: visualScale });
+            this.supportHit(a, target, a.snapshot.stats.dps * T.attacksEvery * T.damage);
+        };
+        a.basicAttacks++;
+        this.stats.supportBasicAttacks++;
+        a.avatar?.playSkillAnim('attack');
+        this.supportPlayFx(a, { layers: [
+            { type: 'flash', at: 0, dur: 0.16, r: a.melee ? 14 : 22, color },
+            { type: 'sparks', at: 0, count: 5, speed: 110, angle: 0, cone: 0.6, color }
+        ] }, from.x, from.bottom, { scale: visualScale });
+        if (a.melee) {
+            this.supportPlayFx(a, hitFx, from.x, from.bottom, { scale: 0.65 * visualScale });
+            impact();
+        } else if (type === 'water' || type === 'laser' || type === 'rail' || arm?.kitAttack?.kind === 'pierce') {
+            const beam = arm?.kitAttack?.vfx || (type === 'water' ? DIVER_VFX.jet : MECH_VFX.laser);
+            this.supportPlayFx(a, beam, from.x, from.bottom, { to: [aim.x, aim.b], scale: visualScale });
+            impact();
+        } else if (type === 'missile') {
+            this.fx.launchMissile(from, destination, impact, { owner: a.owner, dur: 0.3, apex: 40 / visualScale, scale: 0.8 * visualScale });
+        } else if ((type === 'wave' || type === 'frost') && aim.x > from.x) {
+            this.fx.launchWave({ x: from.x, b: from.bottom, range: aim.x - from.x + 40, speed: 650,
+                h: (type === 'frost' ? 34 : 48) * visualScale, color, owner: a.owner, sfx: null,
+                onPass: (x0, x1) => { const p = destination(); if (p.x >= x0 && p.x <= x1) impact(); } });
+        } else {
+            this.fx.launchNeedle(from, destination, impact, { owner: a.owner, dur: 0.22, color, scale: 1.2 * visualScale, sfx: null });
+        }
+    },
+    supportPlayFx(a, def, x, b, opts = {}) {
+        if (this.support?.active === a && def?.layers) this.fx.play(def, x, b, { ...opts, owner: a.owner });
+    },
+    supportCastFx(a, def) {
+        const color = rosterOf(a.snapshot.id).color.slice(1).match(/../g).map(c => parseInt(c, 16)).join(',');
+        // 시전자 위치의 발동 효과는 적 유무·전환 여부와 관계없이 보인다.
+        this.supportPlayFx(a, { layers: [
+            { type: 'ring', at: 0, dur: 0.65, r: 92, ground: true, width: 8, color },
+            { type: 'pillar', at: 0.05, dur: 0.5, h: 150, w: 28, color },
+            { type: 'motes', at: 0, count: 12, spread: 48, rise: [60, 120], life: [0.5, 0.9], size: 3, color }
+        ] }, a.x, 60);
+        if (VFX[a.snapshot.id]) this.supportPlayFx(a, VFX[a.snapshot.id], a.x + T.actorFront, 70, { scale: 0.8 });
+    },
     supportHit(a, enemy, damage, extra = {}) {
         if (this.support?.active !== a || !this.isActive || this.cinematic || this.finalBaseDestroyed ||
             a.elapsed >= T.exitAt || !this.enemies.includes(enemy) || enemy.hp <= 0) return;
@@ -206,8 +279,29 @@ export const SupportMethods = {
     },
     supportUltimate(a) {
         const id = a.snapshot.id;
+        const def = supportUnitOf(id);
         const targets = this.supportTargets().slice(0, T.maxTargets);
         const u = a.snapshot.stats.dps * T.damage * T.ultimate * (1 + 0.1 * (a.snapshot.skillLevel - 1));
+        if (def.volley) {
+            for (let i = 0; i < def.volley; i++) this.supportLater(a, i * 0.45, () => {
+                const liveTargets = this.supportTargets().slice(0, T.maxTargets);
+                const center = liveTargets[Math.floor(liveTargets.length / 2)];
+                if (center) {
+                    const p = aimAt(center);
+                    // 광역 연출을 적마다 겹치면 하얗게 뭉개지므로 타격당 중심에서 한 번만 표시한다.
+                    this.supportPlayFx(a, def.vfx || CHIMERA_VFX.slam, p.x, id === 'architect' ? 60 : p.b, { scale: 0.8 });
+                }
+                for (const e of liveTargets) {
+                    if (def.silence && !solid(e)) {
+                        this.supportMark(a, e);
+                        a.marks.get(e).silenceUntil = a.elapsed + def.silence * (e.boss ? 0.5 : 1);
+                        this.updateEnemyFilter(e);
+                    }
+                    this.supportHit(a, e, u / def.volley * (solid(e) ? def.buildingMul || 1 : 1));
+                }
+            });
+            return;
+        }
         if (id === 'chimera' && monster.rigBattle) monster.rigBattle.supportAttackSpeed = 1 + T.synergy;
         if (id === 'saint') {
             const ratio = targets.some(e => e.boss) || this.stage.boss ? T.bossShield : T.shield;
@@ -219,16 +313,19 @@ export const SupportMethods = {
         }
         if (id === 'hero' || id === 'saint') {
             const cap = id === 'hero' ? 2 : 3;
-            let made = 0;
+            let made = this.allies.filter(ally => ally.supportOwner === a.owner).length;
             if (id === 'saint') {
-                for (const c of [...this.corpses].slice(0, cap)) {
+                for (const c of [...this.corpses].slice(0, Math.max(0, cap - made))) {
+                    this.supportPlayFx(a, VFX[id], c.x, 60);
                     this.spawnSupportAlly(a, c.x, 'stitch', c.type);
                     this.removeCorpse(c);
                     made++;
                 }
             }
-            for (const e of targets.filter(e => !e.boss && !solid(e)).slice(0, cap - made)) {
+            for (const e of targets.filter(e => !e.boss && !solid(e)).slice(0, Math.max(0, cap - made))) {
                 const x = e.x;
+                const p = aimAt(e);
+                this.supportPlayFx(a, VFX[id], p.x, p.b); // 전환으로 적 DOM을 제거하기 전에 연출
                 this.enemies = this.enemies.filter(t => t !== e); // 전환은 처치/드랍 보상 없음
                 e.dom?.remove();
                 this.spawnSupportAlly(a, x, id === 'hero' ? 'mind' : 'stitch', e.artKey || e.type);
@@ -240,7 +337,7 @@ export const SupportMethods = {
             }
             for (const e of targets.filter(e => e.boss || solid(e))) {
                 this.supportMark(a, e);
-                const p = aimAt(e); this.fx.play(VFX[id], p.x, p.b);
+                const p = aimAt(e); this.supportPlayFx(a, VFX[id], p.x, p.b);
                 this.supportHit(a, e, u * 0.65);
             }
             return;
@@ -270,11 +367,11 @@ export const SupportMethods = {
             const hold = id === 'kaiju' || id === 'diver' ? 2 : id === 'frost' ? 1.5 : id === 'doll' ? 3 : 0;
             this.supportMark(a, e, hold, id === 'frost');
             const p = aimAt(e);
-            this.fx.play(VFX[id], p.x, p.b, { scale: 0.8 });
+            this.supportPlayFx(a, VFX[id], p.x, p.b, { scale: 0.8 });
             if (id === 'frost') {
                 this.supportLater(a, 1.5, () => {
                     if (!this.enemies.includes(e)) return;
-                    const q = aimAt(e); this.fx.play(FROST_VFX.shatter, q.x, q.b);
+                    const q = aimAt(e); this.supportPlayFx(a, FROST_VFX.shatter, q.x, q.b);
                     this.supportHit(a, e, u);
                 });
             } else this.supportHit(a, e, u * (id === 'doll' ? 0.65 : 1));
@@ -293,6 +390,10 @@ export const SupportMethods = {
         const a = this.support?.active;
         const m = a?.marks.get(e);
         return !!m && !e.boss && !solid(e) && m.holdUntil > a.elapsed;
+    },
+    supportSilenced(e) {
+        const a = this.support?.active;
+        return !!a && (a.marks.get(e)?.silenceUntil || 0) > a.elapsed;
     },
     supportEnemyDamageMul(e) {
         return this.support?.active?.marks.get(e)?.kind === 'hero' ? 1 - T.synergy : 1;
@@ -313,7 +414,7 @@ export const SupportMethods = {
         if (m.kind === 'frost' && m.shatter) {
             m.shatter = false;
             damage += Math.min(a.snapshot.stats.dps * T.shatter, this.playerDps * 0.75);
-            const p = aimAt(enemy); this.fx.play(FROST_VFX.shatter, p.x, p.b, { scale: 0.6 });
+            const p = aimAt(enemy); this.supportPlayFx(a, FROST_VFX.shatter, p.x, p.b, { scale: 0.6 });
         }
         return { damage, pierce };
     },
@@ -322,11 +423,14 @@ export const SupportMethods = {
         if (a) {
             a.tasks.length = 0;
             a.avatar?.stop();
+            this.fx?.vfx?.removeOwner(a.owner);
             if (this.fx?.drones) this.fx.drones = this.fx.drones.filter(d => d.owner !== a.owner);
             a.dom?.remove();
             for (const e of a.marks.keys()) {
+                a.marks.get(e).silenceUntil = 0;
                 e.dom?.classList.remove('v2-support-mark', 'is-support-held');
                 e.dom?.style.removeProperty('--support-mark');
+                this.updateEnemyFilter(e);
             }
             for (const ally of this.allies || []) if (ally.supportOwner === a.owner) ally.dom?.remove();
             this.allies = (this.allies || []).filter(ally => ally.supportOwner !== a.owner);

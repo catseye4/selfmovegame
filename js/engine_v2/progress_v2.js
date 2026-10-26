@@ -96,6 +96,7 @@ class Progress {
         // 고른 캐릭터: 저장에 있으면 그것, v1 저장이면 몸통 캐릭터
         const saved = data && rosterOf(data.character) ? data.character : null;
         this.character = saved || characterOfPart(partOf('body', gameState.equippedParts.body)) || DEFAULT_CHARACTER;
+        this.clearSupportIfMain();
         this.fixMixed(!saved);
         this.rememberLoadout();
         gameState.cartParts = { ...gameState.equippedParts };
@@ -194,12 +195,16 @@ class Progress {
     /** 캐릭터 바꾸기: 지금 장착을 기억하고 그 캐릭터의 장착으로 */
     selectCharacter(id) {
         if (!rosterOf(id)) return false;
-        if (id === this.character) return true;
+        if (id === this.character) {
+            if (this.clearSupportIfMain()) gameState.notify();
+            return true;
+        }
         this.rememberLoadout();
         const next = this.loadoutFor(id);
         this.character = id;
         gameState.equippedParts = next;
         gameState.cartParts = { ...next };
+        this.clearSupportIfMain();
         gameState.notify();
         return true;
     }
