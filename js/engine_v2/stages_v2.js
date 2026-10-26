@@ -34,6 +34,8 @@
    난이도 곡선은 tools/tests/balance_sim.py 결과(MD/밸런스_기록.md)를 보고 조정한다.
    ========================================================================== */
 
+import { isZoneReleased } from './contentSchedule_v2.js';
+
 // 구역 1: 새 기획 스테이지 1 "거대로봇 : 심연의 출격" (D-085, MD/기획_스테이지설계.md) — 11판(1-1 ~ 1-10 + 보스).
 // 지하 1,000m 제14 비밀 군사 벙커, 막는 세력 = 정부 직속 비밀 토벌군 '블랙 하운드' (적 능력은 enemies_v2.js).
 // 판마다 새 적이 하나씩: 징집 보병 → 진압 방패병(3열 대열) → 테이저 요원 → 로켓 보병 → EMP 드론 → 전투 군견 → 화염방사병 → 기계화 강화병,
@@ -926,7 +928,7 @@ export function chapterOf(stageOrId) {
 
 /** 챕터가 열렸는지: 첫 스테이지가 열렸으면 */
 export function chapterUnlocked(ch, progress) {
-    return isUnlocked(ch.stages[0].id, progress);
+    return isZoneReleased(ch.zone) && isUnlocked(ch.stages[0].id, progress);
 }
 
 /** 챕터 안에서 기본으로 고를 스테이지: 아직 못 깬 첫 스테이지 (전부 깼으면 마지막) */
@@ -946,7 +948,7 @@ export function nextStageOf(id) {
 /** 열린 스테이지: 첫 스테이지 + 바로 앞 스테이지를 클리어한 스테이지 */
 export function isUnlocked(id, progress) {
     const i = STAGES.findIndex(s => s.id === id);
-    return i === 0 || (i > 0 && progress.stage(STAGES[i - 1].id).cleared);
+    return i >= 0 && isZoneReleased(STAGES[i].zone) && (i === 0 || progress.stage(STAGES[i - 1].id).cleared);
 }
 
 /** 기본으로 고를 스테이지: 아직 클리어하지 않은 가장 앞 스테이지 (전부 클리어면 마지막) */

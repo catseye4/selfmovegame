@@ -17,6 +17,7 @@ import { isApp, checkForUpdate } from './ui_v2/appUpdate_v2.js';
 import { applyVfxChoices, readVfxChoices, readVfxStyle } from './engine_v2/vfx/vfxVariants.js';
 import { preloadVfxSheets } from './engine_v2/vfx/vfxPlayer.js';
 import { setFitScale } from './engine_v2/displayRes.js';
+import { initAnalytics, track } from './engine_v2/analytics_v2.js';
 
 class GameRouterV2 {
     constructor() {
@@ -118,6 +119,7 @@ class GameRouterV2 {
 
         this.currentScreen = screenName;
         gameState.currentScreen = screenName;
+        track('screen_view', { screen: screenName });
 
         // 화면 전환 시 각 화면별 데이터 리프레시
         if (screenName === 'menu' || screenName === 'lab' || screenName === 'select') sound.playBgm('menu');
@@ -151,6 +153,7 @@ function fitScreens() {
 }
 
 export function initGameRouterV2() {
+    initAnalytics();
     applyVfxChoices(readVfxChoices());
     battleEngineV2.fx.vfx.style = readVfxStyle();
     preloadVfxSheets();   // 그림 프레임 이펙트(D-060) 미리 받기

@@ -2593,3 +2593,44 @@ body.v2-fit .v2-growth__box { width: 940px; max-height: 655px; }
 #screen-battle-v2 .ally-minion.v2-kit-ally.is-attacking { background-image: var(--atk); animation: var(--atk-anim); }
 /* 시간 정지 (공허의 예언자 필살기, sets2/heroSets2.js): 적이 청자색으로 굳어 보임 */
 #screen-battle-v2.v2-timestop #enemies-container-v2 .v2-enemy__sprite { filter: saturate(0.25) hue-rotate(200deg) brightness(0.85) drop-shadow(0 0 6px rgba(150, 130, 255, 0.9)) !important; }
+
+/* ---------- 모바일 웹: 가로 화면·전체 화면·앱 안 브라우저 안내 ---------- */
+.v2-mobile-web { font-family: var(--v2-font); color: var(--v2-text); }
+.v2-mobile-web [hidden] { display: none !important; }
+.v2-mobile-web__portrait {
+    position: fixed; inset: 0; z-index: 20000;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; padding: 110px 24px 32px; box-sizing: border-box;
+    background: var(--v2-bg); text-align: center;
+    border-top: 4px solid var(--v2-amber);
+}
+.v2-mobile-web__rotate { width: 72px; height: 72px; flex-shrink: 0; color: var(--v2-amber); }
+.v2-mobile-web__portrait h2 { margin: 0; font-size: 24px; color: var(--v2-amber); }
+.v2-mobile-web__portrait p { margin: 0; font-size: 14px; color: var(--v2-dim); }
+.v2-mobile-web__fullscreen, .v2-mobile-web__external, .v2-mobile-web__close {
+    border: 1px solid var(--v2-edge); border-radius: 4px;
+    background: var(--v2-steel-lo); color: var(--v2-amber);
+    padding: 10px 12px; font: inherit; font-size: 13px; cursor: pointer;
+    text-decoration: none; text-align: center;
+}
+.v2-mobile-web > .v2-mobile-web__fullscreen {
+    position: fixed; right: max(10px, env(safe-area-inset-right));
+    bottom: max(10px, env(safe-area-inset-bottom)); z-index: 19000;
+}
+.v2-mobile-web__banner {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 21000;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+    padding: 10px 48px 10px 12px; padding-top: max(10px, env(safe-area-inset-top));
+    background: var(--v2-steel-lo); border-bottom: 1px solid var(--v2-edge);
+    font-size: 13px; line-height: 1.5;
+}
+.v2-mobile-web__banner > span:first-child { flex: 1 1 260px; }
+.v2-mobile-web__close { position: absolute; top: 8px; right: 8px; font-size: 20px; padding: 4px 10px; }
+
+/* ??? ?? ?? ?? (v2) */
+.v2-zonetab.is-coming-soon { position: relative; border-style: dashed; border-color: #aa9063; }
+.v2-release-mark { position: absolute; right: 1px; top: -5px; color: #e5bc79; font-size: 8px; line-height: 1; }
+.v2-charcard.is-coming-soon { border-style: dashed; border-color: #aa9063; }
+.v2-charcard__foot .v2-release-date { color: #e5bc79; }
+.v2-dsp-zone.is-coming-soon { border-style: dashed; border-color: #aa9063; }
+.v2-dsp-zone.is-coming-soon small { color: #e5bc79; }

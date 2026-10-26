@@ -10,6 +10,7 @@ import { gameState } from '../engine/state.js';
 import { progress } from '../engine_v2/progress_v2.js';
 import { rosterOf, ROSTER, SLOTS, partsOfCharacter } from '../engine_v2/roster_v2.js';
 import { CHAPTERS } from '../engine_v2/stages_v2.js';
+import { isZoneReleased, releaseDateOf } from '../engine_v2/contentSchedule_v2.js';
 import { DISPATCH, gradeOf } from '../engine_v2/growth_v2.js';
 import { ENEMY_TYPES } from '../engine_v2/enemies_v2.js';
 import { ENEMY_ART } from '../engine_v2/enemyArt_v2.js';
@@ -448,9 +449,10 @@ function newHtml() {
     const hours = progress.dispatchMs() / 3600000;
     const zoneCards = CHAPTERS.map(ch => {
         const z = DISPATCH_ZONES[ch.zone], open = zones.includes(ch.zone);
+        const soon = !isZoneReleased(ch.zone);
         // 썸네일: 전투 먼 배경(색조) 위에 파견 일러스트 (일러스트가 없으면 아래 것이 보임)
-        return `<button class="v2-dsp-zone${open ? '' : ' is-lock'}${ch.zone === pickedZone ? ' is-pick' : ''}" data-act="dspZone" data-zone="${ch.zone}" ${open ? '' : 'disabled'}>
-            <i style="background-image:url('${z.far[0]}');filter:${z.far[1]}"></i>${z.trek ? `<i style="background-image:url('${z.trek}')"></i>` : ''}<b>구역 ${ch.zone}</b><small>${open ? esc(shortZone(ch.zone)) : '보스전(노말)을 깨면 열림'}</small></button>`;
+        return `<button class="v2-dsp-zone${open ? '' : ' is-lock'}${soon ? ' is-coming-soon' : ''}${ch.zone === pickedZone ? ' is-pick' : ''}" data-act="dspZone" data-zone="${ch.zone}" ${open ? '' : 'disabled'}>
+            <i style="background-image:url('${z.far[0]}');filter:${z.far[1]}"></i>${z.trek ? `<i style="background-image:url('${z.trek}')"></i>` : ''}<b>구역 ${ch.zone}</b><small>${soon ? `곧 공개 · ${releaseDateOf('zones', ch.zone)}` : open ? esc(shortZone(ch.zone)) : '보스전(노말)을 깨면 열림'}</small></button>`;
     }).join('');
     const chars = !cands.length ? '<p class="v2-growth__hint">보낼 캐릭터가 없어요 — 출전 중이 아닌 열린 캐릭터만 보낼 수 있어요.</p>'
         : cands.map(c => `<button class="v2-dsp-char${c.id === pickedChar ? ' is-pick' : ''}" data-act="dspChar" data-char="${c.id}" style="--sk:${c.color}">
@@ -463,7 +465,7 @@ function newHtml() {
         <div class="v2-dsp-go">${ex ? `<span>예상 보상</span><ul class="v2-dsp__reward">${rewardHtml(pickedZone)}</ul>` : ''}
             <button data-act="dispatch" data-char="${pickedChar || ''}" data-zone="${pickedZone || ''}" ${can ? '' : 'disabled'}>파견 보내기</button></div>
         <p class="v2-growth__hint">파츠는 30% 확률로 그 캐릭터 것 (레어 이하). 기록·장면은 연출이고 보상은 구역으로 정해져요.</p>`
-        : '<p class="v2-growth__hint">노말에서 구역 보스전(1-B)을 깨면 그 구역에 파견할 수 있어요.</p>'}
+        : `${CHAPTERS.some(ch => !isZoneReleased(ch.zone)) ? `<div class="v2-dsp-zones">${zoneCards}</div>` : ''}<p class="v2-growth__hint">노말에서 구역 보스전(1-B)을 깨면 그 구역에 파견할 수 있어요.</p>`}
     </section>`;
 }
 

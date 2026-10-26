@@ -9,6 +9,7 @@
 
 import { gameState } from '../engine/state.js';
 import { progress } from '../engine_v2/progress_v2.js';
+import { isCharacterReleased, releaseDateOf } from '../engine_v2/contentSchedule_v2.js';
 import { ROSTER, rosterOf, SLOTS } from '../engine_v2/roster_v2.js';
 import { RigAvatar, rigConfigFor } from '../engine_v2/rig/rigAvatar.js';
 import { RIG_CHARACTERS } from '../engine_v2/rig/characters.js';
@@ -115,6 +116,11 @@ export class SelectController {
 
     /** 카드 누름: 그 캐릭터로 바꿈 (지금 장착은 기억). 잠긴 캐릭터는 별로 해금, 파견 중이면 못 고름 (Q-006) */
     pick(id) {
+        if (!isCharacterReleased(id)) {
+            sound.play('ui_error');
+            this.renderInfo(`곧 공개 · ${releaseDateOf('characters', id)}`);
+            return;
+        }
         if (id === progress.character) return;
         if (progress.isDispatched(id)) {
             sound.play('ui_error');
@@ -154,10 +160,13 @@ export class SelectController {
         const ready = ids.body !== 'none';
         const on = c.id === progress.character;
         const locked = !progress.isCharacterUnlocked(c.id);
+        const soon = !isCharacterReleased(c.id);
         const away = progress.isDispatched(c.id);
         el.classList.toggle('is-selected', on);
         el.classList.toggle('is-empty', !ready);
         el.classList.toggle('is-locked', locked);
+        el.classList.toggle('is-coming-soon', soon);
+        el.setAttribute('aria-disabled', String(soon));
         el.setAttribute('aria-pressed', String(on));
 
         el.querySelector('.v2-charcard__stats').innerHTML = [['ARMOR', st.hp], ['POWER', st.dps], ['SPEED', st.speed]]
@@ -174,7 +183,8 @@ export class SelectController {
         el.querySelector('.v2-charcard__skills').innerHTML = chips.join('');
 
         el.querySelector('.v2-charcard__foot').innerHTML = `<span>파츠 <b>${own.owned}</b> / ${own.total} 보유</span>`
-            + (locked ? `<em class="is-lock">${icon('lock', 12)} ★${progress.characterStars(c.id)}로 해금</em>`
+            + (soon ? `<em class="v2-release-date">곧 공개 · ${releaseDateOf('characters', c.id)}</em>`
+                : locked ? `<em class="is-lock">${icon('lock', 12)} ★${progress.characterStars(c.id)}로 해금</em>`
                 : away ? '<em class="is-need">파견 중</em>'
                     : ready ? '<em class="is-ready">출격 가능</em>' : '<em class="is-need">연구소에서 몸통 구매</em>');
 

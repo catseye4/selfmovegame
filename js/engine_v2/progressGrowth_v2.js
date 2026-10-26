@@ -14,6 +14,7 @@ import { gameState } from '../engine/state.js';
 import { PARTS_DB } from '../data/parts.js';
 import { SLOTS, DEFAULT_CHARACTER, characterOfPart, partsOfCharacter } from './roster_v2.js';
 import { STAGES, CHAPTERS } from './stages_v2.js';
+import { isZoneReleased, isCharacterReleased, releaseDateOf } from './contentSchedule_v2.js';
 import { minGradeOf, dropGroupOf, setOf } from './sets_v2.js';
 import { DIFFICULTIES, highestDifficulty, difficultyOf } from './difficulty_v2.js';
 import {
@@ -243,12 +244,13 @@ export const GrowthMethods = {
     // ---- 2-7 캐릭터 해금 (별) ----
     /** 기본 캐릭터·별로 연 캐릭터(예전 저장에서 산 캐릭터 포함)는 열림 (선택창에서 확인 — select_v2.js) */
     isCharacterUnlocked(id) {
-        return id === DEFAULT_CHARACTER || this.unlockedChars.includes(id) || !(id in CHARACTER_STARS);
+        return isCharacterReleased(id) && (id === DEFAULT_CHARACTER || this.unlockedChars.includes(id) || !(id in CHARACTER_STARS));
     },
     characterStars(id) {
         return CHARACTER_STARS[id] || 0;
     },
     unlockCharacter(id) {
+        if (!isCharacterReleased(id)) return { success: false, reason: `곧 공개 · ${releaseDateOf('characters', id)}` };
         if (this.isCharacterUnlocked(id)) return { success: true };
         const cost = this.characterStars(id);
         if (!this.spendStars(cost)) return { success: false, reason: `별이 부족합니다 (★${cost} 필요)` };
@@ -337,13 +339,14 @@ export const GrowthMethods = {
     },
     /** 파견할 수 있는 구역: 노말에서 보스전까지 깬 구역 */
     dispatchZones() {
-        return CHAPTERS.filter(ch => this.stage(ch.stages[ch.stages.length - 1].id, 'normal').cleared).map(ch => ch.zone);
+        return CHAPTERS.filter(ch => isZoneReleased(ch.zone) && this.stage(ch.stages[ch.stages.length - 1].id, 'normal').cleared).map(ch => ch.zone);
     },
     isDispatched(character) {
         return this.dispatch.some(d => d.character === character);
     },
     /** 파견 보내기: 열린 캐릭터, 지금 고른 캐릭터가 아님, 이미 파견 중이 아님, 깬 구역, 빈 칸 */
     startDispatch(character, zone, now = Date.now()) {
+        if (!isZoneReleased(zone)) return { success: false, reason: `곧 공개 · 구역 ${zone} · ${releaseDateOf('zones', zone)}` };
         if (this.dispatch.length >= this.dispatchSlots()) return { success: false, reason: '파견 칸이 모두 찼습니다' };
         if (character === this.character) return { success: false, reason: '출전 중인 캐릭터는 보낼 수 없습니다' };
         if (!this.isCharacterUnlocked(character)) return { success: false, reason: '잠긴 캐릭터입니다' };

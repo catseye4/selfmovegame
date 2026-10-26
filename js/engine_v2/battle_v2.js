@@ -49,6 +49,7 @@ import { DollMethods } from './battle/doll.js';
 import { GrowthBattleMethods } from './battle/growth.js';
 import { predecodeStageArt } from './enemies_v2.js';
 import { runReport } from './battle/runReport.js';
+import { track } from './analytics_v2.js';
 
 export class BattleEngine {
     constructor() {
@@ -260,6 +261,7 @@ export class BattleEngine {
 
         // 몬스터 비주얼 렌더링 및 위치 리셋
         monsterControllerV2.renderVisuals(equippedObjs);
+        track('stage_start', { stageId: this.stage.id, zone: this.stage.zone, difficulty: this.difficulty, character: monsterControllerV2.getCharacterId() });
         monsterControllerV2.updateHpBar(this.playerHp, this.maxPlayerHp);
         monsterControllerV2.setMonsterPosition(this.monsterX);
         monsterControllerV2.setState('walking');
@@ -443,6 +445,7 @@ export class BattleEngine {
         };
         this.stopBattle();
         setTimeout(() => { if (!this.isActive) sound.playBgm('menu', 2.5); }, 1200);
+        track('stage_end', { stageId: result.stage.id, result: result.victory ? 'victory' : 'defeat', time: result.time, stars: result.starFlags.filter(Boolean).length, dm: result.dm });
         this.director.showResult(result, act => {
             if (act === 'next' && next) progress.selectStage(next.id);
             if (this.onNavigate) this.onNavigate(act === 'retry' || act === 'next' ? 'battle' : act);

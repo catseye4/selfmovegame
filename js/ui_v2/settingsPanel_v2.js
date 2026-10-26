@@ -7,7 +7,7 @@
 import { icon } from './icons.js';
 import { settings } from '../engine_v2/settings_v2.js';
 import { sound } from '../engine_v2/audio/sound_v2.js';
-import { progress } from '../engine_v2/progress_v2.js';
+import { progress, exportSave, importSave } from '../engine_v2/progress_v2.js';
 import { VERSION, BUILD } from '../version_v2.js';
 import { isApp, checkForUpdate } from './appUpdate_v2.js';
 
@@ -25,9 +25,9 @@ const TOGGLES = [
 export function openSettings() {
     if (document.querySelector('.v2-settings')) return;
     const el = document.createElement('div');
-    el.className = 'v2-settings';
+    el.className = 'v2-settings v2-growth__body';
     el.innerHTML = `
-        <div class="v2-settings__panel v2-panel" role="dialog" aria-label="설정">
+        <div class="v2-settings__panel v2-panel v2-growth__body" role="dialog" aria-label="설정">
             <div class="v2-hazard v2-settings__stripe"></div>
             <h2>${icon('gear', 22)} SETTINGS <small>설정</small></h2>
             <section>
@@ -49,6 +49,21 @@ export function openSettings() {
             </section>
             <section>
                 <h3>진행 데이터</h3>
+                <div class="v2-settings__row" data-row="backup">
+                    <span>저장 백업<small data-out="backup" role="status">다른 기기로 옮길 코드를 보관하세요</small>
+                        <textarea data-code="backup" aria-label="저장 백업 코드" rows="2" cols="16" readonly hidden></textarea>
+                    </span>
+                    <div class="v2-settings__actions">
+                        <button class="v2-btn v2-btn--ghost" data-act="copy-save">코드 복사</button>
+                        <button class="v2-btn v2-btn--ghost" data-act="download-save">파일로 저장</button>
+                    </div>
+                </div>
+                <div class="v2-settings__row" data-row="import">
+                    <span>저장 불러오기<small data-out="import" role="status">백업 코드를 붙여 넣으세요</small>
+                        <textarea data-code="import" aria-label="불러올 백업 코드" rows="2" cols="16"></textarea>
+                    </span>
+                    <button class="v2-btn v2-btn--ghost v2-settings__reset" data-act="import-save">불러오기</button>
+                </div>
                 <div class="v2-settings__row">
                     <span>진행 초기화<small>DM·파츠·강화·스테이지 기록을 처음으로 (설정은 유지)</small></span>
                     <button class="v2-btn v2-btn--danger v2-settings__reset" data-act="wipe">초기화</button>
@@ -116,6 +131,42 @@ export function openSettings() {
     };
     document.addEventListener('keydown', onKey, true);
     el.querySelector('[data-act="close"]').addEventListener('click', close);
+    el.querySelector('[data-act="copy-save"]').addEventListener('click', async () => {
+        const out = el.querySelector('[data-out="backup"]');
+        try {
+            const code = exportSave();
+            const box = el.querySelector('[data-code="backup"]');
+            box.value = code;
+            try {
+                await navigator.clipboard.writeText(code);
+                out.textContent = '백업 코드를 복사했습니다';
+            } catch (e) {
+                box.hidden = false;
+                box.focus();
+                box.select();
+                out.textContent = '선택된 코드를 직접 복사해 주세요';
+            }
+        } catch (e) { out.textContent = `백업 실패: ${e.message}`; }
+    });
+    el.querySelector('[data-act="download-save"]').addEventListener('click', () => {
+        const out = el.querySelector('[data-out="backup"]');
+        try {
+            const url = URL.createObjectURL(new Blob([exportSave()], { type: 'text/plain;charset=utf-8' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `MAD-OVERLORD-${new Date().toISOString().slice(0, 10)}.txt`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            out.textContent = '백업 파일을 저장했습니다';
+        } catch (e) { out.textContent = `백업 실패: ${e.message}`; }
+    });
+    el.querySelector('[data-act="import-save"]').addEventListener('click', () => {
+        if (!confirm('지금 진행을 덮어씁니다. 백업을 불러올까요?')) return;
+        const result = importSave(el.querySelector('[data-code="import"]').value);
+        if (!result.success) el.querySelector('[data-out="import"]').textContent = result.reason;
+    });
     // 진행 초기화: 두 번 눌러야 실행 (실수 방지)
     const wipe = el.querySelector('[data-act="wipe"]');
     wipe.addEventListener('click', () => {

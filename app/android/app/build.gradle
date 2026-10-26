@@ -24,6 +24,15 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    flavorDimensions "store"
+    productFlavors {
+        dev {
+            dimension "store"
+        }
+        play {
+            dimension "store"
+        }
+    }
     signingConfigs {
         release {
             if (releasePropsFile.exists()) {

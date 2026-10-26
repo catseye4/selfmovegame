@@ -12,7 +12,8 @@ import { monsterControllerV2 } from '../engine_v2/monster_v2.js';
 import { skillsForParts, legPassiveOf } from '../engine_v2/skills_v2.js';
 import { progress } from '../engine_v2/progress_v2.js';
 import { rosterOf } from '../engine_v2/roster_v2.js';
-import { CHAPTERS, stageById, isUnlocked, defaultStage, chapterOf, chapterUnlocked, defaultStageIn } from '../engine_v2/stages_v2.js';
+import { STAGES, CHAPTERS, stageById, isUnlocked, defaultStage, chapterOf, chapterUnlocked, defaultStageIn } from '../engine_v2/stages_v2.js';
+import { isZoneReleased, isCharacterReleased, releaseDateOf } from '../engine_v2/contentSchedule_v2.js';
 import { DIFFICULTIES, difficultyOf, difficultyUnlocked, stageFor, FINAL_STAGE_ID } from '../engine_v2/difficulty_v2.js';
 import { ENEMY_TYPES } from '../engine_v2/enemies_v2.js';
 import { sound } from '../engine_v2/audio/sound_v2.js';
@@ -52,6 +53,11 @@ export class MenuController {
         });
         $('btn-to-battle-v2')?.addEventListener('click', () => {
             if (this.map !== 'story') return;
+            if (!isUnlocked(progress.selectedStage, progress) || !isCharacterReleased(progress.character)) {
+                sound.play('ui_error');
+                $('menu-map-foot-v2').textContent = '아직 공개되지 않은 콘텐츠입니다 — 공개된 구역과 캐릭터를 선택하세요';
+                return;
+            }
             if (!progress.isReady()) {   // 몸통을 아직 안 산 캐릭터 (D-051)
                 sound.play('ui_error');
                 $('menu-map-foot-v2').innerHTML = '<b>출격 불가</b> — 몸통 파츠가 없습니다. MUTATION LAB에서 파츠를 구매하세요';
@@ -85,10 +91,14 @@ export class MenuController {
     /** 지금 고른 스테이지 (저장된 선택이 열려 있으면 그것, 아니면 아직 못 깬 첫 스테이지) */
     currentStage() {
         const sel = progress.selectedStage;
-        return sel && isUnlocked(sel, progress) ? stageById(sel) : defaultStage(progress);
+        if (sel && isUnlocked(sel, progress)) return stageById(sel);
+        const next = defaultStage(progress);
+        return isUnlocked(next.id, progress) ? next : STAGES.find(s => isUnlocked(s.id, progress)) || next;
     }
 
     selectStage(id) {
+        const ch = chapterOf(id);
+        if (!isZoneReleased(ch.zone)) { this.selectZone(ch.id); return; }
         if (!isUnlocked(id, progress)) {
             sound.play('ui_error');
             $('menu-map-foot-v2').innerHTML = `<b>${id}</b> 잠김 — 이전 스테이지를 먼저 클리어하세요`;
@@ -103,6 +113,11 @@ export class MenuController {
     selectZone(id) {
         const ch = CHAPTERS.find(c => c.id === id);
         if (!ch) return;
+        if (!isZoneReleased(ch.zone)) {
+            sound.play('ui_error');
+            $('menu-map-foot-v2').textContent = `구역 ${ch.zone}${[2, 4, 5, 9].includes(ch.zone) ? '는' : '은'} ${releaseDateOf('zones', ch.zone)} 공개 예정입니다`;
+            return;
+        }
         if (!chapterUnlocked(ch, progress)) {
             sound.play('ui_error');
             const prev = CHAPTERS[CHAPTERS.indexOf(ch) - 1];
@@ -148,9 +163,11 @@ export class MenuController {
         const curCh = chapterOf(cur);
         box.innerHTML = CHAPTERS.map(ch => {
             const open = chapterUnlocked(ch, progress);
+            const soon = !isZoneReleased(ch.zone);
+            const label = soon ? `구역 ${ch.zone} — ${releaseDateOf('zones', ch.zone)} 공개` : `구역 ${ch.zone}`;
             // 구역이 10개라 번호만 (이름은 title·aria-label) — 레이더 머리 폭 안에 들어가게 (새 기획 D-086)
-            return `<button class="v2-zonetab${ch === curCh ? ' is-on' : ''}${open ? '' : ' is-locked'}" data-zone="${ch.id}" title="${ch.name}" aria-label="구역 ${ch.zone}">`
-                + `${open ? '' : icon('lock', 10)}${ch.zone}</button>`;
+            return `<button class="v2-zonetab${ch === curCh ? ' is-on' : ''}${open ? '' : ' is-locked'}${soon ? ' is-coming-soon' : ''}" data-zone="${ch.id}" title="${soon ? label : ch.name}" aria-label="${label}">`
+                + `${open ? '' : icon('lock', 10)}${ch.zone}${soon ? '<small class="v2-release-mark">곧</small>' : ''}</button>`;
         }).join('');
         box.querySelectorAll('.v2-zonetab').forEach(b => b.addEventListener('click', () => this.selectZone(b.dataset.zone)));
     }
@@ -167,10 +184,11 @@ export class MenuController {
         this.renderZones(cur);
         const nodes = ch.stages.map(st => ({
             id: st.id, at: st.map, boss: !!st.boss, name: `${st.id} ${st.name}`,
-            state: progress.stage(st.id).cleared ? 'cleared' : isUnlocked(st.id, progress) ? 'open' : 'locked',
+            state: !isZoneReleased(st.zone) ? 'locked' : progress.stage(st.id).cleared ? 'cleared' : isUnlocked(st.id, progress) ? 'open' : 'locked',
             stars: progress.starCount(st.id)
         }));
         this.radar.setStages(nodes, cur.id, id => this.selectStage(id));
+        $('btn-to-battle-v2').disabled = !isUnlocked(cur.id, progress) || !isCharacterReleased(progress.character);
         const stars = progress.stage(cur.id).stars.map(f => (f ? '★' : '☆')).join('');
         const enemies = Object.keys(cur.enemy.mix).map(k => ENEMY_TYPES[k].name).join(' · ');
         const best = progress.stage(cur.id).bestTime;

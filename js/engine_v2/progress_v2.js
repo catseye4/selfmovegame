@@ -23,8 +23,11 @@ import { PARTS_DB } from '../data/parts.js';
 import { SLOTS, DEFAULT_CHARACTER, rosterOf, characterOfPart, partsOfCharacter } from './roster_v2.js';
 import { DIFFICULTIES, DEFAULT_DIFFICULTY, difficultyOf, difficultyUnlocked, highestDifficulty } from './difficulty_v2.js';
 import { GrowthMethods, emptyGrowth } from './progressGrowth_v2.js';
+import { track } from './analytics_v2.js';
 import { gradeOf } from './growth_v2.js';
 import { isDropOnly, dropGroupOf } from './sets_v2.js';
+import * as saveStore from './saveStore_v2.js';
+import { settings } from './settings_v2.js';
 
 const KEY = 'mo_v2_save';
 export const MAX_LEVEL = 5;           // 노말 강화 한도 — 높은 난이도를 열면 올라감 (progress.maxLevel(), D-063)
@@ -53,6 +56,7 @@ class Progress {
         Object.assign(this, emptyGrowth());   // 파츠 등급·조각·코어·스킬 레벨·모듈·연구·별 사용·파견 (저장)
         this.loaded = false;
         this.saveTimer = null;
+        this.saveId = null;
     }
 
     // ---- 시작 / 저장 ----
@@ -63,8 +67,9 @@ class Progress {
         // 가격 0인 파츠는 처음부터 보유 (드랍 전용 — 유니크 세트 — 은 빼고)
         SLOTS.forEach(slot => (PARTS_DB[slot] || []).forEach(p => { if (!p.cost && !isDropOnly(p)) this.owned.add(p.id); }));
         let data = null;
-        try { data = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { data = null; }
+        try { data = JSON.parse(saveStore.load(KEY) || 'null'); } catch (e) { data = null; }
         if (data) {
+            if (typeof data.saveId === 'string' && data.saveId) this.saveId = data.saveId;
             if (Number.isFinite(data.dm)) gameState.darkMatter = data.dm;
             if (data.equipped) {
                 SLOTS.forEach(slot => {
@@ -110,12 +115,16 @@ class Progress {
     }
 
     save() {
+        clearTimeout(this.saveTimer);
+        if (!this.saveId) this.saveId = globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
         // 장착이 바깥(검사 도구 등)에서 바뀌었으면 몸통 캐릭터를 따라감
         const bodyChar = characterOfPart(partOf('body', gameState.equippedParts.body));
         if (bodyChar) this.character = bodyChar;
         this.rememberLoadout();
         const data = {
             v: 3,   // 3: 강화 외 성장 필드 추가 (Q-006)
+            savedAt: Date.now(),
+            saveId: this.saveId,
             dm: gameState.darkMatter,
             equipped: { ...gameState.equippedParts },
             owned: [...this.owned],
@@ -129,12 +138,13 @@ class Progress {
             tips: [...this.tips],
             ...this.growthData()
         };
-        try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* 저장 불가 환경: 이번 실행에서만 유지 */ }
+        saveStore.save(KEY, JSON.stringify(data));
     }
 
     /** 처음부터 다시 (설정 창의 진행 초기화) */
     resetAll() {
-        try { localStorage.removeItem(KEY); } catch (e) { /* 무시 */ }
+        clearTimeout(this.saveTimer);
+        saveStore.remove(KEY);
         location.reload();
     }
 
@@ -232,6 +242,7 @@ class Progress {
         if (locked.length) return { success: false, reason: `${locked[0].name}: 드랍·조각으로만 얻는 파츠입니다` };
         const cost = this.cartCost();
         if (gameState.darkMatter < cost) return { success: false, reason: '다크 매터(DM)가 부족합니다' };
+        const partIds = SLOTS.map(slot => gameState.cartParts[slot]).filter(id => id !== 'none' && !this.owned.has(id));
         SLOTS.forEach(slot => {
             const id = gameState.cartParts[slot];
             if (!this.owned.has(id)) {
@@ -243,6 +254,7 @@ class Progress {
         gameState.equippedParts = { ...gameState.cartParts };
         this.rememberLoadout();
         gameState.notify();
+        if (partIds.length) track('part_purchase', { partIds, cost });
         return { success: true, cost };
     }
 
@@ -357,3 +369,15 @@ class Progress {
 Object.assign(Progress.prototype, GrowthMethods);
 
 export const progress = new Progress();
+
+export function exportSave() {
+    progress.save();
+    saveStore.save('mo_v2_settings', JSON.stringify(settings.values));
+    return saveStore.exportSave();
+}
+
+export function importSave(code) {
+    const result = saveStore.importSave(code);
+    if (result.success) clearTimeout(progress.saveTimer);
+    return result;
+}
