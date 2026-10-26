@@ -15,8 +15,8 @@ android {
         applicationId "com.madoverlord.game"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 5          // app/build_www.py가 js/version_v2.js의 BUILD로 맞춤
-        versionName "0.2.3"    // 〃 VERSION
+        versionCode 6          // app/build_www.py가 js/version_v2.js의 BUILD로 맞춤
+        versionName "0.2.4"    // 〃 VERSION
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
