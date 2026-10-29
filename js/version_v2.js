@@ -8,5 +8,5 @@
    ========================================================================== */
 
 export const VERSION = '0.2.4';
-export const BUILD = 9;
+export const BUILD = 10;
 export const RELEASE_REPO = 'catseye4/selfmovegame';
