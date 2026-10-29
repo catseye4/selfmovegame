@@ -12,7 +12,7 @@ import { monsterControllerV2 } from '../engine_v2/monster_v2.js';
 import { skillsForParts, legPassiveOf } from '../engine_v2/skills_v2.js';
 import { progress } from '../engine_v2/progress_v2.js';
 import { rosterOf } from '../engine_v2/roster_v2.js';
-import { STAGES, CHAPTERS, stageById, isUnlocked, defaultStage, chapterOf, chapterUnlocked, defaultStageIn } from '../engine_v2/stages_v2.js';
+import { STAGES, CHAPTERS, stageById, isUnlocked, defaultStage, chapterOf, chapterUnlocked, defaultStageIn, unlockAllStagesTemp, allStagesUnlocked } from '../engine_v2/stages_v2.js';
 import { isZoneReleased, isCharacterReleased, releaseDateOf } from '../engine_v2/contentSchedule_v2.js';
 import { DIFFICULTIES, difficultyOf, difficultyUnlocked, stageFor, FINAL_STAGE_ID } from '../engine_v2/difficulty_v2.js';
 import { ENEMY_TYPES } from '../engine_v2/enemies_v2.js';
@@ -32,6 +32,9 @@ const SLOTS = [
     { slot: 'body', label: 'BODY', role: '2' },
     { slot: 'leg', label: 'LEG', role: 'P' }
 ];
+
+/** 구역 공개 여부 — 시험용 전체 해제 중이면 모두 열림 */
+const zoneOpen = zone => allStagesUnlocked() || isZoneReleased(zone);
 
 export class MenuController {
     constructor(switchScreenFn) {
@@ -57,6 +60,26 @@ export class MenuController {
         gameState.subscribe(updateBadge);
         setInterval(updateBadge, 15000);
         this.initEvents();
+        this.initUnlockTaps();
+    }
+
+    /** 시험용: 왼쪽 위 아이콘을 5번 연속(각 1초 안) 누르면 모든 스테이지·구역 잠금을 이번 실행 동안만 해제 */
+    initUnlockTaps() {
+        const emblem = this.root && this.root.querySelector('.v2-brand__emblem');
+        if (!emblem) return;
+        let taps = 0;
+        let last = 0;
+        emblem.addEventListener('click', () => {
+            const now = performance.now();
+            taps = now - last < 1000 ? taps + 1 : 1;
+            last = now;
+            if (taps < 5 || allStagesUnlocked()) return;
+            unlockAllStagesTemp();
+            emblem.classList.add('is-dev-unlocked');
+            sound.play('ui_equip');
+            this.renderStages();
+            $('menu-map-foot-v2').innerHTML = '<b>시험 모드</b> — 모든 스테이지 잠금 해제 (게임을 다시 켜면 원래대로 · 원래 잠긴 판은 기록 안 됨)';
+        });
     }
 
     initEvents() {
@@ -112,7 +135,7 @@ export class MenuController {
 
     selectStage(id) {
         const ch = chapterOf(id);
-        if (!isZoneReleased(ch.zone)) { this.selectZone(ch.id); return; }
+        if (!zoneOpen(ch.zone)) { this.selectZone(ch.id); return; }
         if (!isUnlocked(id, progress)) {
             sound.play('ui_error');
             $('menu-map-foot-v2').innerHTML = `<b>${id}</b> 잠김 — 이전 스테이지를 먼저 클리어하세요`;
@@ -127,7 +150,7 @@ export class MenuController {
     selectZone(id) {
         const ch = CHAPTERS.find(c => c.id === id);
         if (!ch) return;
-        if (!isZoneReleased(ch.zone)) {
+        if (!zoneOpen(ch.zone)) {
             sound.play('ui_error');
             $('menu-map-foot-v2').textContent = `구역 ${ch.zone}${[2, 4, 5, 9].includes(ch.zone) ? '는' : '은'} ${releaseDateOf('zones', ch.zone)} 공개 예정입니다`;
             return;
@@ -177,7 +200,7 @@ export class MenuController {
         const curCh = chapterOf(cur);
         box.innerHTML = CHAPTERS.map(ch => {
             const open = chapterUnlocked(ch, progress);
-            const soon = !isZoneReleased(ch.zone);
+            const soon = !zoneOpen(ch.zone);
             const label = soon ? `구역 ${ch.zone} — ${releaseDateOf('zones', ch.zone)} 공개` : `구역 ${ch.zone}`;
             // 구역이 10개라 번호만 (이름은 title·aria-label) — 레이더 머리 폭 안에 들어가게 (새 기획 D-086)
             return `<button class="v2-zonetab${ch === curCh ? ' is-on' : ''}${open ? '' : ' is-locked'}${soon ? ' is-coming-soon' : ''}" data-zone="${ch.id}" title="${soon ? label : ch.name}" aria-label="${label}">`
@@ -198,7 +221,7 @@ export class MenuController {
         this.renderZones(cur);
         const nodes = ch.stages.map(st => ({
             id: st.id, at: st.map, boss: !!st.boss, name: `${st.id} ${st.name}`,
-            state: !isZoneReleased(st.zone) ? 'locked' : progress.stage(st.id).cleared ? 'cleared' : isUnlocked(st.id, progress) ? 'open' : 'locked',
+            state: !zoneOpen(st.zone) ? 'locked' : progress.stage(st.id).cleared ? 'cleared' : isUnlocked(st.id, progress) ? 'open' : 'locked',
             stars: progress.starCount(st.id)
         }));
         this.radar.setStages(nodes, cur.id, id => this.selectStage(id));

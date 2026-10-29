@@ -2704,3 +2704,6 @@ body.v2-fit .v2-growth__box { width: 940px; max-height: 655px; }
 .v2-tutorial button { pointer-events: auto; border: 1px solid #63768b; border-radius: 4px; background: #172334; color: #e4ecf5; padding: 2px 9px; font: inherit; cursor: pointer; }
 .v2-tutorial [data-tutorial="claim"] { color: var(--v2-green); border-color: var(--v2-green); }
 #screen-battle-v2 .v2-tutorial { top: 80px; bottom: auto; }
+
+/* 시험용 전체 스테이지 잠금 해제 중 — 메뉴 왼쪽 위 아이콘 5번 (menu_v2.js initUnlockTaps) */
+.v2-brand__emblem.is-dev-unlocked { filter: drop-shadow(0 0 6px #6dffb0) drop-shadow(0 0 2px #6dffb0); }

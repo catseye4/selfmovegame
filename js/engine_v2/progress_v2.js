@@ -30,6 +30,7 @@ import { TutorialMethods, emptyTutorial } from './tutorial_v2.js';
 import { track } from './analytics_v2.js';
 import { gradeOf } from './growth_v2.js';
 import { isDropOnly, dropGroupOf } from './sets_v2.js';
+import { allStagesUnlocked, isUnlockedNormally } from './stages_v2.js';
 import * as saveStore from './saveStore_v2.js';
 import { settings } from './settings_v2.js';
 
@@ -375,6 +376,8 @@ class Progress {
      * @returns {{ newStars: number, bonus: number }} 새로 얻은 별 수와 보너스 DM (보너스는 여기서 지급, 난이도 보상 배율)
      */
     recordStage(id, { stars, cleared, time }, diff = this.difficulty) {
+        // 시험용 전체 해제로 연 판(원래 잠긴 판)은 기록하지 않음 — 다시 켜면 이전 진행 그대로
+        if (allStagesUnlocked() && !isUnlockedNormally(id, this)) return { newStars: 0, bonus: 0, pets: [], skipped: true };
         const prev = this.stage(id, diff);
         const merged = prev.stars.map((had, i) => had || !!stars[i]);
         const newStars = merged.filter(Boolean).length - prev.stars.filter(Boolean).length;

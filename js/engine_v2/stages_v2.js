@@ -926,9 +926,14 @@ export function chapterOf(stageOrId) {
     return CHAPTERS.find(ch => ch.stages.some(s => s.id === id)) || CHAPTER1;
 }
 
+/** 시험용 전체 잠금 해제 (메뉴 왼쪽 위 아이콘 5번 — menu_v2.js). 메모리에만 있어 게임을 다시 켜면 원래대로 */
+let allStagesOpen = false;
+export function unlockAllStagesTemp() { allStagesOpen = true; }
+export function allStagesUnlocked() { return allStagesOpen; }
+
 /** 챕터가 열렸는지: 첫 스테이지가 열렸으면 */
 export function chapterUnlocked(ch, progress) {
-    return isZoneReleased(ch.zone) && isUnlocked(ch.stages[0].id, progress);
+    return allStagesOpen || (isZoneReleased(ch.zone) && isUnlocked(ch.stages[0].id, progress));
 }
 
 /** 챕터 안에서 기본으로 고를 스테이지: 아직 못 깬 첫 스테이지 (전부 깼으면 마지막) */
@@ -945,8 +950,13 @@ export function nextStageOf(id) {
     return i >= 0 && i < STAGES.length - 1 ? STAGES[i + 1] : null;
 }
 
-/** 열린 스테이지: 첫 스테이지 + 바로 앞 스테이지를 클리어한 스테이지 */
+/** 열린 스테이지: 첫 스테이지 + 바로 앞 스테이지를 클리어한 스테이지 (시험용 전체 해제 중이면 모두) */
 export function isUnlocked(id, progress) {
+    return (allStagesOpen && STAGES.some(s => s.id === id)) || isUnlockedNormally(id, progress);
+}
+
+/** 시험용 전체 해제와 상관없이 진행으로 열린 스테이지 */
+export function isUnlockedNormally(id, progress) {
     const i = STAGES.findIndex(s => s.id === id);
     return i >= 0 && isZoneReleased(STAGES[i].zone) && (i === 0 || progress.stage(STAGES[i - 1].id).cleared);
 }
