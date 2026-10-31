@@ -100,6 +100,14 @@ export class LabController {
         $('btn-lab-back-v2')?.addEventListener('click', () => this.switchScreen('menu'));
         $('btn-lab-settings-v2')?.addEventListener('click', () => openSettings());
 
+        const skills = $('lab-skills-v2');
+        if (skills) {
+            skills.addEventListener('scroll', () => this.updateSkillScrollHint(), { passive: true });
+            this.skillResizeObserver = new ResizeObserver(() => this.updateSkillScrollHint());
+            [skills, $('lab-loadout-v2'), $('lab-setbonus-v2')].filter(Boolean)
+                .forEach(el => this.skillResizeObserver.observe(el));
+        }
+
         const tabs = this.root.querySelectorAll('.tab-btn-v2');
         tabs.forEach(btn => btn.addEventListener('click', () => {
             tabs.forEach(b => b.classList.remove('active'));
@@ -372,6 +380,19 @@ export class LabController {
                 </div></li>`;
         }).join('');
         this.renderSetBonus(cart);
+        this.updateSkillScrollHint();
+    }
+
+    updateSkillScrollHint() {
+        const box = $('lab-skills-v2');
+        const hint = $('lab-skills-hint-v2');
+        if (!box || !hint) return;
+        const overflow = box.clientHeight > 0 && box.scrollHeight > box.clientHeight + 1;
+        hint.hidden = !overflow;
+        if (!overflow) return;
+        const above = box.scrollTop > 1;
+        const below = box.scrollTop + box.clientHeight < box.scrollHeight - 1;
+        hint.textContent = [above ? '↑ 위에 더 있음' : '', below ? '아래에 더 있음 ↓' : ''].filter(Boolean).join(' · ');
     }
 
     /** 세트 효과 (Q-008): 장바구니 장착에 걸린 세트마다 "레어 ① 포격 사령부 3/4 · 4부위: …" (켜지면 밝게) */

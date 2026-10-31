@@ -24,6 +24,7 @@ import { resChipHtml, openGrowthPanel } from './growthUi_v2.js';
 import { MUTATORS } from '../engine_v2/growth_v2.js';
 import { openShop } from './shop_v2.js';
 import { createOfflineRewardButton, updateOfflineRewardButton } from './offlineRewardUi_v2.js';
+import { updateSupportMenu } from './supportUi_v2.js';
 
 const $ = id => document.getElementById(id);
 const SLOTS = [
@@ -104,6 +105,7 @@ export class MenuController {
         });
         $('btn-menu-settings-v2')?.addEventListener('click', () => openSettings());
         $('btn-menu-support-v2')?.addEventListener('click', () => openGrowthPanel('modules', () => this.updateDisplay()));
+        $('btn-menu-coop-v2')?.addEventListener('click', () => openGrowthPanel('coop', () => this.updateDisplay()));
         this.root?.querySelectorAll('.v2-maptab').forEach(tab => tab.addEventListener('click', () => this.setMap(tab.dataset.map)));
     }
 
@@ -258,6 +260,8 @@ export class MenuController {
         const badge = $('menu-support-badge-v2');   // 받을 파견이 있으면 빨간 점
         if (badge) badge.textContent = progress.dispatch.some(d => d.end <= Date.now()) ? ' ' : '';
         const equipped = gameState.getEquippedObjects();
+        const coop = $('btn-menu-coop-v2');
+        if (coop) updateSupportMenu(coop);
         monsterControllerV2.renderVisuals(equipped, progress.character);
 
         // 캐릭터 이름/팩션 (캐릭터는 선택창에서 고름 — 몸통을 아직 안 샀으면 흐린 모습)

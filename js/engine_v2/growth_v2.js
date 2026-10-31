@@ -114,7 +114,8 @@ export const RESEARCH = {
     coreBoost: { name: '코어 추출', desc: '스킬 코어 +20%', per: 0.2, max: 3, stars: [5, 8, 12] },
     shardBoost: { name: '조각 회수', desc: '중복 환급 조각 +25%', per: 0.25, max: 2, stars: [6, 10] },
     dispatchTime: { name: '파견 효율', desc: '파견 시간 -10%', per: 0.1, max: 3, stars: [6, 10, 14] },
-    dispatchSlot: { name: '파견 확장', desc: '파견 칸 +1', per: 1, max: 1, stars: [15] }
+    dispatchSlot: { name: '파견 확장', desc: '파견 칸 +1', per: 1, max: 1, stars: [15] },
+    supportCooldown: { name: '협력 호출 최적화', desc: '협력 첫 충전·재충전 -3초 (40→37→34→31초)', per: 3, max: 3, stars: [5, 8, 10] }
 };
 
 // ---- 2-5 나이트메어 전장 변이 (주마다 바뀜) ----

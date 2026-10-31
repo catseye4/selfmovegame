@@ -8,10 +8,31 @@ DSP = "const D = await import('/js/ui_v2/dispatchUi_v2.js');"
 def run(ctx):
     g = ctx.game(fresh=True)
     g.enter_v2()
+    # 해금만 된 캐릭터/일부 부위만 가진 캐릭터는 목록과 실행에서 모두 제외한다.
+    st = g.js("""const { SLOTS, partsOfCharacter } = await import('/js/engine_v2/roster_v2.js');
+        const locked = progress.startDispatch('architect', 1).success;
+        progress.stages['1-B'] = { cleared: true, stars: [true,true,true], bestTime: 60 };
+        progress.unlockedChars.push('architect');
+        const empty = progress.startDispatch('architect', 1).success;
+        const ids = SLOTS.map(s => partsOfCharacter('architect', s)[0].id);
+        ids.slice(0, 3).forEach(id => progress.owned.add(id));
+        const partial = progress.startDispatch('architect', 1).success;
+        progress.owned.add(ids[3]);
+        const ready = !progress.dispatchReason('architect');
+        const sent = progress.startDispatch('architect', 1).success;
+        const duplicate = progress.startDispatch('architect', 1).success;
+        progress.dispatch = [];
+        ids.forEach(id => progress.owned.delete(id));
+        return { locked, empty, partial, ready, sent, duplicate };""")
+    ctx.check(not st['locked'] and not st['empty'] and not st['partial'] and st['ready'] and st['sent'] and not st['duplicate'],
+              '파견 보유 검사: 잠금·파츠 없음·3부위 거부, 4부위 보유 시 가능, 중복 파견 거부', str(st))
     # 모든 구역을 깨고 하드·헬도 열어 칸 3개, 캐릭터 모두 열기
     g.js(f"""{ALL}.forEach(id => progress.stages[id] = {CLEAR});
         for (const d of ['hard', 'hell']) ({ALL}).forEach(id => progress.recordsOf(d)[id] = {CLEAR});
         progress.unlockedChars = ['kaiju', 'hero', 'chimera', 'diver', 'saint', 'frost', 'doll'];
+        const {{ SLOTS, partsOfCharacter }} = await import('/js/engine_v2/roster_v2.js');
+        progress.unlockedChars.forEach(c => SLOTS.forEach(s => progress.owned.add(partsOfCharacter(c, s)[0].id)));
+        progress.unlockedChars.push('architect');   // 해금했어도 파츠가 없는 설계자는 후보에 나오지 않음
         progress.selectCharacter('mech');
         const now = Date.now();
         progress.startDispatch('frost', 2, now - 60 * 60 * 1000);      // 1시간 지남
@@ -43,8 +64,9 @@ def run(ctx):
     ctx.check(st['time'].startswith('1:') or st['time'].startswith('2:'), '남은 시간 표시 (3시간 중 1시간 지남 → 약 2시간)', str(st))
     ctx.check(30 < st['bar'] < 37 and st['steps'] >= 2 and st['log'] >= 1 and st['reward'] == '3,000' and st['rig'],
               '진행 막대 1/3 · 단계 눈금 · 기록 · 예상 보상(구역 2 DM 3,000) · 캐릭터 그림', str(st))
-    ctx.check(st['zones'] == 10 and st['locked'] == 1 and 'mech' not in st['chars'] and 'frost' not in st['chars'] and 'hero' in st['chars'],
-              '새 파견: 구역 10개(구역 6은 6-B 전이라 잠김), 출전 중·파견 중 캐릭터는 목록에 없음', str(st))
+    ctx.check(st['zones'] == 10 and st['locked'] == 1 and 'mech' not in st['chars'] and 'frost' not in st['chars'] and 'hero' in st['chars']
+              and 'architect' not in st['chars'],
+              '새 파견: 구역 10개(구역 6은 6-B 전이라 잠김), 출전 중·파견 중·파츠 미보유 캐릭터는 목록에 없음', str(st))
 
     # 배경이 흐르고 적이 다가와 맞붙음 (첫 적은 1.5~4.5초 뒤)
     st = g.js("""const s = document.querySelector('.v2-dsp');
@@ -62,10 +84,20 @@ def run(ctx):
     g.shot('dispatch_running', '.v2-growth__box')
 
     # 새 파견: 구역·캐릭터 고르고 보내기
+    g.page.set_viewport_size({'width': 900, 'height': 520})
+    g.page.locator('.v2-dsp-zone[data-zone="3"]').scroll_into_view_if_needed()
+    before = g.js("return document.querySelector('.v2-growth__body').scrollTop;")
     g.page.click('.v2-dsp-zone[data-zone="3"]')
     g.wait(150)
+    after = g.js("return document.querySelector('.v2-growth__body').scrollTop;")
+    ctx.check(before > 0 and abs(before - after) <= 1, '구역 선택 후 작전 지원 스크롤 위치 유지', str([before, after]))
+    g.page.locator('.v2-dsp-char[data-char="saint"]').scroll_into_view_if_needed()
+    before = g.js("return document.querySelector('.v2-growth__body').scrollTop;")
     g.page.click('.v2-dsp-char[data-char="saint"]')
     g.wait(150)
+    after = g.js("return document.querySelector('.v2-growth__body').scrollTop;")
+    ctx.check(before > 0 and abs(before - after) <= 1, '캐릭터 선택 후 작전 지원 스크롤 위치 유지', str([before, after]))
+    g.page.set_viewport_size({'width': 1300, 'height': 740})
     g.page.click('.v2-dsp-go button[data-act="dispatch"]')
     g.wait(800)
     st = g.js("""return { n: progress.dispatch.length, last: progress.dispatch[2] && [progress.dispatch[2].character, progress.dispatch[2].zone],

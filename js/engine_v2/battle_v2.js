@@ -51,6 +51,7 @@ import { PetBattleMethods } from './battle/pets.js';
 import { predecodeStageArt } from './enemies_v2.js';
 import { runReport } from './battle/runReport.js';
 import { track } from './analytics_v2.js';
+import { SupportMethods } from './battle/support.js';
 
 export class BattleEngine {
     constructor() {
@@ -270,6 +271,7 @@ export class BattleEngine {
         monsterControllerV2.setState('walking');
         monsterControllerV2.resetSkills();
         monsterControllerV2.playIntro();   // 거대로봇: 출격 점프
+        this.setupSupport();
         this.fx.start();
         if (this.equippedBodyId === 'body_hero') {
             // 흑마법 오라 (디버프 장판): 발밑에서 저주 범위 끝까지. 안에 든 적은 촉수에 발목이 잡힘
@@ -303,6 +305,7 @@ export class BattleEngine {
     stopBattle() {
         this.isActive = false;
         this.clearPet();
+        this.clearSupport();
         this.pSlowT = 0;
         this.pStunT = 0;
         this.pRootT = 0;
@@ -407,6 +410,7 @@ export class BattleEngine {
         if (left > 0 || this.timeUp) return false;
         this.timeUp = true;
         this.cinematic = true;
+        this.clearSupport();
         const run = this.runId;
         this.director.timeOver().then(() => {
             if (this.runId === run && this.isActive) this.finishBattle(false);
@@ -503,6 +507,7 @@ export class BattleEngine {
         this.tickGrowth(dt);             // growth.js (방벽 발생기 면역 시간)
         this.tickArtillery(dt);          // enemyField.js
         this.tickSpawning(dt);           // enemyField.js
+        this.tickSupport(dt);            // 독립 시전자, 10초 게임 시간·궁극기 2회, 자동 호출
 
         const frontX = this.frontX();    // 이번 프레임의 주인공 앞면 (진격으로 움직이기 전 값을 끝까지 씀)
         this.tickFactionPassives(dt, frontX);   // player.js
@@ -553,7 +558,7 @@ export class BattleEngine {
 
             // 거점 건물은 가까이 붙으면 직접 공격 (적 보병은 enemies_v2.js에서)
             if (minDistance <= 70 && closestEnemy.isBuilding) {
-                this.damagePlayer(closestEnemy.dps * dt, dt);
+                this.damagePlayer(closestEnemy.dps * dt, dt, null, closestEnemy);
             }
         } else if (activeBuilding) {
             monsterControllerV2.setState('walking-forward');
@@ -616,7 +621,8 @@ attachMethods(BattleEngine.prototype, {
     'battle/frost.js': FrostMethods,
     'battle/doll.js': DollMethods,
     'battle/growth.js': GrowthBattleMethods,
-    'battle/pets.js': PetBattleMethods
+    'battle/pets.js': PetBattleMethods,
+    'battle/support.js': SupportMethods
 });
 
 export const battleEngineV2 = new BattleEngine();

@@ -856,7 +856,7 @@ export function updateEnemy(b, e, dt, frontX) {
     const slowMul = e.slowT > 0 ? 0.5 : 1;
     const dist = e.x - frontX;
     // 침묵 (침묵의 방송자, battle/kit.js kitStatus): 원거리·치유·바리케이드·특수 공격·보스 기술을 못 씀 — 걷고 근접으로 때리기만
-    const silenced = e.kitSilenceT > 0;
+    const silenced = e.kitSilenceT > 0 || b.supportSilenced?.(e);
 
     // 수호의 결계: 거리·아군과의 교전 여부와 상관없이 주기마다 금빛 방벽
     if (t.barrier && !silenced) {
@@ -923,7 +923,7 @@ export function updateEnemy(b, e, dt, frontX) {
         const ally = b.allies.find(a => e.x - a.x <= 65 && e.x - a.x >= -35);
         if (ally) {
             setAttacking(e, true);
-            b.damageAlly(ally, e.dps * dt);
+            b.damageAlly(ally, e.dps * dt * b.supportEnemyDamageMul(e));
             return;
         }
     }
@@ -1015,7 +1015,7 @@ export function updateEnemy(b, e, dt, frontX) {
         b.fx.play(ELITE_VFX.volatileBlast, e.x + ENEMY_CENTER, FOOT_B);
         b.fx.play(ZONE_VFX[sd.fx || 'gooSplat'], b.monsterX + 60, FOOT_B + 20, { scale: 1.3 });
         b.director.shake(8, 380);
-        b.damagePlayer(b.maxPlayerHp * sd.dmg, 0);
+        b.damagePlayer(b.maxPlayerHp * sd.dmg, 0, null, e);
         if (sd.width) b.addPuddle(e.x + ENEMY_CENTER - sd.width / 2, sd.width, sd.sec);
         if (sd.slow) b.applyPlayerSlow(sd.slow);
         b.createDamagePopup(e.x, 170, sd.label || '☠ 맹독 자폭!', false);
@@ -1047,7 +1047,7 @@ export function updateEnemy(b, e, dt, frontX) {
         playOnce(e, 'attack');
         b.fx.play(ZONE_VFX[t.cleave.fx || 'axeCleave'], b.monsterX + 70, 100);
         b.director.shake(7, 300);
-        b.damagePlayer(b.maxPlayerHp * t.cleave.dmg, 0);
+        b.damagePlayer(b.maxPlayerHp * t.cleave.dmg, 0, null, e);
         b.createDamagePopup(b.monsterX + 30, 210, t.cleave.label || '🪓 도끼 내려찍기', false);
         if (t.cleave.push) b.knockPlayerBack(t.cleave.push, `${t.cleave.label || '강타'}에 밀려남!`);   // 구역 9 레킹볼
     }
@@ -1056,7 +1056,7 @@ export function updateEnemy(b, e, dt, frontX) {
         playOnce(e, 'attack');
         b.fx.play(BATTLE_VFX.shieldBash, b.monsterX + 70, 100);
         sound.play('mech_fist_hit', { rate: 0.7 });
-        b.damagePlayer(b.maxPlayerHp * t.shove.dmg, 0);
+        b.damagePlayer(b.maxPlayerHp * t.shove.dmg, 0, null, e);
         b.knockPlayerBack(t.shove.push, '배토판에 밀려남!');
     }
     if (t.bite && e.cd.skill >= t.bite.every) {   // 전투 군견: 물어뜯기 → 출혈 (1초마다 ticks번)
@@ -1068,7 +1068,7 @@ export function updateEnemy(b, e, dt, frontX) {
         if (bt.slow) b.applyPlayerSlow(bt.slow);
         if (bt.vuln) b.applyPlayerVuln(bt.vuln.sec, bt.vuln.more);   // 구역 9 용접기 워커: 방어 약화
         for (let i = 1; i <= bt.ticks; i++) b.schedule(i, () => {
-            if (b.isActive && !b.finalBaseDestroyed) b.damagePlayer(bt.dmg * b.stage.enemy.dps, 0);
+            if (b.isActive && !b.finalBaseDestroyed) b.damagePlayer(bt.dmg * b.stage.enemy.dps, 0, null, e);
         });
     }
     if (t.bash && e.cd.skill >= t.bash.every) {
@@ -1076,7 +1076,7 @@ export function updateEnemy(b, e, dt, frontX) {
         playOnce(e, 'bash');
         b.fx.play(BATTLE_VFX.shieldBash, b.monsterX + 70, 100);
         sound.play('mech_fist_hit', { rate: 0.8 });
-        b.damagePlayer(b.maxPlayerHp * t.bash.dmg, 0);
+        b.damagePlayer(b.maxPlayerHp * t.bash.dmg, 0, null, e);
         b.applyPlayerStun(t.bash.stun, '방패 강타!');
         b.allies.forEach(a => { a.x -= 40; if (a.dom) a.dom.style.left = `${a.x}px`; });
     }
@@ -1121,7 +1121,7 @@ function shootTranq(b, e) {
     b.fx.launchOrb(from, () => ({ x: b.monsterX + 60, b: 120 }), r.color || '90, 230, 255', 0.38, () => {
         if (!b.isActive) return;
         const k = b.rangedMul();   // 자기장 방벽: 원거리 피해·효과 절반
-        b.damagePlayer(r.dmg * b.stage.enemy.dps * k, 0);
+        b.damagePlayer(r.dmg * b.stage.enemy.dps * k, 0, null, e);
         if (r.stun) b.applyPlayerStun(r.stun * k, '마취!');   // 구역 6 마취의 주술사: 감속 대신 기절
         else b.applyPlayerSlow(r.slow * k);
         if (r.label) b.createDamagePopup(b.monsterX + 30, 200, r.label, false);   // 구역 2 작살포 트럭
@@ -1149,7 +1149,7 @@ function shootNet(b, e) {
     b.fx.launchOrb(from, () => ({ x: b.monsterX + 60, b: 110 }), n.color || '210, 190, 140', 0.42, () => {
         if (!b.isActive) return;
         const k = b.rangedMul();
-        b.damagePlayer(n.dmg * b.stage.enemy.dps * k, 0);
+        b.damagePlayer(n.dmg * b.stage.enemy.dps * k, 0, null, e);
         b.applyPlayerRoot(n.root * k);
         if (n.label) b.createDamagePopup(b.monsterX + 30, 200, n.label, false);
     }, null);
@@ -1164,7 +1164,7 @@ function lobRocket(b, e) {
         if (!b.isActive) return;
         b.fx.play(ZONE_VFX[r.fx || 'rocketBlast'], b.monsterX + 60, FOOT_B + 20);
         if (!r.fx) b.director.shake(6, 260);
-        b.damagePlayer(r.dmg * b.stage.enemy.dps * b.rangedMul(), 0);
+        b.damagePlayer(r.dmg * b.stage.enemy.dps * b.rangedMul(), 0, null, e);
     }, { apex: r.apex || 160, dur: r.dur || 1.1, color: r.color || '255, 160, 80' });
 }
 
@@ -1177,7 +1177,7 @@ function empPulse(b, e) {
         if (!b.isActive) return;
         const k = b.rangedMul();
         b.fx.play(ZONE_VFX[m.fx || 'empZap'], b.monsterX + 60, 130);
-        if (m.dmg) b.damagePlayer(m.dmg * b.stage.enemy.dps * k, 0);
+        if (m.dmg) b.damagePlayer(m.dmg * b.stage.enemy.dps * k, 0, null, e);
         b.delaySkills(Math.round(m.cd * k * 10) / 10, m.label || '📡 전파 방해 — 스킬 쿨다운 +');
     }, null);
 }
@@ -1214,7 +1214,7 @@ function eyeBeam(b, e) {
     b.schedule(m.warn, () => {
         if (!b.isActive || !b.enemies.includes(e)) return;
         b.fx.play(BOSS_VFX.gaze, e.x + 30, FOOT_B + 120, { to: [b.monsterX + 60, 120] });
-        b.damagePlayer(m.dmg * b.stage.enemy.dps * b.rangedMul(), 0);
+        b.damagePlayer(m.dmg * b.stage.enemy.dps * b.rangedMul(), 0, null, e);
     });
 }
 
@@ -1227,7 +1227,7 @@ function shootBolt(b, e) {
         if (!b.isActive) return;
         const k = b.rangedMul();
         b.fx.play(ZONE_VFX[bt.fx || 'arrowHit'], b.monsterX + 60, 115, { scale: bt.fx ? 1 : 1.6 });
-        b.damagePlayer(bt.dmg * b.stage.enemy.dps * k, 0);
+        b.damagePlayer(bt.dmg * b.stage.enemy.dps * k, 0, null, e);
         b.knockPlayerBack(bt.push, bt.label ? `${bt.label}에 밀려남!` : '은제 쐐기에 밀려남!');
     }, { color: bt.color || '220, 230, 240', dur: 0.45, sfx: null });
 }
@@ -1247,7 +1247,7 @@ function tickDrain(b, e, dt) {
         [-30, 10, 50].forEach((dx, i) => b.schedule(i * 0.06, () => b.isActive && b.fx.play(BATTLE_VFX.abyssSpike, x + dx, FOOT_B, { scale: 0.9 })));
         b.director.flash('#4a0010', 260, 0.4);
         const dmg = b.maxPlayerHp * d.dmg;
-        b.damagePlayer(dmg, 0);
+        b.damagePlayer(dmg, 0, null, e);
         if (d.root) b.applyPlayerRoot(d.root * b.rangedMul());   // 구역 6 탐욕의 심장: 피의 촉수가 발을 묶음
         const gain = Math.min(e.maxHp - e.hp, dmg * d.heal * 2.2);   // 보스 체력이 주인공보다 커서 체감되게 조금 키움
         if (gain >= 1) {
@@ -1279,7 +1279,7 @@ function tickIronclad(b, e, dt) {
                         if (!b.isActive) return;
                         b.fx.play(ZONE_VFX.rocketBlast, b.monsterX + 60, 110, { scale: 1.4 });
                         b.director.shake(10, 450);
-                        b.damagePlayer(b.maxPlayerHp * c.dmg, 0);
+                        b.damagePlayer(b.maxPlayerHp * c.dmg, 0, null, e);
                         b.knockPlayerBack(c.push, '철갑탄에 밀려남!');
                     }, { color: '255, 200, 120', dur: 0.25, sfx: null });
                 });
@@ -1290,7 +1290,7 @@ function tickIronclad(b, e, dt) {
                 if (!b.isActive || !b.enemies.includes(e)) return;
                 b.fx.play(ZONE_VFX.waterBeam, e.x + 10, 160, { to: [b.monsterX + 60, 120] });
                 b.director.shake(10, 450);
-                b.damagePlayer(b.maxPlayerHp * c.dmg, 0);
+                b.damagePlayer(b.maxPlayerHp * c.dmg, 0, null, e);
                 b.knockPlayerBack(c.push, '압축포에 밀려남!');
             });
         }
@@ -1311,7 +1311,7 @@ function tickIronclad(b, e, dt) {
                     b.fx.play(ZONE_VFX[br.fx || 'rocketBlast'], x, FOOT_B + 10);
                     b.director.shake(5, 220);
                     if (Math.abs(b.monsterX + 35 - x) <= br.radius) {
-                        b.damagePlayer(b.maxPlayerHp * br.dmg, 0);
+                        b.damagePlayer(b.maxPlayerHp * br.dmg, 0, null, e);
                         if (br.stun) b.applyPlayerStun(br.stun, '철골에 깔림!');   // 구역 9 파노프티콘 H빔
                     }
                 }));
@@ -1333,7 +1333,7 @@ function tickHeart(b, e, dt) {
             b.schedule(0.35, () => {
                 if (!b.isActive || !b.enemies.includes(e)) return;
                 b.director.shake(10, 420);
-                b.damagePlayer(b.maxPlayerHp * p.dmg, 0);
+                b.damagePlayer(b.maxPlayerHp * p.dmg, 0, null, e);
                 b.knockPlayerBack(p.push, `${(p.label || '핏빛 파동').replace('⚠ ', '')}에 밀려남!`);
             });
         }
@@ -1348,7 +1348,7 @@ function tickHeart(b, e, dt) {
             for (let i = 0; i < sh.n; i++) {
                 const dy = (i - (sh.n - 1) / 2) * 34;   // 부채꼴: 높이를 벌려 쏨 — 가운데 몇 발만 주인공에 맞음
                 b.schedule(i * 0.05, () => b.isActive && b.fx.launchOrb(from, () => ({ x: b.monsterX + 60, b: 120 + dy }), '230, 40, 70', 0.42, () => {
-                    if (b.isActive && Math.abs(dy) <= 40) b.damagePlayer(b.maxPlayerHp * sh.dmg, 0);
+                    if (b.isActive && Math.abs(dy) <= 40) b.damagePlayer(b.maxPlayerHp * sh.dmg, 0, null, e);
                 }, null));
             }
         }
@@ -1389,7 +1389,7 @@ function mgBurst(b, e) {
         if (!b.isActive || !b.enemies.includes(e)) return;
         sound.play('mech_laser', { rate: 2.2, vol: 0.25 });
         b.fx.launchNeedle({ x: e.x + 4, bottom: 96 }, () => ({ x: b.monsterX + 60, b: 115 + (Math.random() - 0.5) * 30 }), () => {
-            if (b.isActive) b.damagePlayer(m.dmg * b.stage.enemy.dps * b.rangedMul(), 0);
+            if (b.isActive) b.damagePlayer(m.dmg * b.stage.enemy.dps * b.rangedMul(), 0, null, e);
         }, { color: '255, 220, 120', dur: 0.18, sfx: null });
     });
 }
@@ -1437,7 +1437,7 @@ function tickBehemoth(b, e, dt) {
                 playOnce(e, 'charge');
                 b.fx.play(ZONE_VFX.chargeImpact, b.monsterX + 70, 100);
                 b.director.shake(12, 450);
-                b.damagePlayer(b.maxPlayerHp * tc.dmg, 0);
+                b.damagePlayer(b.maxPlayerHp * tc.dmg, 0, null, e);
                 b.knockPlayerBack(tc.push, '톱니 돌진에 밀려남!');
             });
         }
@@ -1549,7 +1549,7 @@ function tickPile(b, e, dt) {
         b.schedule(steps * 0.07, () => {
             if (!b.isActive) return;
             b.director.shake(12, 500);
-            b.damagePlayer(b.maxPlayerHp * pl.dmg, 0);
+            b.damagePlayer(b.maxPlayerHp * pl.dmg, 0, null, e);
             b.applyPlayerStun(pl.stun, '대지 분쇄!');
         });
     });
@@ -1571,7 +1571,7 @@ function tickLaser(b, e, dt) {
         b.fx.play(ZONE_VFX[l.beamFx || 'plasmaBeam'], e.x + 10, 170, { to: [b.monsterX + 60, 120] });
         b.director.flash('#ff3040', 220, 0.45);
         b.director.shake(9, 400);
-        b.damagePlayer(b.maxPlayerHp * l.dmg, 0);
+        b.damagePlayer(b.maxPlayerHp * l.dmg, 0, null, e);
     });
 }
 
@@ -1591,11 +1591,11 @@ export function castSpell(b, e, key = null) {
         const spell = e.t.spell, effect = spell[s.key];
         const k = b.rangedMul();
         const dmg = spell.dmg * b.stage.enemy.dps;
-        b.damagePlayer(dmg * k * effect.dmgMul, 0);
+        b.damagePlayer(dmg * k * effect.dmgMul, 0, null, e);
         if (effect.burnTicks) {
             b.createDamagePopup(b.monsterX + 40, 200, '🔥 화상', false);
             for (let i = 1; i <= effect.burnTicks; i++) b.schedule(effect.burnEvery * i, () => {
-                if (b.isActive && !b.finalBaseDestroyed) b.damagePlayer(dmg * effect.burnMul * k, 0);
+                if (b.isActive && !b.finalBaseDestroyed) b.damagePlayer(dmg * effect.burnMul * k, 0, null, e);
             });
         }
         if (effect.stun) b.applyPlayerStun(effect.stun * k, '감전!');
@@ -1609,7 +1609,7 @@ function lobSpore(b, e) {
     b.fx.launchMissile({ x: e.x + 10, bottom: 120 }, () => ({ x: b.monsterX + 60, b: FOOT_B + 40 }), () => {
         if (!b.isActive) return;
         b.fx.play(ZONE_VFX.sporeBurst, b.monsterX + 60, FOOT_B + 40);
-        b.damagePlayer(e.t.spore.dmg * b.stage.enemy.dps * b.rangedMul(), 0);
+        b.damagePlayer(e.t.spore.dmg * b.stage.enemy.dps * b.rangedMul(), 0, null, e);
     }, { apex: 150, dur: 0.95, color: '150, 255, 90' });
 }
 
@@ -1660,7 +1660,7 @@ function tickAbyssBoss(b, e, dt, dist) {
                     color: '255, 214, 120',
                     onHook: () => {
                         if (!b.isActive || !b.enemies.includes(e)) return;
-                        b.damagePlayer(b.maxPlayerHp * c.dmg, 0);
+                        b.damagePlayer(b.maxPlayerHp * c.dmg, 0, null, e);
                         b.applyPlayerRoot(c.root * b.rangedMul());
                         b.fx.play(BOSS_VFX.chainHit, b.monsterX + 60, 120);
                     }
@@ -1707,7 +1707,7 @@ function tickAbyssBoss(b, e, dt, dist) {
                 playOnce(e, 'attack');
                 b.fx.play(ZONE_VFX.chargeImpact, b.monsterX + 70, 100);
                 b.director.shake(12, 450);
-                b.damagePlayer(b.maxPlayerHp * c.dmg, 0);
+                b.damagePlayer(b.maxPlayerHp * c.dmg, 0, null, e);
                 b.knockPlayerBack(c.push, '돌진에 밀려남!');
             });
         }
@@ -1721,7 +1721,7 @@ function tickAbyssBoss(b, e, dt, dist) {
             b.schedule(g.warn, () => {
                 if (!b.isActive || !b.enemies.includes(e)) return;
                 b.fx.play(BOSS_VFX.gaze, e.x + 40, 190, { to: [b.monsterX + 60, 120] });
-                b.damagePlayer(b.maxPlayerHp * g.dmg, 0);
+                b.damagePlayer(b.maxPlayerHp * g.dmg, 0, null, e);
                 b.applyPlayerStun(g.stun, '진홍 시선!');
             });
         }
@@ -1828,7 +1828,7 @@ function tickMercyBoss(b, e, dt) {
                 b.fx.play(ZONE_VFX.bellToll, e.x + ENEMY_CENTER, FOOT_B);
                 b.director.flash('#fff2c0', 260, 0.4);
                 if (e.x - b.frontX() > bl.range) return;
-                b.damagePlayer(b.maxPlayerHp * bl.dmg, 0);
+                b.damagePlayer(b.maxPlayerHp * bl.dmg, 0, null, e);
                 b.delaySkills(bl.cd, '🔔 파문 — 스킬 쿨다운 +');
             });
         }
@@ -1846,7 +1846,7 @@ function groundStrike(b, e, s, clip, label, hit, warnFx = BATTLE_VFX.smiteWarn, 
         hit();
         b.director.shake(10, 450);
         if (!hitFx?.sfx) sound.play('chimera_slam', { rate: 0.85 });
-        b.damagePlayer(b.maxPlayerHp * s.dmg, 0);
+        b.damagePlayer(b.maxPlayerHp * s.dmg, 0, null, e);
     });
 }
 
@@ -1919,7 +1919,7 @@ function tickBossSkills(b, e, dt, dist) {
             b.fx.play(BATTLE_VFX.baseBlast, b.monsterX + 35, FOOT_B + 20, { scale: 1.2 });
             b.director.shake(10, 450);
             sound.play('chimera_slam', { rate: 0.8 });
-            b.damagePlayer(b.maxPlayerHp * d.dmg, 0);
+            b.damagePlayer(b.maxPlayerHp * d.dmg, 0, null, e);
         });
     }
 }
@@ -1969,7 +1969,7 @@ function smite(b, e) {
         b.director.shake(10, 450);
         b.director.flash('#fff6c8', 200, 0.6);
         sound.play('chimera_slam');
-        b.damagePlayer(b.maxPlayerHp * t.dmg, 0);
+        b.damagePlayer(b.maxPlayerHp * t.dmg, 0, null, e);
     });
 }
 

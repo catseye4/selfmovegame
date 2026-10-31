@@ -33,6 +33,7 @@ import { isDropOnly, dropGroupOf } from './sets_v2.js';
 import { allStagesUnlocked, isUnlockedNormally } from './stages_v2.js';
 import * as saveStore from './saveStore_v2.js';
 import { settings } from './settings_v2.js';
+import { SupportProgressMethods } from './support_v2.js';
 
 const KEY = 'mo_v2_save';
 export const MAX_LEVEL = 5;           // 노말 강화 한도 — 높은 난이도를 열면 올라감 (progress.maxLevel(), D-063)
@@ -58,6 +59,10 @@ class Progress {
         this.character = DEFAULT_CHARACTER;   // 선택창에서 고른 캐릭터 (저장)
         this.loadouts = {};                   // 캐릭터별 마지막 장착 (저장)
         this.tips = new Set();                // 본 첫 출격 안내 id (저장, coach_v2.js)
+        this.supportCharacter = null;
+        this.supportAuto = false;
+        this.supportRandom = false;
+        this.supportHelpSeen = false;
         Object.assign(this, emptyGrowth());   // 파츠 등급·조각·코어·스킬 레벨·모듈·연구·별 사용·파견 (저장)
         this.commerce = emptyCommerce();
         this.offline = emptyOffline();
@@ -94,6 +99,10 @@ class Progress {
             if (data.difficulty && difficultyUnlocked(data.difficulty, this)) this.difficulty = difficultyOf(data.difficulty).id;
             this.loadouts = { ...(data.loadouts || {}) };
             (data.tips || []).forEach(t => this.tips.add(t));
+            this.supportCharacter = rosterOf(data.supportCharacter) ? data.supportCharacter : null;
+            this.supportAuto = data.supportAuto === true;
+            this.supportRandom = data.supportRandom === true;
+            this.supportHelpSeen = data.supportHelpSeen === true;
             this.loadGrowth(data);
         }
         this.loadTutorial(data);
@@ -104,6 +113,7 @@ class Progress {
         // 고른 캐릭터: 저장에 있으면 그것, v1 저장이면 몸통 캐릭터
         const saved = data && rosterOf(data.character) ? data.character : null;
         this.character = saved || characterOfPart(partOf('body', gameState.equippedParts.body)) || DEFAULT_CHARACTER;
+        this.clearSupportIfMain();
         this.fixMixed(!saved);
         this.rememberLoadout();
         gameState.cartParts = { ...gameState.equippedParts };
@@ -153,6 +163,10 @@ class Progress {
             commerce: this.commerce,
             offline: this.offline,
             tutorial: this.tutorial,
+            supportCharacter: this.supportCharacter,
+            supportAuto: this.supportAuto,
+            supportRandom: this.supportRandom,
+            supportHelpSeen: this.supportHelpSeen,
             ...this.growthData()
         };
         const text = JSON.stringify(data);
@@ -215,12 +229,16 @@ class Progress {
     /** 캐릭터 바꾸기: 지금 장착을 기억하고 그 캐릭터의 장착으로 */
     selectCharacter(id) {
         if (!rosterOf(id)) return false;
-        if (id === this.character) return true;
+        if (id === this.character) {
+            if (this.clearSupportIfMain()) gameState.notify();
+            return true;
+        }
         this.rememberLoadout();
         const next = this.loadoutFor(id);
         this.character = id;
         gameState.equippedParts = next;
         gameState.cartParts = { ...next };
+        this.clearSupportIfMain();
         gameState.notify();
         return true;
     }
@@ -399,6 +417,7 @@ Object.assign(Progress.prototype, CommerceMethods);
 Object.assign(Progress.prototype, PetMethods);
 Object.assign(Progress.prototype, OfflineMethods);
 Object.assign(Progress.prototype, TutorialMethods);
+Object.assign(Progress.prototype, SupportProgressMethods);
 
 export const progress = new Progress();
 

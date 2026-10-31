@@ -12,6 +12,7 @@ import { sound } from '../engine_v2/audio/sound_v2.js';
 import { icon } from './icons.js';
 import { mountDispatch, tickDispatch, unmountDispatch, dispatchAct, showReturn } from './dispatchUi_v2.js';
 import { petsHtml, petAct } from './petsUi_v2.js';
+import { supportHtml } from './supportUi_v2.js';
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -42,6 +43,7 @@ let onChange = null;
 
 export function openGrowthPanel(startTab = 'modules', changed = null) {
     tab = startTab;
+    if (tab === 'coop') { progress.supportHelpSeen = true; progress.save(); }
     onChange = changed;
     if (!panel) {
         panel = document.createElement('div');
@@ -56,7 +58,7 @@ export function openGrowthPanel(startTab = 'modules', changed = null) {
         document.addEventListener('keydown', e => { if (panel?.isConnected && e.key === 'Escape') closeGrowthPanel(); });
     }
     document.body.appendChild(panel);   // 설정 창처럼 화면 전체 위 (settingsPanel_v2.js)
-    render();
+    render(false);
     clearInterval(timer);
     timer = setInterval(() => { if (tab === 'dispatch' && panel.isConnected && tickDispatch()) render(); }, 1000);   // 파견: 시간만 고치고, 끝난 파견이 생기면 다시 그림
     sound.play('ui_click');
@@ -80,10 +82,19 @@ function toast(msg, ok = true) {
 
 function act(name, d) {
     let r = null;
-    if (name === 'tab') { if (tab === 'dispatch' && d.tab !== 'dispatch') unmountDispatch(); tab = d.tab; sound.play('ui_tab'); return render(); }
+    if (name === 'tab') {
+        if (tab === 'dispatch' && d.tab !== 'dispatch') unmountDispatch();
+        tab = d.tab;
+        if (tab === 'coop') { progress.supportHelpSeen = true; progress.save(); }
+        sound.play('ui_tab');
+        return render(false);
+    }
     if (name.startsWith('dsp')) return dispatchAct(name, d) ? render() : null;   // 파견 탭: 구역·캐릭터 고르기, 귀환 장면 닫기
     if (name === 'close') return closeGrowthPanel();
     if (name === 'equipPet' || name === 'upPet') r = petAct(name, d);
+    if (name === 'selectSupport') { progress.selectSupport(d.id || null); return render(); }
+    if (name === 'randomSupport') { progress.randomSupport(); return render(); }
+    if (name === 'supportAuto') { progress.setSupportAuto(!progress.supportAuto); return render(); }
     if (name === 'buyModule') r = progress.buyModule(d.id);
     if (name === 'equipModule') { progress.equipModule(Number(d.slot), d.id || null); sound.play('ui_tab'); return render(); }
     if (name === 'upModule') r = progress.upgradeModule(d.id);
@@ -100,11 +111,12 @@ function act(name, d) {
     if (r) toast(r.success ? (name === 'dispatch' ? '파견 출발!' : '완료!') : r.reason, r.success);
 }
 
-function render() {
+function render(preserveScroll = true) {
     if (!panel) return;
+    const scrollTop = preserveScroll ? (panel.querySelector('.v2-growth__body')?.scrollTop || 0) : 0;
     const petUnlocked = progress.stage('1-1', 'normal').cleared || progress.pets.owned.some(id => progress.canUsePet(id));
-    const tabs = [['modules', '전술 모듈'], ['dispatch', '파견'], ['research', '계정 연구'], ['pets', '펫']];
-    const body = tab === 'dispatch' ? '' : tab === 'research' ? researchHtml() : tab === 'pets'
+    const tabs = [['coop', '협력 출격'], ['modules', '전술 모듈'], ['dispatch', '파견'], ['research', '계정 연구'], ['pets', '펫']];
+    const body = tab === 'coop' ? supportHtml() : tab === 'dispatch' ? '' : tab === 'research' ? researchHtml() : tab === 'pets'
         ? petUnlocked ? petsHtml() : '<p class="v2-growth__hint">노말 1-1을 클리어하면 펫이 열립니다.</p>' : modulesHtml();
     panel.innerHTML = `<div class="v2-growth__box v2-panel">
         <div class="v2-growth__head">
@@ -117,6 +129,7 @@ function render() {
         <div class="v2-growth__body${tab === 'dispatch' ? ' is-dispatch' : ''}">${body}</div>
     </div>`;
     if (tab === 'dispatch') mountDispatch(panel.querySelector('.v2-growth__body'));   // 파견 중 장면 (dispatchUi_v2.js)
+    panel.querySelector('.v2-growth__body').scrollTop = scrollTop;
 }
 
 function modulesHtml() {

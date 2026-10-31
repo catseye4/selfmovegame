@@ -345,13 +345,22 @@ export const GrowthMethods = {
     isDispatched(character) {
         return this.dispatch.some(d => d.character === character);
     },
-    /** 파견 보내기: 열린 캐릭터, 지금 고른 캐릭터가 아님, 이미 파견 중이 아님, 깬 구역, 빈 칸 */
+    /** 파견 후보와 실행이 함께 쓰는 조건: 해금·4부위 보유, 주인공·파견 중 제외 */
+    dispatchReason(character) {
+        if (character === this.character) return '출전 중인 캐릭터는 보낼 수 없습니다';
+        if (!this.isCharacterUnlocked(character)) return '잠긴 캐릭터입니다';
+        if (this.isDispatched(character)) return '이미 파견 중입니다';
+        if (!SLOTS.every(slot => partsOfCharacter(character, slot).some(p => this.isOwned(p.id)))) {
+            return '파츠 4부위를 보유한 캐릭터만 파견할 수 있습니다';
+        }
+        return '';
+    },
+    /** 파견 보내기: 보유 캐릭터, 지금 고른 캐릭터가 아님, 이미 파견 중이 아님, 깬 구역, 빈 칸 */
     startDispatch(character, zone, now = Date.now()) {
         if (!isZoneReleased(zone)) return { success: false, reason: `곧 공개 · 구역 ${zone} · ${releaseDateOf('zones', zone)}` };
         if (this.dispatch.length >= this.dispatchSlots()) return { success: false, reason: '파견 칸이 모두 찼습니다' };
-        if (character === this.character) return { success: false, reason: '출전 중인 캐릭터는 보낼 수 없습니다' };
-        if (!this.isCharacterUnlocked(character)) return { success: false, reason: '잠긴 캐릭터입니다' };
-        if (this.isDispatched(character)) return { success: false, reason: '이미 파견 중입니다' };
+        const reason = this.dispatchReason(character);
+        if (reason) return { success: false, reason };
         if (!this.dispatchZones().includes(zone)) return { success: false, reason: '아직 깨지 않은 구역입니다' };
         this.dispatch.push({ character, zone, start: now, end: now + this.dispatchMs() });
         gameState.notify();
